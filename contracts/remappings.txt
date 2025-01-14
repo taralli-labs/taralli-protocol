@@ -1,0 +1,8 @@
+solady/=lib/solady/src/
+solmate/=lib/solmate/src/
+permit2/=lib/permit2/src/
+risc0/=lib/risc0-ethereum/contracts/src/
+taralli-risc0-examples/=lib/taralli-risc0-examples/
+forge-std/=lib/forge-std/src/
+openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/
+@=src/

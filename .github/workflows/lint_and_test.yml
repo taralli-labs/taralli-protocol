@@ -1,0 +1,39 @@
+name: Lint and Test Rust Crates
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Rust (nightly)
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt, clippy
+    
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run build
+      run: cargo build --verbose
+
+    - name: Run fmt
+      run: cargo +nightly fmt -- --check
+
+    - name: Run clippy
+      run: cargo +nightly clippy -- -W clippy::perf
+
+    - name: Run tests
+      run: cargo test --verbose

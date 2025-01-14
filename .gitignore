@@ -1,0 +1,13 @@
+/target
+/node_modules
+/images
+/mock
+.env
+data/
+.cursorignore
+*.hex
+
+# omit secrets but leave secrets catalogue
+secrets/*
+!secrets/README.md
+anvil_state.json

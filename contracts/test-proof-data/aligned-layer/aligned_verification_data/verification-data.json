@@ -1,0 +1,22 @@
+{
+  "verification_data_commitment": {
+    "proof_commitment": "c181e470901eecf693bfa6f0e89e837dcf35700cdd91c210a0ce0660e8674208",
+    "pub_input_commitment": "0000000000000000000000000000000000000000000000000000000000000000",
+    "proving_system_aux_data_commitment": "836371a502bf5ad67be837b21fa99bc381f7e8124f02042ffb80fa7ce27bc8f6",
+    "proof_generator_addr": "2b5ad5c4795c026514f8317c7a215e218dccd6cf"
+  },
+  "batch_merkle_root": "5acb15480d253d4e1fdbe3c2998790e2050c5367e4fed50424f1c1253301fd21",
+  "batch_inclusion_proof": {
+    "merkle_path": [
+      "9ab230cb5fd62b0921468e55c99d877a4d083090babf1aec961e1574232f42cd",
+      "afa5e2eb4f388c4ccaf566bb3ba4ed7e53fb7c4b007bf1ed9c64bcf0b5aa4b38",
+      "2204231396077dbebf2b56c039a50c0e8979b1fb7bfb8d05499324fb611ac85b",
+      "85cb52f8242eb3314dd6083796cb98386a0f43b329144468a45569988d1a8577",
+      "2b8d12e55b7912b0ae139780504db27d93563457a27290ef22def42734b1d8fa",
+      "1e440e20ab681c3077c7cca45173e084eb8d06538a0aa4b01c9fab0cca76e4e4",
+      "7fdc643e5b925243f6e1e05b7ee20b86eadd7a21c51fdead095b89cbe86c9a38",
+      "e9e759f07de56a2cf2c381e75f762d4a06d0c570b81490733595ff1e693ec2d1"
+    ]
+  },
+  "verification_data_batch_index": 15
+}
