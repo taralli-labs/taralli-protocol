@@ -143,7 +143,7 @@ contract UniversalBombetta is Bombetta {
     /// @param opaqueSubmission The opaque data that will be decoded by the market contract and passed to the verifier.
     ///                         Empty if the deadline has been reached and the prover is being slashed.
     /// @return proverResolved Value returning true if the original prover address that bid() to fulfill the request
-    ///                        resolved the proof request. Returning false if the provider failed to fulfill the request 
+    ///                        resolved the proof request. Returning false if the provider failed to fulfill the request
     ///                        and the stale request is resolved by another address.
     function resolve(bytes32 requestId, bytes calldata opaqueSubmission, bytes32 submittedPartialCommitment)
         external
