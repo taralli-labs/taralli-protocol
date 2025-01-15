@@ -7,3 +7,6 @@
 [submodule "contracts/lib/solady"]
 	path = contracts/lib/solady
 	url = https://github.com/Vectorized/solady
+[submodule "contracts/lib/risc0-ethereum"]
+	path = contracts/lib/risc0-ethereum
+	url = https://github.com/risc0/risc0-ethereum
