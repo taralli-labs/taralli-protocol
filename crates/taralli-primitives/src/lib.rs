@@ -5,10 +5,11 @@
 
 pub mod alloy {
     pub mod primitives {
-        pub use alloy::primitives::{
-            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, PrimitiveSignature,
-            B256, U256,
+        pub use taralli_systems::alloy::primitives::{
+            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, U256,
         };
+        // Keep additional alloy types that primitives needs
+        pub use alloy::primitives::{PrimitiveSignature, B256};
     }
 
     pub mod network {

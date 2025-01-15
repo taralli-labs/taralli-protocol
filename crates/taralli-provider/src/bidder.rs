@@ -55,7 +55,7 @@ where
             ));
         }
 
-        log::info!("bidder: check timestamps done");
+        tracing::info!("bidder: check timestamps done");
 
         // auction is active, calculate target timestamp from target_amount (amount of
         // reward tokens)
@@ -81,7 +81,7 @@ where
             sleep(Duration::from_secs(wait_time)).await;
         }
 
-        log::info!("bidder: calculate target ts for target amount");
+        tracing::info!("bidder: calculate target ts for target amount");
 
         // check the proof request does not already have a bid
         let request_id = compute_request_id(&onchain_proof_request, signature);
@@ -98,8 +98,8 @@ where
             ));
         }
 
-        log::info!("bidder: check status of auction again to make sure no bid is submitted");
-        log::info!(
+        tracing::info!("bidder: check status of auction again to make sure no bid is submitted");
+        tracing::info!(
             "bidder: requester address = {}",
             active_job_return.requester
         );

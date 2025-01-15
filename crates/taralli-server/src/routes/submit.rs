@@ -19,7 +19,7 @@ pub async fn submit_handler<
     let maximum_allowed_stake = app_state.maximum_allowed_stake();
     let timeout = app_state.validation_timeout_seconds();
 
-    log::info!("Validating proof request");
+    tracing::info!("Validating proof request");
     match validate_proof_request(
         &request,
         &app_state,
@@ -31,10 +31,10 @@ pub async fn submit_handler<
     .await
     {
         Ok(()) => {
-            log::debug!("Validation successful, attempting to broadcast");
+            tracing::debug!("Validation successful, attempting to broadcast");
             match app_state.subscription_manager().broadcast(request) {
                 Ok(recv_count) => {
-                    log::info!(
+                    tracing::info!(
                         "Submitted request was broadcast to {} receivers",
                         recv_count
                     );
@@ -47,7 +47,7 @@ pub async fn submit_handler<
                     ))
                 }
                 Err(_) => {
-                    log::debug!("No active subscribers to receive the broadcast");
+                    tracing::debug!("No active subscribers to receive the broadcast");
                     Err((
                         StatusCode::BAD_REQUEST,
                         Json(json!({
@@ -58,7 +58,7 @@ pub async fn submit_handler<
             }
         }
         Err(e) => {
-            log::warn!("Validation failed: {:?}", e);
+            tracing::warn!("Validation failed: {:?}", e);
             let status = match e {
                 ServerError::ValidationTimeout(_) => StatusCode::REQUEST_TIMEOUT,
                 _ => StatusCode::BAD_REQUEST,

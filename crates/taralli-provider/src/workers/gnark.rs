@@ -99,7 +99,7 @@ impl GnarkWorker {
 #[async_trait]
 impl ComputeWorker for GnarkWorker {
     async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
-        log::info!("gnark worker: execution started");
+        tracing::info!("gnark worker: execution started");
 
         let params = match &request.proving_system_information {
             ProvingSystemParams::Gnark(params) => params.clone(),
@@ -123,15 +123,3 @@ impl ComputeWorker for GnarkWorker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-    use color_eyre::Result;
-
-    #[tokio::test]
-    async fn test_direct_proof_generation() -> Result<()> {
-
-    }
-}*/

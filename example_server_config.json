@@ -1,0 +1,20 @@
+{
+    "server_port": 8000,
+    "admin_port": 8001,
+    "rpc_url": "",
+    "log_level": "INFO",
+    "validation_timeout_seconds": 30,
+    "minimum_allowed_proving_time": 10,
+    "maximum_allowed_start_delay": 300,
+    "maximum_allowed_stake": 1000000000000000000000,
+    "market_address": "0xe05e737478E4f0b886981aD85CF9a59D55413e8b",
+    "token_address": "0x89fF1B147026815cf497AA45D4FDc2DF51Ed7f00",
+    "token_decimals": 18,
+    "proving_system_ids": [
+      "arkworks",
+      "risc0",
+      "sp1",
+      "aligned-layer",
+      "gnark"
+    ]
+  }

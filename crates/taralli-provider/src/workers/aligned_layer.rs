@@ -362,19 +362,19 @@ impl ComputeWorker for AlignedLayerWorker {
             }
         };
 
-        log::info!("Aligned layer worker: execution started");
+        tracing::info!("Aligned layer worker: execution started");
         // generate proof
         let aligned_verification_inputs = self.generate_proof(&params).await.map_err(|e| {
             ProviderError::WorkerExecutionFailed(format!("Failed to generate proof: {}", e))
         })?;
 
-        log::info!("Worker finished generating proof, submitting to aligned layer batcher then awaiting batch inclusion");
+        tracing::info!("Worker finished generating proof, submitting to aligned layer batcher then awaiting batch inclusion");
 
         let aligned_verification_data = self
             .submit_proof_to_aligned_layer(aligned_verification_inputs)
             .await?;
 
-        log::info!(
+        tracing::info!(
             "proof successfully included in a valid aligned layer batch, crafting worker result"
         );
 
@@ -386,28 +386,3 @@ impl ComputeWorker for AlignedLayerWorker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-
-    use std::path::{Path, PathBuf};
-
-    use super::*;
-    use alloy::{primitives::U256, sol_types::SolValue};
-
-    #[tokio::test]
-    async fn test_risc0_bonsai_worker_execution() -> Result<()> {
-        // Load .env from workspace root
-        let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .parent()
-            .unwrap()
-            .to_path_buf();
-
-        dotenv::from_path(workspace_root.join(".env"))
-            .expect("Failed to load .env file from workspace root");
-
-        Ok(())
-    }
-}*/

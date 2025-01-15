@@ -18,7 +18,7 @@ pub async fn subscribe_handler<
     app_state: State<AppState<T, P, ProofRequest<I>>>,
 ) -> Sse<impl futures::Stream<Item = Result<Event, axum::Error>>> {
     let recv_new = app_state.subscription_manager().add_subscription();
-    log::info!(
+    tracing::info!(
         "subscription has been added, receiver count: {}",
         app_state.subscription_manager().active_subscriptions()
     );

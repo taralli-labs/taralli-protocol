@@ -120,7 +120,7 @@ where
             .api
             .subscribe_to_markets()
             .map_err(|e| ProviderError::ServerRequestError(e.to_string()))?;
-        log::info!("subscribed to markets, waiting for incoming requests");
+        tracing::info!("subscribed to markets, waiting for incoming requests");
         while let Some(result) = stream.next().await {
             match result {
                 Ok(proof_request) => {
@@ -128,19 +128,19 @@ where
                         &proof_request.onchain_proof_request,
                         proof_request.signature,
                     );
-                    log::info!(
+                    tracing::info!(
                         "Incoming proof request - proving system id: {:?}, onchain proof request: {:?}, request ID: {:?}",
                         proof_request.proving_system_id,
                         proof_request.onchain_proof_request,
                         request_id
                     );
                     if let Err(e) = self.process_request(request_id, proof_request).await {
-                        log::error!("Failed to process proof request: {:?}", e);
+                        tracing::error!("Failed to process proof request: {:?}", e);
                     }
                 }
-                Err(e) => log::error!("Error receiving event: {:?}", e),
+                Err(e) => tracing::error!("Error receiving event: {:?}", e),
             }
-            log::info!("request processed");
+            tracing::info!("request processed");
         }
 
         Ok(())
@@ -163,13 +163,13 @@ where
             .header()
             .timestamp();
 
-        log::info!("latest block timesetamp fetched: {}", current_ts);
+        tracing::info!("latest block timesetamp fetched: {}", current_ts);
 
         // (WIP) Statically analyze the request to determine what bid, if any, the client will aim for.
         self.analyzer
             .analyze(&request, 0)
             .map_err(|e| ProviderError::RequestAnalysisError(e.to_string()))?;
-        log::info!("analysis done");
+        tracing::info!("analysis done");
 
         // Submit a bid for the request
         self.bidder
@@ -182,7 +182,7 @@ where
             .await
             .map_err(|e| ProviderError::TransactionFailure(format!("bid txs failed: {}", e)))?;
 
-        log::info!("bid transaction submitted");
+        tracing::info!("bid transaction submitted");
 
         // Execute worker
         let work_result: WorkResult = self
@@ -191,7 +191,7 @@ where
             .await
             .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
-        log::info!("worker executed");
+        tracing::info!("worker executed");
 
         // Resolve request
         self.resolver
@@ -203,7 +203,7 @@ where
             .await
             .map_err(|e| ProviderError::TransactionFailure(format!("resolve txs failed: {}", e)))?;
 
-        log::info!("resolve transaction submitted");
+        tracing::info!("resolve transaction submitted");
 
         Ok(())
     }

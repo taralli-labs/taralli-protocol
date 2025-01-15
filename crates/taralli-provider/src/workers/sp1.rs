@@ -91,12 +91,12 @@ impl ComputeWorker for Sp1Worker {
             }
         };
 
-        log::info!("Sp1 worker: execution started");
+        tracing::info!("Sp1 worker: execution started");
         let (sp1_proof, vk) = self.generate_proof(&params).map_err(|e| {
             ProviderError::WorkerExecutionFailed(format!("Failed to generate proof: {}", e))
         })?;
 
-        log::info!("prover execution finished");
+        tracing::info!("prover execution finished");
 
         let opaque_submission = Self::format_opaque_submission(&sp1_proof, &vk)?;
         let partial_commitment = Self::compute_partial_commitment()?;

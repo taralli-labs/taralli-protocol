@@ -96,8 +96,8 @@ where
         let resolve_deadline = proof_request.onchain_proof_request.endAuctionTimestamp
             + proof_request.onchain_proof_request.provingTime as u64;
 
-        log::info!("submitting request to server");
-        log::info!("request ID: {}", request_id);
+        tracing::info!("submitting request to server");
+        tracing::info!("request ID: {}", request_id);
 
         // submit signed request to server
         let response = self
@@ -108,7 +108,7 @@ where
 
         // track the request
         if response.status().is_success() {
-            log::info!("submission success, tracking started");
+            tracing::info!("submission success, tracking started");
             self.tracker
                 .track_request(
                     request_id,
@@ -117,7 +117,7 @@ where
                 )
                 .await
                 .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-            log::info!("tracking complete");
+            tracing::info!("tracking complete");
             Ok(())
         } else {
             // Parse the error response

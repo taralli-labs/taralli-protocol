@@ -47,14 +47,14 @@ where
             .await
             .map_err(|e| ProviderError::TransactionError(e.to_string()))?;
 
-        log::info!("call_return done");
+        tracing::info!("resolve call_return done, getting txs recipt");
 
         let receipt = call_return
             .get_receipt()
             .await
             .map_err(|e| ProviderError::TransactionFailure(e.to_string()))?;
 
-        log::info!("resolve txs receipt: {:?}", receipt);
+        tracing::info!("resolve txs receipt: {:?}", receipt);
 
         Ok(receipt)
     }

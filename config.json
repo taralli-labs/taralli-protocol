@@ -1,4 +1,6 @@
 {
+  "server_port": 8002,
+  "admin_port": 8001,
   "rpc_url": "https://eth-holesky.g.alchemy.com/v2/PKaGQXWNzWbsW8DEqaKXgXVfu0LnwGiu",
   "log_level": "INFO",
   "validation_timeout_seconds": 30,

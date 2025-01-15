@@ -11,3 +11,4 @@ data/
 secrets/*
 !secrets/README.md
 anvil_state.json
+config.json

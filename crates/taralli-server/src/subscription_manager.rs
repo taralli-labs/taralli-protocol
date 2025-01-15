@@ -33,17 +33,17 @@ where
     pub fn broadcast(&self, event: M) -> Result<usize> {
         let subscriber_count = self.active_subscriptions();
         if subscriber_count == 0 {
-            log::warn!("Attempted to broadcast event but found no active subscribers");
+            tracing::warn!("Attempted to broadcast event but found no active subscribers");
             return Err(ServerError::NoProvidersAvailable());
         }
 
         match self.sender.send(event) {
             Ok(recv_count) => {
-                log::info!("Successfully broadcast event to {} receiver(s)", recv_count);
+                tracing::info!("Successfully broadcast event to {} receiver(s)", recv_count);
                 Ok(recv_count)
             }
             Err(e) => {
-                log::error!(
+                tracing::error!(
                     "Failed to broadcast event to {} subscribers: {}",
                     subscriber_count,
                     e
