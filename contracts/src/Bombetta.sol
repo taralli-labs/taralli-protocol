@@ -6,7 +6,7 @@ import "./libraries/BombettaTypes.sol";
 
 /// @title  Bombetta
 /// @author Taralli Labs
-/// @notice a permission-less proving marketplace
+/// @notice a permission-less verifiable compute marketplace
 abstract contract Bombetta is IBombetta {
     /// @notice emitted when a bid is placed successfully on a signed proof request.
     event Bid(address indexed signer, bytes32 indexed requestId, uint256 tokenReward, uint256 ethStake, address prover);

@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tempfile::NamedTempFile;
 
 #[derive(Default)]
@@ -98,7 +98,7 @@ impl GnarkWorker {
 
 #[async_trait]
 impl ComputeWorker for GnarkWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         tracing::info!("gnark worker: execution started");
 
         let params = match &request.proving_system_information {

@@ -35,7 +35,6 @@ contract Deploy is Script, Test {
 
         // deploy test token
         ERC20Mock testToken = new ERC20Mock("Test Token", "TEST", 18);
-        emit log_named_address("Reward Token Address", address(testToken));
 
         vm.stopBroadcast();
 
@@ -45,7 +44,6 @@ contract Deploy is Script, Test {
         vm.serializeAddress(deploymentAddresses, "universal_bombetta", address(universalBombetta));
         vm.serializeAddress(deploymentAddresses, "test_token", address(testToken));
         vm.serializeAddress(deploymentAddresses, "risc0_verifier", address(risc0Verifier));
-        vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
         vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
 
         string memory jsonOutput = vm.serializeString(deploymentAddresses, "object", "object");

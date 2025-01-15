@@ -19,7 +19,7 @@ use taralli_primitives::{
     },
     taralli_systems::id::ProvingSystemParams,
 };
-use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams, ProofRequest};
+use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams, Request};
 use tempfile::NamedTempFile;
 use wasmer::Store;
 
@@ -207,7 +207,7 @@ impl ArkworksWorker {
 
 #[async_trait]
 impl ComputeWorker for ArkworksWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         tracing::info!("arkworks worker: execution started");
 
         let params = match &request.proving_system_information {

@@ -1,5 +1,5 @@
 use reqwest::Client;
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, ProofRequest};
+use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
 use url::Url;
 
 use crate::error::{RequesterError, RequesterResult};
@@ -19,7 +19,7 @@ impl RequesterApi {
 
     pub async fn submit_request(
         &self,
-        request: ProofRequest<ProvingSystemParams>,
+        request: Request<ProvingSystemParams>,
     ) -> RequesterResult<reqwest::Response> {
         let submit_endpoint = self
             .server_url

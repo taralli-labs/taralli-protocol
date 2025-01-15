@@ -11,7 +11,7 @@ use taralli_primitives::alloy::{
     transports::Transport,
 };
 use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
-use taralli_primitives::{OnChainProofRequest, ProofRequest};
+use taralli_primitives::{OnChainProofRequest, Request};
 
 // TODO add in default builder patterns
 //const DEFAULT_AUCTION_LENGTH: u32 = 300; // 5 minutes
@@ -163,8 +163,8 @@ where
     ];
 
     /// return the ProofRequest derived from the current state of RequestBuilder
-    pub fn build(self) -> ProofRequest<ProvingSystemParams> {
-        ProofRequest {
+    pub fn build(self) -> Request<ProvingSystemParams> {
+        Request {
             proving_system_id: self.proving_system_id,
             proving_system_information: ProvingSystemParams::try_from((
                 &self.proving_system_id,

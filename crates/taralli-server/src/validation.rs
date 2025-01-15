@@ -13,12 +13,12 @@ use taralli_primitives::validation::{
     validate_amount_constraints, validate_market_address, validate_proving_system_id,
     validate_signature, validate_time_constraints,
 };
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tokio::time::timeout;
 
 pub async fn validate_proof_request<T, P, I>(
-    request: &ProofRequest<I>,
-    app_state: &State<AppState<T, P, ProofRequest<I>>>,
+    request: &Request<I>,
+    app_state: &State<AppState<T, P, Request<I>>>,
     minimum_allowed_proving_time: u32,
     maximum_start_delay: u32,
     maximum_allowed_stake: u128,

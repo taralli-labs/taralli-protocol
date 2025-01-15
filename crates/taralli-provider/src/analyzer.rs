@@ -3,7 +3,7 @@ use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
     validation::{validate_amount_constraints, validate_market_address, validate_signature},
-    ProofRequest,
+    Request,
 };
 
 use crate::{config::AnalyzerConfig, error::Result};
@@ -33,7 +33,7 @@ where
 
     pub fn analyze(
         &self,
-        request: &ProofRequest<ProvingSystemParams>,
+        request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
     ) -> Result<()> {
         // check that the incoming proof request's described proof workload matches what the provider
@@ -62,7 +62,7 @@ where
 
     pub fn validate_request(
         &self,
-        request: &ProofRequest<ProvingSystemParams>,
+        request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
     ) -> Result<()> {
         validate_market_address(request, self.config.market_address)?;

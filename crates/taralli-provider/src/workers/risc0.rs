@@ -6,7 +6,7 @@ use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::taralli_systems::systems::risc0::Risc0ProofParams;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 
 pub struct Risc0Worker {
     proving_options: ProverOpts,
@@ -56,7 +56,7 @@ impl Risc0Worker {
 
 #[async_trait]
 impl ComputeWorker for Risc0Worker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
         let params = match &request.proving_system_information {
             ProvingSystemParams::Risc0(params) => params.clone(),

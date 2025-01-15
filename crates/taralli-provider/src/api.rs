@@ -1,7 +1,7 @@
 use futures::{Stream, StreamExt};
 use reqwest_eventsource::{Event, EventSource};
 use std::pin::Pin;
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, ProofRequest};
+use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
 use url::Url;
 
 use crate::{
@@ -22,7 +22,7 @@ impl ProviderApi {
 
     pub fn subscribe_to_markets(
         &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<ProofRequest<ProvingSystemParams>>> + Send>>> {
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>> {
         // Attempt to join the URL, log error if it fails
         let url = self
             .server_url
@@ -35,7 +35,7 @@ impl ProviderApi {
         Ok(Box::pin(event_source.filter_map(|event| async move {
             match event {
                 Ok(Event::Message(message)) => {
-                    match serde_json::from_str::<ProofRequest<ProvingSystemParams>>(&message.data) {
+                    match serde_json::from_str::<Request<ProvingSystemParams>>(&message.data) {
                         Ok(proof_request) => Some(Ok(proof_request)),
                         Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
                             "Failed to parse proof request from incoming event: {}",

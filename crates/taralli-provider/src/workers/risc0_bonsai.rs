@@ -8,7 +8,7 @@ use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::taralli_systems::systems::risc0::Risc0ProofParams;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tokio::task;
 
 #[derive(Default)]
@@ -70,7 +70,7 @@ impl Risc0BonsaiWorker {
 
 #[async_trait]
 impl ComputeWorker for Risc0BonsaiWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
         let params = match &request.proving_system_information {
             ProvingSystemParams::Risc0(params) => params.clone(),

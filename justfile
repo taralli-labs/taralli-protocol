@@ -27,13 +27,6 @@ deploy_contracts:
 start_server:
     cargo run --bin server
 
-# Client commands
-simple_request:
-    cargo run --example simple_request
-
-subscribe_market:
-    cargo run --example subscribe_market
-
 # Fixes the formatting of the workspace
 fmt-fix:
     cargo +nightly fmt --all

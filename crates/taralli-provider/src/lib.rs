@@ -32,7 +32,7 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::utils::compute_request_id;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use url::Url;
 
 pub struct ProviderClient<T, P, N>
@@ -149,7 +149,7 @@ where
     async fn process_request(
         &self,
         request_id: FixedBytes<32>,
-        request: ProofRequest<ProvingSystemParams>,
+        request: Request<ProvingSystemParams>,
     ) -> Result<()> {
         // Fetch latest block timestamp
         // TODO: remove this call from the request processing work flow, instead passing it in as input from another external process

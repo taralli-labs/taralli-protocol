@@ -19,7 +19,7 @@ use taralli_primitives::taralli_systems::systems::aligned_layer::{
 };
 use taralli_primitives::taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
 use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tempfile::NamedTempFile;
 
 use ethers::core::types::H160;
@@ -351,7 +351,7 @@ impl AlignedLayerWorker {
 
 #[async_trait]
 impl ComputeWorker for AlignedLayerWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
         let params = match &request.proving_system_information {
             ProvingSystemParams::AlignedLayer(params) => params.clone(),

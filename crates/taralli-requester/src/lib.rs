@@ -21,7 +21,7 @@ use taralli_primitives::utils::{
 use taralli_primitives::validation::{
     validate_amount_constraints, validate_market_address, validate_signature,
 };
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 
 pub struct RequesterClient<T, P, N, S>
 where
@@ -63,7 +63,7 @@ where
 
     pub fn validate_request(
         &self,
-        request: &ProofRequest<ProvingSystemParams>,
+        request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
     ) -> RequesterResult<()> {
         validate_market_address(request, self.config.market_address)?;
@@ -83,7 +83,7 @@ where
     /// then start tracking the request auction and resolution on-chain.
     pub async fn submit_and_track_request(
         &self,
-        proof_request: ProofRequest<ProvingSystemParams>,
+        proof_request: Request<ProvingSystemParams>,
         auction_time_length: u64,
     ) -> RequesterResult<()> {
         // compute request id
@@ -134,8 +134,8 @@ where
 
     pub async fn sign_request(
         &self,
-        mut request: ProofRequest<ProvingSystemParams>,
-    ) -> RequesterResult<ProofRequest<ProvingSystemParams>> {
+        mut request: Request<ProvingSystemParams>,
+    ) -> RequesterResult<Request<ProvingSystemParams>> {
         // compute witness
         let witness = compute_request_witness(&request.onchain_proof_request);
         // build permit2 digest
