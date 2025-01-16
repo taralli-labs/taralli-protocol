@@ -1,6 +1,5 @@
 {
     "server_port": 8000,
-    "admin_port": 8001,
     "rpc_url": "",
     "log_level": "INFO",
     "validation_timeout_seconds": 30,

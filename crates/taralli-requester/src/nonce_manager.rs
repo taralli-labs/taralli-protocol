@@ -78,31 +78,4 @@ where
         }
         Err(RequesterError::FindUnusedNonceError())
     }
-
-    // /// If a signature with a given 'nonce' has been signed then broadcast, but needs
-    // /// to be retracted, invalidate_nonce can retract a signature's validity given it executes
-    // /// before a bid txs/consumption of the signature has been finalized in a block on-chain
-    // pub async fn invalidate_nonce(&mut self, nonce: U256) -> Result<()> {
-    //     let word_pos = nonce / *U256_256;
-    //     let bit_pos = nonce % *U256_256;
-    //     let mask = *U256_ONE << bit_pos;
-    //
-    //     // create instance
-    //     let permit2 = Permit2Instance::new(*PERMIT2_ADDRESS, self.provider.clone());
-    //
-    //     // Update the bitmap in the contract
-    //     let _ = permit2
-    //         .invalidateUnorderedNonces(word_pos, mask)
-    //         .send()
-    //         .await?;
-    //
-    //     // Update our cache
-    //     if let Some((cached_word_pos, mut cached_bitmap)) = self.nonce_cache {
-    //         if cached_word_pos == word_pos {
-    //             cached_bitmap |= mask;
-    //         }
-    //     }
-    //
-    //     Ok(())
-    // }
 }

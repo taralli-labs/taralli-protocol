@@ -8358,7 +8358,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "dotenv",
  "lazy_static",
  "serde",
  "serde_json",
@@ -8446,7 +8445,6 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "color-eyre",
- "dotenv",
  "futures",
  "futures-util",
  "hex",
@@ -8471,7 +8469,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "dotenv",
  "serde",
  "serde_json",
  "thiserror 2.0.11",

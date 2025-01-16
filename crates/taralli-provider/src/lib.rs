@@ -55,7 +55,7 @@ where
     P: Provider<T, N> + Clone,
     N: Network + Clone,
 {
-    fn new(
+    fn _new(
         rpc_provider: P,
         market_address: Address,
         server_url: Url,

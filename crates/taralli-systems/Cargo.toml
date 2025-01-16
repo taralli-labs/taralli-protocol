@@ -12,4 +12,3 @@ async-trait = "0.1.83"
 
 [dev-dependencies]
 tokio = { workspace = true }
-dotenv = "0.15.0"
