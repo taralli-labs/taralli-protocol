@@ -32,7 +32,7 @@ impl Sp1Worker {
         //     bytes calldata publicValues,
         //     bytes calldata proofBytes
         // )
-        // WIP
+        // WIP!
 
         // check that proof type is ether groth16 or plonk as these are the only on chain veriable
         // proof types for sp1 proofs

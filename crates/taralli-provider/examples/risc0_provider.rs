@@ -38,6 +38,7 @@ async fn main() -> Result<()> {
         .wallet(wallet)
         .on_http(rpc_url);
     // market contract
+    // All examples have this, just wondering if it should be hardcoded or in a config file.
     let market_address = address!("e05e737478E4f0b886981aD85CF9a59D55413e8b");
 
     // build provider client config

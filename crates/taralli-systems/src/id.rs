@@ -74,7 +74,7 @@ macro_rules! proving_systems {
             }
 
             fn verifier_constraints() -> VerifierConstraints {
-                // This should never be called directly on ProvingSystemParams
+                // This should never be called directly on ProvingSystemParams!
                 // Instead, use the specific proving system implementation
                 VerifierConstraints::default()
             }

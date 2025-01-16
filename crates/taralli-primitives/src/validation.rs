@@ -42,104 +42,6 @@ pub fn validate_market_address<I: ProvingSystemInformation>(
     }
 }
 
-/*pub fn validate_verification_commitments<I: ProvingSystemInformation>(
-    request: &ProofRequest<I>,
-) -> Result<()> {
-    let verifier_details =
-        VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true).map_err(
-            |e| {
-                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-            },
-        )?;
-
-    let verifier_constraints = I::verifier_constraints();
-
-    if let Some(verifier) = verifier_constraints.verifier {
-        if verifier_details.verifier != verifier {
-            return Err(PrimitivesError::ValidationError(
-                "verifier address mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(selector) = verifier_constraints.selector {
-        if verifier_details.selector != selector {
-            return Err(PrimitivesError::ValidationError(
-                "selector mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(is_sha) = verifier_constraints.is_sha_commitment {
-        if verifier_details.isShaCommitment != is_sha {
-            return Err(PrimitivesError::ValidationError(
-                "isShaCommitment mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(offset) = verifier_constraints.public_inputs_offset {
-        if verifier_details.publicInputsOffset != offset {
-            return Err(PrimitivesError::ValidationError(
-                "publicInputsOffset mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(length) = verifier_constraints.public_inputs_length {
-        if verifier_details.publicInputsLength != length {
-            return Err(PrimitivesError::ValidationError(
-                "publicInputsLength mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(has_partial_commitment_check) =
-        verifier_constraints.has_partial_commitment_result_check
-    {
-        if verifier_details.hasPartialCommitmentResultCheck != has_partial_commitment_check {
-            return Err(PrimitivesError::ValidationError(
-                "hasPartialCommitmentResultCheck mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(submitted_partial_commitment_offset) =
-        verifier_constraints.submitted_partial_commitment_result_offset
-    {
-        if verifier_details.submittedPartialCommitmentResultOffset
-            != submitted_partial_commitment_offset
-        {
-            return Err(PrimitivesError::ValidationError(
-                "submittedPartialCommitmentResultOffset mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(submitted_partial_commitment_length) =
-        verifier_constraints.submitted_partial_commitment_result_offset
-    {
-        if verifier_details.submittedPartialCommitmentResultLength
-            != submitted_partial_commitment_length
-        {
-            return Err(PrimitivesError::ValidationError(
-                "submittedPartialCommitmentResultLength mismatch".to_string(),
-            ));
-        }
-    }
-
-    if let Some(predetermined_partial_commitment) =
-        verifier_constraints.predetermined_partial_commitment
-    {
-        if verifier_details.predeterminedPartialCommitment != predetermined_partial_commitment {
-            return Err(PrimitivesError::ValidationError(
-                "predeterminedPartialCommitment mismatch".to_string(),
-            ));
-        }
-    }
-
-    Ok(())
-}*/
 
 pub fn validate_verification_commitments<I: ProvingSystemInformation>(
     request: &ProofRequest<I>,
@@ -162,6 +64,7 @@ pub fn validate_verification_commitments<I: ProvingSystemInformation>(
 
 pub fn validate_nonce<I: ProvingSystemInformation>(_request: &ProofRequest<I>) -> Result<()> {
     // TODO
+    // do we have to finish this?
     Ok(())
 }
 

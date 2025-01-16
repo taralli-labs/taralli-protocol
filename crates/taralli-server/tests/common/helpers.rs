@@ -29,8 +29,6 @@ use tower::util::ServiceExt;
 
 pub const MAX_BODY_SIZE: usize = 1024 * 1024; // 1 MB limit
 
-// todo: move some of this to /src so I can import within taralli-auth
-
 pub fn submit_request_body(input: Option<String>) -> Request<Body> {
     Request::builder()
         .method("POST")

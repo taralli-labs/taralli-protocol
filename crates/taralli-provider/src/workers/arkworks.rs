@@ -107,6 +107,7 @@ impl ArkworksWorker {
         Ok(Bytes::from(proof_input_values.abi_encode()))
     }
 
+    // Are we ok with this unfinished implementation?
     fn compute_partial_commitment() -> FixedBytes<32> {
         // Implement commitment computation if needed
         FixedBytes::new([0u8; 32])
@@ -231,36 +232,3 @@ impl ComputeWorker for ArkworksWorker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-    use color_eyre::Result;
-
-    #[tokio::test]
-    async fn test_direct_proof_generation() -> Result<()> {
-        println!("Current working directory: {:?}", std::env::current_dir()?);
-
-        // Load files from the same paths as the requester
-        let r1cs_data_path = Path::new("../../contracts/test-proof-data/groth16/multiplier2.r1cs");
-        let wasm_path = Path::new("../../contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
-        let proof_inputs_file = File::open("../../contracts/test-proof-data/groth16/multiplier2_js/input.json").unwrap();
-
-        // Read the files
-        let r1cs = std::fs::read(r1cs_data_path).unwrap();
-        let wasm = std::fs::read(wasm_path).unwrap();
-        let input: Value = serde_json::from_reader(proof_inputs_file).unwrap();
-
-        // Create the ArkworksProofParams
-        let params = ArkworksProofParams { r1cs, wasm, input };
-
-        // Create worker and execute
-        let worker = ArkworksWorker::new();
-        println!("starting prover");
-        let result = worker.generate_proof(&params).await?;
-
-        println!("result: {:?}", result);
-        Ok(())
-    }
-}*/

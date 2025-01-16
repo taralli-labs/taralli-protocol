@@ -23,7 +23,7 @@ impl ProvingSystemInformation for ArkworksProofParams {
 
         // assert input structure is correct
 
-        // WIP
+        // WIP!
 
         // assert other things
         Ok(())

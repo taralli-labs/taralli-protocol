@@ -20,7 +20,7 @@ impl GnarkWorker {
         Self
     }
 
-    // WIP
+    // WIP also this
     fn format_opaque_submission(_proof: Vec<u8>, _public_inputs: Value) -> Result<Bytes> {
         Ok(Bytes::from(FixedBytes::<32>::ZERO))
     }

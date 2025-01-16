@@ -83,39 +83,3 @@ impl ComputeWorker for Risc0Worker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-
-    use std::path::Path;
-
-    use super::*;
-    use alloy::{primitives::U256, sol_types::SolValue};
-    use serde_json::Value;
-
-    #[tokio::test]
-    async fn test_risc0_worker_execution() -> Result<()> {
-        // 1. Load prover inputs
-        let elf_path = Path::new("../../contracts/test-proof-data/risc0/is-even");
-        let elf = std::fs::read(elf_path)?;
-
-        // 2. Prepare the input (an even number)
-        let input_number = U256::from(1304);
-        let input_bytes = input_number.abi_encode();
-
-        // 3. Create Risc0ProofParams
-        let vm_params = Risc0ProofParams {
-            elf,
-            inputs: Value::from(input_bytes),
-        };
-
-        // 5. Create and execute the worker
-        let worker = Risc0Worker::new(ProverOpts::groth16());
-
-        println!("execution starting");
-        // 6. Execute and handle the result
-        let proof_info = worker.generate_proof(&vm_params).await?;
-        println!("execution finished: {:?}", proof_info.receipt);
-        Ok(())
-    }
-}*/

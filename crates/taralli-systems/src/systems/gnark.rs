@@ -41,7 +41,7 @@ impl ProvingSystemInformation for GnarkProofParams {
             }
         }
 
-        // WIP
+        // WIP!
         // assert other things
         Ok(())
     }

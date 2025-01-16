@@ -31,6 +31,7 @@ where
         }
     }
 
+    // Few things commented here.
     pub fn analyze(
         &self,
         request: &ProofRequest<ProvingSystemParams>,
