@@ -1,5 +1,5 @@
 use crate::config::RewardTokenConfig;
-use crate::error::{RequesterError, RequesterResult};
+use crate::error::{RequesterError, Result};
 use crate::nonce_manager::Permit2NonceManager;
 use serde_json::Value;
 use taralli_primitives::alloy::{
@@ -13,7 +13,7 @@ use taralli_primitives::alloy::{
 use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::{OnChainProofRequest, Request};
 
-// TODO add in default builder patterns
+// TODO: add in default builder patterns
 //const DEFAULT_AUCTION_LENGTH: u32 = 300; // 5 minutes
 
 pub struct AuctionParameters<P: Into<U256>> {
@@ -89,7 +89,7 @@ where
     }
 
     /// return the RequestBuilder with the added permit2 nonce
-    pub async fn set_new_nonce(mut self) -> RequesterResult<Self> {
+    pub async fn set_new_nonce(mut self) -> Result<Self> {
         self.nonce = self
             .permit2_nonce_manager
             .get_nonce()
@@ -100,7 +100,7 @@ where
 
     /// return the RequestBuilder with the added auction timestamps based on auction length
     /// and the current latest block timestamp
-    pub async fn set_auction_timestamps_from_auction_length(mut self) -> RequesterResult<Self> {
+    pub async fn set_auction_timestamps_from_auction_length(mut self) -> Result<Self> {
         if self.auction_length == 0 {
             return Err(RequesterError::SetAuctionTimestampsError());
         }
@@ -194,7 +194,7 @@ where
     async fn calculate_timestamp_params_from_current_timestamp(
         &self,
         auction_length: u32,
-    ) -> RequesterResult<(u64, u64)> {
+    ) -> Result<(u64, u64)> {
         let latest_block = self
             .rpc_provider
             .get_block(BlockId::latest(), BlockTransactionsKind::Hashes)

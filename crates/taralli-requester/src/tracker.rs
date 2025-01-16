@@ -11,7 +11,7 @@ use taralli_primitives::alloy::{
     transports::Transport,
 };
 
-use crate::error::{RequesterError, RequesterResult};
+use crate::error::{RequesterError, Result};
 
 pub struct RequestTracker<T, P, N>
 where
@@ -44,7 +44,7 @@ where
         request_id: B256,
         auction_timeout: Duration,
         resolution_timeout: Duration,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         // track the auction
         // if auction result doesn't show up by end ts of auction, stop
         // if a successful bid event for the given request ID is seen, proceed
@@ -71,7 +71,7 @@ where
         &self,
         request_id: &B256,
         timeout: Duration,
-    ) -> RequesterResult<Option<Bid>> {
+    ) -> Result<Option<Bid>> {
         // Create an instance of the UniversalBombetta contract
         let market_contract =
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
@@ -131,7 +131,7 @@ where
         &self,
         request_id: &B256,
         timeout: Duration,
-    ) -> RequesterResult<Option<Resolve>> {
+    ) -> Result<Option<Resolve>> {
         // Implementation to watch the resolution for a specific request
         let market_contract =
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());

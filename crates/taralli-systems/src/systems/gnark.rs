@@ -21,7 +21,7 @@ pub struct GnarkProofParams {
 
 impl ProvingSystemInformation for GnarkProofParams {
     fn validate_prover_inputs(&self) -> Result<()> {
-        // Add validation logic specific to Arkworks
+        // TODO: Add validation logic specific to Gnark
         if self.r1cs.is_empty() {
             return Err(SystemsError::ProverInputsError(
                 "r1cs bytes cannot be empty".to_string(),
@@ -40,9 +40,6 @@ impl ProvingSystemInformation for GnarkProofParams {
                 // Validate Plonk/BLS12-381 specific requirements
             }
         }
-
-        // WIP
-        // assert other things
         Ok(())
     }
 

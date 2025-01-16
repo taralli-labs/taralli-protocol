@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 import "forge-std/Script.sol";
@@ -11,7 +11,7 @@ import "src/interfaces/IPermit2.sol";
 import "test/mocks/ERC20Mock.sol";
 
 contract Deploy is Script, Test {
-    // local anvil instance must fork from ethereum main-net for permit2
+    // default is Holesky testnet
     string RPC_URL = vm.envString("ETH_HOLESKY_RPC_URL");
     // Canonical Permit2 contract
     IPermit2 public immutable PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
@@ -23,13 +23,13 @@ contract Deploy is Script, Test {
 
         // deloy groth16 verifier for simple circuit
         SimpleGroth16Verifier groth16Verifier = new SimpleGroth16Verifier();
-        // deploy risc0 verifier for risc0 proof requests with corresponding control root & id
+        // deploy risc0 verifier for risc0 requests with corresponding control root & id
         string memory proofDataJson = vm.readFile("./test-proof-data/risc0/even-number-proof.json");
         bytes32 controlRoot = vm.parseJsonBytes32(proofDataJson, "$.control_root");
         bytes32 bn254ControlId = vm.parseJsonBytes32(proofDataJson, "$.bn254_control_id");
         RiscZeroGroth16Verifier risc0Verifier = new RiscZeroGroth16Verifier(controlRoot, bn254ControlId);
 
-        // deploy bombetta
+        // deploy bombetta market
         UniversalBombetta universalBombetta = new UniversalBombetta(PERMIT2);
         emit log_named_address("Universal Bombetta Address", address(universalBombetta));
 

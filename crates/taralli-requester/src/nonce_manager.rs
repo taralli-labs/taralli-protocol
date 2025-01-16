@@ -8,7 +8,7 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::utils::PERMIT2_ADDRESS;
 
-use crate::error::{RequesterError, RequesterResult};
+use crate::error::{RequesterError, Result};
 
 const U256_ONE: U256 = U256::from_limbs([1, 0, 0, 0]);
 const U256_256: U256 = U256::from_limbs([256, 0, 0, 0]);
@@ -36,7 +36,7 @@ where
         }
     }
 
-    pub async fn get_nonce(&mut self) -> RequesterResult<U256> {
+    pub async fn get_nonce(&mut self) -> Result<U256> {
         if let Some(nonce_cache) = self.nonce_cache {
             if let Ok(nonce) = self.find_unused_nonce(nonce_cache.0, nonce_cache.1) {
                 return Ok(nonce);
@@ -54,7 +54,7 @@ where
         &self,
         signer: Address,
         permit2: Permit2Instance<T, P, N>,
-    ) -> RequesterResult<(U256, U256)> {
+    ) -> Result<(U256, U256)> {
         let mut word_pos = U256::ZERO;
         loop {
             let bitmap = permit2
@@ -70,7 +70,7 @@ where
         }
     }
 
-    fn find_unused_nonce(&self, word_pos: U256, bitmap: U256) -> RequesterResult<U256> {
+    fn find_unused_nonce(&self, word_pos: U256, bitmap: U256) -> Result<U256> {
         for i in 0..256 {
             if bitmap & (U256_ONE << i) == U256::ZERO {
                 return Ok(word_pos * U256_256 + U256::from(i));

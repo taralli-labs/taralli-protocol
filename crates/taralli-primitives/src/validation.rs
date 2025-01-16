@@ -53,6 +53,7 @@ pub fn validate_verification_commitments<I: ProvingSystemInformation>(
         )?;
 
     if I::verifier_constraints() == verifier_details {
+        // TODO
         Ok(())
     } else {
         Err(PrimitivesError::ValidationError(

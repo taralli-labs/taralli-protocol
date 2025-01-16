@@ -96,7 +96,6 @@ run requester client(s)
 cargo run --example risc0_requester
 ```
 
+### Contributions
 
-
-
-
+[here](./docs/CONTRIBUTING.md)

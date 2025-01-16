@@ -25,7 +25,7 @@ pub struct AlignedLayerProofParams {
 // prover api
 impl ProvingSystemInformation for AlignedLayerProofParams {
     fn validate_prover_inputs(&self) -> Result<()> {
-        // WIP
+        // TODO:
         // check aligned layer params
 
         // Validate the underlying system's inputs

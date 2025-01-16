@@ -14,7 +14,7 @@ pub struct Risc0ProofParams {
 // prover api
 impl ProvingSystemInformation for Risc0ProofParams {
     fn validate_prover_inputs(&self) -> Result<()> {
-        // WIP
+        // TODO: 
         // check elf makes sense
         // check image id matches?
         // check other stuff

@@ -29,18 +29,19 @@ where
     P: Provider<T> + Clone,
     I: ProvingSystemInformation + Clone,
 {
+    // TODO: remove this async process from the validation execution of the server and use input parameter instead
     let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
 
     timeout(timeout_seconds, async {
-        validate_market_address(request, app_state.market_address())?;
         validate_proving_system_id(request, app_state.proving_system_ids())?;
+        validate_market_address(request, app_state.market_address())?;
+        validate_amount_constraints(maximum_allowed_stake, request)?;
         validate_time_constraints(
             latest_timestamp,
             minimum_allowed_proving_time,
             maximum_start_delay,
             request,
         )?;
-        validate_amount_constraints(maximum_allowed_stake, request)?;
         validate_signature(request)?;
         Ok(())
     })

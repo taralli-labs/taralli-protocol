@@ -8,7 +8,7 @@ pub mod tracker;
 use self::api::RequesterApi;
 use self::builder::RequestBuilder;
 use self::config::RequesterConfig;
-use self::error::{RequesterError, RequesterResult};
+use self::error::{RequesterError, Result};
 use self::tracker::RequestTracker;
 use std::time::Duration;
 use taralli_primitives::alloy::{
@@ -65,7 +65,7 @@ where
         &self,
         request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         validate_market_address(request, self.config.market_address)?;
         // TODO better design for time constraint checking
         //validate_time_constraints(
@@ -85,7 +85,7 @@ where
         &self,
         proof_request: Request<ProvingSystemParams>,
         auction_time_length: u64,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         // compute request id
         let request_id = compute_request_id(
             &proof_request.onchain_proof_request,
@@ -135,7 +135,7 @@ where
     pub async fn sign_request(
         &self,
         mut request: Request<ProvingSystemParams>,
-    ) -> RequesterResult<Request<ProvingSystemParams>> {
+    ) -> Result<Request<ProvingSystemParams>> {
         // compute witness
         let witness = compute_request_witness(&request.onchain_proof_request);
         // build permit2 digest

@@ -26,6 +26,7 @@ use wasmer::Store;
 #[derive(Default)]
 pub struct ArkworksWorker;
 
+/// TODO: make generic over any circuit
 impl ArkworksWorker {
     pub fn new() -> Self {
         Self

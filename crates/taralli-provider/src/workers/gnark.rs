@@ -15,12 +15,13 @@ use tempfile::NamedTempFile;
 #[derive(Default)]
 pub struct GnarkWorker;
 
+/// TODO: make generic over the 3 gnark schemes as well as any circuit within those 3 schemes.
+///       add generic onchain verification support.
 impl GnarkWorker {
     pub fn new() -> Self {
         Self
     }
 
-    // WIP
     fn format_opaque_submission(_proof: Vec<u8>, _public_inputs: Value) -> Result<Bytes> {
         Ok(Bytes::from(FixedBytes::<32>::ZERO))
     }

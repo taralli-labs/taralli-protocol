@@ -27,8 +27,6 @@ use ethers::signers::LocalWallet;
 
 use super::risc0::Risc0Worker;
 use super::sp1::Sp1Worker;
-//use aligned_sdk::sdk::{estimate_fee, get_nonce_from_ethereum};
-//use tokio::task;
 
 const ALIGNED_NETWORK: Network = Network::Holesky;
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com"; // holesky testnet batcher url

@@ -14,7 +14,7 @@ pub struct Sp1ProofParams {
 // prover api
 impl ProvingSystemInformation for Sp1ProofParams {
     fn validate_prover_inputs(&self) -> Result<()> {
-        // WIP
+        // TODO: 
         // check elf makes sense
         // check image id matches?
         // check other stuff

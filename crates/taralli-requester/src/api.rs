@@ -2,7 +2,7 @@ use reqwest::Client;
 use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
 use url::Url;
 
-use crate::error::{RequesterError, RequesterResult};
+use crate::error::{RequesterError, Result};
 
 pub struct RequesterApi {
     client: Client,
@@ -20,7 +20,7 @@ impl RequesterApi {
     pub async fn submit_request(
         &self,
         request: Request<ProvingSystemParams>,
-    ) -> RequesterResult<reqwest::Response> {
+    ) -> Result<reqwest::Response> {
         let submit_endpoint = self
             .server_url
             .join("/submit")

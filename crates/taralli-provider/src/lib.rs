@@ -165,7 +165,7 @@ where
 
         tracing::info!("latest block timesetamp fetched: {}", current_ts);
 
-        // (WIP) Statically analyze the request to determine what bid, if any, the client will aim for.
+        // analyze the validity and profitability of the request
         self.analyzer
             .analyze(&request, 0)
             .map_err(|e| ProviderError::RequestAnalysisError(e.to_string()))?;
