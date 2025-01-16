@@ -14,4 +14,3 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-dotenv = { workspace = true }

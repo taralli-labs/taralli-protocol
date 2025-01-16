@@ -29,4 +29,3 @@ hex = "0.4.3"
 [dev-dependencies]
 tower = { version = "0.5.1", features = ["util"] }
 hyper = "1.4.1"
-dotenv = "0.15.0"
