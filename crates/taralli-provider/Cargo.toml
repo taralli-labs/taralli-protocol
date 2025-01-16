@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-taralli-primitives = { path = "../taralli-primitives" }
+taralli-primitives = { workspace = true }
 alloy = { workspace = true }
-chrono = {workspace = true}
-serde = {workspace = true}
-serde_json = {workspace = true}
+chrono = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }
 reqwest = { workspace = true }
@@ -31,7 +31,7 @@ ark-bn254 = "0.5.0"
 ark-std = "0.5.0"
 ark-groth16 = "0.5.0"
 ark-crypto-primitives = "0.5.0"
-aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer", tag="v0.12.2" }
+aligned-sdk = { git = "https://github.com/yetanotherco/aligned_layer", tag = "v0.12.2" }
 bincode = "1.1.3"
 ethers = { version = "2.0", features = ["ws", "rustls", "eip712"] }
 tempfile = "3.14.0"
@@ -43,4 +43,3 @@ color-eyre = { workspace = true }
 anyhow = "1.0.86"
 dotenv = "0.15.0"
 k256 = "0.13.4"
-

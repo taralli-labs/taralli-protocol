@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/*"]
+members = [
+    "crates/taralli-primitives",
+    "crates/taralli-provider",
+    "crates/taralli-requester",
+    "crates/taralli-server",
+    "crates/taralli-systems",
+]
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"
@@ -14,14 +20,25 @@ all = "warn"
 
 [workspace.dependencies]
 taralli-systems = { path = "crates/taralli-systems" }
-alloy = { version = "0.8.0", default-features = false, features = ["full", "reqwest-rustls-tls"] }
+taralli-primitives = { path = "crates/taralli-primitives" }
+alloy = { version = "0.8.0", default-features = false, features = [
+    "full",
+    "reqwest-rustls-tls",
+] }
 tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros"] }
 serde_json = "1.0.117"
 serde = { version = "1.0.197", features = ["derive"] }
 chrono = "0.4.38"
 thiserror = "2.0.3"
-reqwest = { version = "0.12.2",  default-features = false, features = ["json", "stream", "rustls-tls"] }
-risc0-zkvm = { version = "1.1.2", default-features = false, features = ["client", "bonsai"] }
+reqwest = { version = "0.12.2", default-features = false, features = [
+    "json",
+    "stream",
+    "rustls-tls",
+] }
+risc0-zkvm = { version = "1.1.2", default-features = false, features = [
+    "client",
+    "bonsai",
+] }
 dotenv = "0.15.0"
 futures-util = "0.3.30"
 futures = "0.3.30"

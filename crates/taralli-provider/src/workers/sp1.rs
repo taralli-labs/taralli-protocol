@@ -97,7 +97,6 @@ impl ComputeWorker for Sp1Worker {
         })?;
 
         tracing::info!("prover execution finished");
-
         let opaque_submission = Self::format_opaque_submission(&sp1_proof, &vk)?;
         let partial_commitment = Self::compute_partial_commitment()?;
 

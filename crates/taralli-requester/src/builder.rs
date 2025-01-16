@@ -14,8 +14,6 @@ use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemPara
 use taralli_primitives::{OnChainProofRequest, Request};
 
 // TODO: add in default builder patterns
-//const DEFAULT_AUCTION_LENGTH: u32 = 300; // 5 minutes
-
 pub struct AuctionParameters<P: Into<U256>> {
     pub auction_len: u32,
     pub floor_price: P,
@@ -207,8 +205,6 @@ where
 
         Ok((start_auction_timestamp, end_auction_timestamp))
     }
-
-    // Low level builder functions ///
 
     pub fn set_auction_length(mut self, auction_length: u32) -> Self {
         self.auction_length = auction_length;

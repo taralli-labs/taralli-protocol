@@ -15,8 +15,8 @@ use crate::{config::AnalyzerConfig, error::Result};
 // decide wether or not the inbound proof request is `safe` and `profitable` to bid upon.
 // uses the bidder to submit the bid with a given target price if all the checks pass
 pub struct RequestAnalyzer<T, P, N> {
-    rpc_provider: P,
-    config: AnalyzerConfig,
+    _rpc_provider: P,
+    _config: AnalyzerConfig,
     phantom_data: PhantomData<(T, N)>,
 }
 
@@ -28,8 +28,8 @@ where
 {
     pub fn new(rpc_provider: P, config: AnalyzerConfig) -> Self {
         Self {
-            rpc_provider,
-            config,
+            _rpc_provider: rpc_provider,
+            _config: config,
             phantom_data: PhantomData,
         }
     }
@@ -50,7 +50,7 @@ where
     pub fn validate_request(
         &self,
         request: &Request<ProvingSystemParams>,
-        latest_timestamp: u64,
+        _latest_timestamp: u64,
     ) -> Result<()> {
         // all validation checks that are commented out with the exception of signature validation are trusted to 
         // be done before hand by the server as of now.
