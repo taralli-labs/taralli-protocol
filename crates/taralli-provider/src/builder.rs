@@ -106,7 +106,7 @@ where
 
     pub fn build(self) -> ProviderClient<T, P, N> {
         if self.workers.is_empty() {
-            panic!("No workers registered. Provider must support at least one proving system.");
+            panic!("No workers registered. Provider must support at least one system.");
         }
 
         let supported_systems: Vec<_> = self.workers.keys().cloned().collect();

@@ -9,18 +9,19 @@ use std::path::PathBuf;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tempfile::NamedTempFile;
 
 #[derive(Default)]
 pub struct GnarkWorker;
 
+/// TODO: make generic over the 3 gnark schemes as well as any circuit within those 3 schemes.
+///       add generic onchain verification support.
 impl GnarkWorker {
     pub fn new() -> Self {
         Self
     }
 
-    // WIP
     fn format_opaque_submission(_proof: Vec<u8>, _public_inputs: Value) -> Result<Bytes> {
         Ok(Bytes::from(FixedBytes::<32>::ZERO))
     }
@@ -98,8 +99,8 @@ impl GnarkWorker {
 
 #[async_trait]
 impl ComputeWorker for GnarkWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
-        log::info!("gnark worker: execution started");
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
+        tracing::info!("gnark worker: execution started");
 
         let params = match &request.proving_system_information {
             ProvingSystemParams::Gnark(params) => params.clone(),
@@ -123,15 +124,3 @@ impl ComputeWorker for GnarkWorker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-    use color_eyre::Result;
-
-    #[tokio::test]
-    async fn test_direct_proof_generation() -> Result<()> {
-
-    }
-}*/

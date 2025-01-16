@@ -19,13 +19,14 @@ use taralli_primitives::{
     },
     taralli_systems::id::ProvingSystemParams,
 };
-use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams, ProofRequest};
+use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams, Request};
 use tempfile::NamedTempFile;
 use wasmer::Store;
 
 #[derive(Default)]
 pub struct ArkworksWorker;
 
+/// TODO: make generic over any circuit
 impl ArkworksWorker {
     pub fn new() -> Self {
         Self
@@ -207,8 +208,8 @@ impl ArkworksWorker {
 
 #[async_trait]
 impl ComputeWorker for ArkworksWorker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
-        log::info!("arkworks worker: execution started");
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
+        tracing::info!("arkworks worker: execution started");
 
         let params = match &request.proving_system_information {
             ProvingSystemParams::Arkworks(params) => params.clone(),
@@ -231,36 +232,3 @@ impl ComputeWorker for ArkworksWorker {
         })
     }
 }
-
-/*#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::Path;
-    use color_eyre::Result;
-
-    #[tokio::test]
-    async fn test_direct_proof_generation() -> Result<()> {
-        println!("Current working directory: {:?}", std::env::current_dir()?);
-
-        // Load files from the same paths as the requester
-        let r1cs_data_path = Path::new("../../contracts/test-proof-data/groth16/multiplier2.r1cs");
-        let wasm_path = Path::new("../../contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
-        let proof_inputs_file = File::open("../../contracts/test-proof-data/groth16/multiplier2_js/input.json").unwrap();
-
-        // Read the files
-        let r1cs = std::fs::read(r1cs_data_path).unwrap();
-        let wasm = std::fs::read(wasm_path).unwrap();
-        let input: Value = serde_json::from_reader(proof_inputs_file).unwrap();
-
-        // Create the ArkworksProofParams
-        let params = ArkworksProofParams { r1cs, wasm, input };
-
-        // Create worker and execute
-        let worker = ArkworksWorker::new();
-        println!("starting prover");
-        let result = worker.generate_proof(&params).await?;
-
-        println!("result: {:?}", result);
-        Ok(())
-    }
-}*/

@@ -115,7 +115,6 @@ async fn main() -> Result<()> {
         DynSolValue::FixedBytes(risc0_image_id, 32),
         DynSolValue::Uint(proof_input, 256),
     ]);
-    // sha256(abi.encode(imageId, proofInputHash))
     let public_inputs_commitment_digest =
         Sha256::digest(public_inputs_commitment_preimage.abi_encode());
     let public_inputs_commitment = B256::from_slice(public_inputs_commitment_digest.as_slice());

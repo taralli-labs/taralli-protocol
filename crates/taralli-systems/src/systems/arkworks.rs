@@ -14,7 +14,7 @@ pub struct ArkworksProofParams {
 
 impl ProvingSystemInformation for ArkworksProofParams {
     fn validate_prover_inputs(&self) -> Result<()> {
-        // Add validation logic specific to Arkworks
+        // TODO: Add validation logic specific to Arkworks
         if self.r1cs.is_empty() || self.wasm.is_empty() {
             return Err(SystemsError::ProverInputsError(
                 "r1cs or wasm bytes cannot be empty".to_string(),
@@ -23,9 +23,6 @@ impl ProvingSystemInformation for ArkworksProofParams {
 
         // assert input structure is correct
 
-        // WIP
-
-        // assert other things
         Ok(())
     }
 
@@ -43,5 +40,3 @@ impl ProvingSystemInformation for ArkworksProofParams {
         }
     }
 }
-
-// verifier api

@@ -7,8 +7,6 @@ use taralli_primitives::alloy::{
     network::Ethereum, primitives::Address, providers::Provider, transports::Transport,
 };
 use taralli_primitives::taralli_systems::id::ProvingSystemId;
-// use std::collections::HashMap;
-// use taralli_primitives::abi::universal_bombetta::VerifierDetails;
 
 // Generic over the type of request so that we can change it later without
 // breaking the API
@@ -21,8 +19,6 @@ where
     subscription_manager: Arc<SubscriptionManager<M>>,
     market_address: Address,
     proving_system_ids: Vec<ProvingSystemId>,
-    //proving_system_commitments_ids: HashMap<String, Vec<String>>,
-    //verifier_details: Vec<VerifierDetails>,
     validation_timeout_seconds: Duration,
     minimum_allowed_proving_time: u32,
     maximum_allowed_start_delay: u32,
@@ -41,8 +37,6 @@ where
         subscription_manager: Arc<SubscriptionManager<M>>,
         market_address: Address,
         proving_system_ids: Vec<String>,
-        //proving_system_commitments_ids: HashMap<String, Vec<String>>,
-        //verifier_details: Vec<VerifierDetails>,
         minimum_allowed_proving_time: u32,
         maximum_allowed_start_delay: u32,
         maximum_allowed_stake: u128,
@@ -63,8 +57,6 @@ where
             subscription_manager,
             market_address,
             proving_system_ids,
-            //proving_system_commitments_ids,
-            //verifier_details,
             minimum_allowed_proving_time,
             maximum_allowed_start_delay,
             maximum_allowed_stake,
@@ -88,16 +80,6 @@ where
     pub fn proving_system_ids(&self) -> Vec<ProvingSystemId> {
         self.proving_system_ids.clone()
     }
-
-    // pub fn proving_system_commitments_ids(&self, proving_system_id: &str) -> Option<Vec<String>> {
-    //     self.proving_system_commitments_ids
-    //         .get(proving_system_id)
-    //         .cloned()
-    // }
-
-    // pub fn verifier_details(&self) -> Vec<VerifierDetails> {
-    //     self.verifier_details.clone()
-    // }
 
     pub fn minimum_allowed_proving_time(&self) -> u32 {
         self.minimum_allowed_proving_time

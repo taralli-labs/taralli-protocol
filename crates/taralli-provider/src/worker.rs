@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceRequirements {
@@ -21,7 +21,7 @@ pub struct WorkResult {
 
 #[async_trait]
 pub trait ComputeWorker: Send + Sync {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult>;
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult>;
 }
 
 pub(crate) struct WorkerManager {
@@ -35,7 +35,7 @@ impl WorkerManager {
 
     pub(crate) async fn execute(
         &self,
-        request: &ProofRequest<ProvingSystemParams>,
+        request: &Request<ProvingSystemParams>,
     ) -> Result<WorkResult> {
         let worker = self
             .workers

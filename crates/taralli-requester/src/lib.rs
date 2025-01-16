@@ -8,7 +8,7 @@ pub mod tracker;
 use self::api::RequesterApi;
 use self::builder::RequestBuilder;
 use self::config::RequesterConfig;
-use self::error::{RequesterError, RequesterResult};
+use self::error::{RequesterError, Result};
 use self::tracker::RequestTracker;
 use std::time::Duration;
 use taralli_primitives::alloy::{
@@ -21,7 +21,7 @@ use taralli_primitives::utils::{
 use taralli_primitives::validation::{
     validate_amount_constraints, validate_market_address, validate_signature,
 };
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 
 pub struct RequesterClient<T, P, N, S>
 where
@@ -49,7 +49,7 @@ where
             config.rpc_provider.clone(),
             config.signer.address(),
             config.market_address,
-            config.proving_system_id.clone(),
+            config.proving_system_id,
         );
         let tracker = RequestTracker::new(config.rpc_provider.clone(), config.market_address);
 
@@ -63,9 +63,9 @@ where
 
     pub fn validate_request(
         &self,
-        request: &ProofRequest<ProvingSystemParams>,
+        request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         validate_market_address(request, self.config.market_address)?;
         // TODO better design for time constraint checking
         //validate_time_constraints(
@@ -83,9 +83,9 @@ where
     /// then start tracking the request auction and resolution on-chain.
     pub async fn submit_and_track_request(
         &self,
-        proof_request: ProofRequest<ProvingSystemParams>,
+        proof_request: Request<ProvingSystemParams>,
         auction_time_length: u64,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         // compute request id
         let request_id = compute_request_id(
             &proof_request.onchain_proof_request,
@@ -96,8 +96,8 @@ where
         let resolve_deadline = proof_request.onchain_proof_request.endAuctionTimestamp
             + proof_request.onchain_proof_request.provingTime as u64;
 
-        log::info!("submitting request to server");
-        log::info!("request ID: {}", request_id);
+        tracing::info!("submitting request to server");
+        tracing::info!("request ID: {}", request_id);
 
         // submit signed request to server
         let response = self
@@ -108,7 +108,7 @@ where
 
         // track the request
         if response.status().is_success() {
-            log::info!("submission success, tracking started");
+            tracing::info!("submission success, tracking started");
             self.tracker
                 .track_request(
                     request_id,
@@ -117,7 +117,7 @@ where
                 )
                 .await
                 .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-            log::info!("tracking complete");
+            tracing::info!("tracking complete");
             Ok(())
         } else {
             // Parse the error response
@@ -134,8 +134,8 @@ where
 
     pub async fn sign_request(
         &self,
-        mut request: ProofRequest<ProvingSystemParams>,
-    ) -> RequesterResult<ProofRequest<ProvingSystemParams>> {
+        mut request: Request<ProvingSystemParams>,
+    ) -> Result<Request<ProvingSystemParams>> {
         // compute witness
         let witness = compute_request_witness(&request.onchain_proof_request);
         // build permit2 digest

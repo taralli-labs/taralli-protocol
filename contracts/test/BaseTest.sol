@@ -5,7 +5,6 @@ import "forge-std/Test.sol";
 import "src/UniversalBombetta.sol";
 import "src/verifiers/SimpleGroth16Verifier.sol";
 import "src/interfaces/IPermit2.sol";
-import "src/interfaces/IGroth16Verifier.sol";
 import "src/libraries/BombettaTypes.sol";
 import "./mocks/ERC20Mock.sol";
 

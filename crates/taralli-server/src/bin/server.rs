@@ -8,7 +8,7 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, ProofRequest};
+use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
 use taralli_server::{
     app_state::AppState,
     config::Config,
@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
         .init();
 
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
-    let subscription_manager: Arc<SubscriptionManager<ProofRequest<ProvingSystemParams>>> =
+    let subscription_manager: Arc<SubscriptionManager<Request<ProvingSystemParams>>> =
         Default::default();
 
     // initialize state
@@ -42,8 +42,6 @@ async fn main() -> Result<()> {
         subscription_manager,
         config.market_address,
         config.proving_system_ids,
-        //config.proving_system_commitment_ids,
-        //config.verifier_details,
         config.minimum_allowed_proving_time,
         config.maximum_allowed_start_delay,
         config.maximum_allowed_stake,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
 /// @notice Represents an opaque request for a proof to be generated.

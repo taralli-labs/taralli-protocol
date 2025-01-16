@@ -11,7 +11,7 @@ use taralli_primitives::alloy::{
     transports::Transport,
 };
 
-use crate::error::{RequesterError, RequesterResult};
+use crate::error::{RequesterError, Result};
 
 pub struct RequestTracker<T, P, N>
 where
@@ -44,11 +44,11 @@ where
         request_id: B256,
         auction_timeout: Duration,
         resolution_timeout: Duration,
-    ) -> RequesterResult<()> {
+    ) -> Result<()> {
         // track the auction
         // if auction result doesn't show up by end ts of auction, stop
         // if a successful bid event for the given request ID is seen, proceed
-        log::info!("watching auction");
+        tracing::info!("watching auction");
         let _auction_event = self
             .watch_auction(&request_id, auction_timeout)
             .await
@@ -57,7 +57,7 @@ where
 
         // track the resolution of the request until provingDeadline
         // if by the provingDeadline no resolution event is seen, send the slash txs
-        log::info!("watching resolution");
+        tracing::info!("watching resolution");
         let _resolution_event = self
             .watch_resolution(&request_id, resolution_timeout)
             .await?;
@@ -67,11 +67,7 @@ where
         Ok(())
     }
 
-    pub async fn watch_auction(
-        &self,
-        request_id: &B256,
-        timeout: Duration,
-    ) -> RequesterResult<Option<Bid>> {
+    pub async fn watch_auction(&self, request_id: &B256, timeout: Duration) -> Result<Option<Bid>> {
         // Create an instance of the UniversalBombetta contract
         let market_contract =
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
@@ -100,7 +96,7 @@ where
                     }
                     Err(e) => {
                         // Log the error but continue watching
-                        log::error!("Error processing log: {:?}", e);
+                        tracing::error!("Error processing log: {:?}", e);
                     }
                 }
             }
@@ -110,18 +106,18 @@ where
 
         match result {
             Ok(Some(bid_event)) => {
-                log::info!("Bid event found: {:?}", bid_event);
+                tracing::info!("Bid event found: {:?}", bid_event);
                 Ok(Some(bid_event))
             }
             Ok(None) => {
-                log::info!(
+                tracing::info!(
                     "No matching bid event found for request ID: {:?}",
                     request_id
                 );
                 Ok(None)
             }
             Err(_) => {
-                log::info!("Auction watching timed out.");
+                tracing::info!("Auction watching timed out.");
                 Ok(None)
             }
         }
@@ -131,7 +127,7 @@ where
         &self,
         request_id: &B256,
         timeout: Duration,
-    ) -> RequesterResult<Option<Resolve>> {
+    ) -> Result<Option<Resolve>> {
         // Implementation to watch the resolution for a specific request
         let market_contract =
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
@@ -160,7 +156,7 @@ where
                     }
                     Err(e) => {
                         // Log the error but continue watching
-                        log::error!("Error processing log: {:?}", e);
+                        tracing::error!("Error processing log: {:?}", e);
                     }
                 }
             }
@@ -170,18 +166,18 @@ where
 
         match result {
             Ok(Some(resolve_event)) => {
-                log::info!("Resolve event found: {:?}", resolve_event);
+                tracing::info!("Resolve event found: {:?}", resolve_event);
                 Ok(Some(resolve_event))
             }
             Ok(None) => {
-                log::info!(
+                tracing::info!(
                     "No matching resolve event found for request ID: {:?}",
                     request_id
                 );
                 Ok(None)
             }
             Err(_) => {
-                log::info!("Resolution watching timed out.");
+                tracing::info!("Resolution watching timed out.");
                 Ok(None)
             }
         }

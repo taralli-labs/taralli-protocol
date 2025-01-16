@@ -1,3 +1,16 @@
+//! Core types and traits for the Taralli protocol
+//!
+//! This module re-exports commonly used types from alloy-primitives
+//! to ensure version compatibility and provide a single source of truth.
+
+pub mod alloy {
+    pub mod primitives {
+        pub use alloy::primitives::{
+            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, U256,
+        };
+    }
+}
+
 use crate::error::Result;
 use alloy::primitives::{Address, FixedBytes, U256};
 use serde::Serialize;

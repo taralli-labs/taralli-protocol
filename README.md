@@ -1,27 +1,64 @@
 # Taralli Protocol
 
-The current prototype hosts a simple auction on a server and allows for multiple provers to watch
-for requests in the request pool and to bid in the auction
+## Overview
 
-## Setup local dev environment
+Taralli protocol is a verifiable compute marketplace built on top of ethereum. The current prototype is described by this [design doc](./docs/taralli-design.md) with plans to maintain and update the specification of the protocol as features are added. The protocol is currently in active development and not ready for production use.
 
-### environment setup
+### Protocol Components
+
+**`smart contracts`**
+
+- [Bombetta](./contracts/src/Bombetta.sol): The generic standard for bombetta marketplace contracts to implement.
+- [UniversalBombetta](./contracts/src/UniversalBombetta.sol): Implementation of the bombetta marketplace standard.
+
+**`protocol crates`**
+
+- [systems](./crates/taralli-systems/): defines types for existing systems and their respective IDs by which requests/offers for/of compute using these systems can be made.
+- [primitives](./crates/taralli-primitives/): defines shared types and functionality that is used across the protocol server as well as clients to interact with the protocol.
+- [protocol server](./crates/taralli-server/): rust axum api server that facilitates the communication of requests/offers for/of compute between protocol clients.
+- [requester client](./crates/taralli-requester/): rust program for creating, submitting and tracking requests.
+- [provider client](./crates/taralli-provider/): rust program for monitoring incoming requests from the protocol server, selecting requests, processing requests, and resolving requests.
+
+### Roadmap
+
+A full roadmap doc is provided [here](./docs/roadmap.md) outlining what changes and additions will be made to the protocol in list of priority.
+
+## Pre-requisites
+
+- [rust](https://www.rust-lang.org/tools/install)
+- [foundry](https://book.getfoundry.sh/getting-started/installation)
+
+## Setup
+
+### env
 
 root .env
 ```
-SERVER_PORT=3000
-SERVER_URL="http://localhost:3000"
-RPC_URL="http://localhost:8545"
-LOG_LEVEL="info"
+SERVER_URL= required for clients
+RPC_URL= required for server and clients
+REQUESTER_PRIVATE_KEY= required for clients
+PROVIDER_PRIVATE_KEY= required for clients
+RISC0_PROVER=prove
+BONSAI_API_URL=https://api.bonsai.xyz/
+BONSAI_API_KEY= required for using risc0 bonsai api
 ```
 contracts/ .env
 ```
 ETH_MAINNET_RPC_URL=
-ETH_HOLESKY_RPC_URL="needed"
-ETH_LOCAL_RPC_URL="needed"
+ETH_HOLESKY_RPC_URL= works with existing deploy script
+ETH_LOCAL_RPC_URL=
 TESTNET_PRIVATE_KEY=
-LOCAL_PRIVATE_KEY="needed"
+LOCAL_PRIVATE_KEY=
 ```
+
+NOTE: 
+If you want to get the whole protocol running locally excluding the contracts/chain, the quickest/easiest way is to use holesky RPCs + the existing holesky deployment addresses [here](./contracts/deployments.json) or redeploy your own version of the contracts to holesky using existing forge script.
+
+You can also create a local anvil fork of the holesky network and that works too.
+
+### server config
+
+an example server config can be found [here](./example_server_config.json). The preexisting systems the server uses are defined by the `proving_system_ids` field.
 
 ### Build
 
@@ -36,66 +73,29 @@ build cargo workspace
 cargo build
  ```
 
-### start anvil
+### Deploy Contracts
+This command deploys the contracts to holesky by default but any eth rpc will work. Just be mindful that permit2 is required and certain external contracts are needed for client workflows
 ```bash
-just start_anvil
+forge script Deploy --broadcast
 ```
 
-### deploy contracts to anvil fork
-```bash
-just mock_deploy_contracts
-```
-```bash
-just deploy_contracts
-```
+## Run
 
-### update market address in server config
+run taralli server
 ```bash
-just update_market_addresses
+cargo run --bin server
 ```
 
-### start taralli server (crates/taralli-server/bin)
+run provider client(s)
 ```bash
-just start_server
+cargo run --example risc0_provider
 ```
 
-### Client example runner commands (crates/taralli-client/examples)
-send create market request to server
+run requester client(s)
 ```bash
-just create_market
+cargo run --example risc0_requester
 ```
 
-send delete market request to server
-```bash
-just delete_market
-```
+### Contributions
 
-send simple proof request to server
-```bash
-just simple_request
-```
-
-send subscribe market request to server
-```bash
-just subscribe_market
-```
-
-### formatting & linting
-format rust code
-```bash
-just format
-```
-lint rust code (requires changes to be staged, e.g. `git add`)
-```bash
-just lint
-```
-format smart contracts
-```bash
-just format_sol
-```
-
-
-
-
-
-
+[here](./docs/CONTRIBUTING.md)

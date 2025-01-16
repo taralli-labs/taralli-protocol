@@ -8,7 +8,7 @@ use taralli_systems::{id::ProvingSystemId, ProvingSystemInformation};
 pub type OnChainProofRequest = UniversalBombetta::ProofRequest;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ProofRequest<I: ProvingSystemInformation> {
+pub struct Request<I: ProvingSystemInformation> {
     pub proving_system_id: ProvingSystemId,
     pub proving_system_information: I,
     pub onchain_proof_request: OnChainProofRequest,

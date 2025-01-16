@@ -5,7 +5,7 @@ use axum::{
 };
 use futures::stream::StreamExt;
 use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::app_state::AppState;
@@ -15,10 +15,10 @@ pub async fn subscribe_handler<
     P: Provider<T> + Clone,
     I: ProvingSystemInformation + Clone,
 >(
-    app_state: State<AppState<T, P, ProofRequest<I>>>,
+    app_state: State<AppState<T, P, Request<I>>>,
 ) -> Sse<impl futures::Stream<Item = Result<Event, axum::Error>>> {
     let recv_new = app_state.subscription_manager().add_subscription();
-    log::info!(
+    tracing::info!(
         "subscription has been added, receiver count: {}",
         app_state.subscription_manager().active_subscriptions()
     );

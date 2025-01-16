@@ -22,6 +22,7 @@ use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
+/// TODO: complete aligned layer support for all 3 sub systems, gnark is incomplete
 #[tokio::main]
 async fn main() -> Result<()> {
     // setup tracing for client execution
@@ -58,7 +59,7 @@ async fn main() -> Result<()> {
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
     let auction_length = 60u32; // 1 min
-    let verifier_address = address!("6bE05b2634182f99b859f9F616426DbF7A413041");
+    let verifier_address = address!("58F280BeBE9B34c9939C3C39e0890C81f163B623");
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("5fe24f23");
     let public_inputs_offset = U256::from(256);
     let public_inputs_length = U256::from(64);

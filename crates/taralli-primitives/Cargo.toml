@@ -2,7 +2,6 @@
 name = "taralli-primitives"
 version = "0.1.0"
 edition = "2021"
-# build = "build.rs"
 
 [dependencies]
 alloy = { workspace = true }
@@ -10,9 +9,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 taralli-systems = { workspace = true }
-lazy_static = "1.5.0"
-async-trait = "0.1.83"
+lazy_static = { workspace = true }
+async-trait = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-dotenv = "0.15.0"

@@ -8,7 +8,7 @@ use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::taralli_systems::systems::sp1::Sp1ProofParams;
-use taralli_primitives::ProofRequest;
+use taralli_primitives::Request;
 
 pub struct Sp1Worker {
     prover_client: ProverClient,
@@ -80,7 +80,7 @@ impl Sp1Worker {
 
 #[async_trait]
 impl ComputeWorker for Sp1Worker {
-    async fn execute(&self, request: &ProofRequest<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
         let params = match &request.proving_system_information {
             ProvingSystemParams::Sp1(params) => params.clone(),
@@ -91,13 +91,12 @@ impl ComputeWorker for Sp1Worker {
             }
         };
 
-        log::info!("Sp1 worker: execution started");
+        tracing::info!("Sp1 worker: execution started");
         let (sp1_proof, vk) = self.generate_proof(&params).map_err(|e| {
             ProviderError::WorkerExecutionFailed(format!("Failed to generate proof: {}", e))
         })?;
 
-        log::info!("prover execution finished");
-
+        tracing::info!("prover execution finished");
         let opaque_submission = Self::format_opaque_submission(&sp1_proof, &vk)?;
         let partial_commitment = Self::compute_partial_commitment()?;
 

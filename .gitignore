@@ -6,8 +6,5 @@
 data/
 .cursorignore
 *.hex
-
-# omit secrets but leave secrets catalogue
-secrets/*
-!secrets/README.md
 anvil_state.json
+config.json

@@ -35,4 +35,4 @@ pub enum RequesterError {
     PrimitivesError(#[from] PrimitivesError),
 }
 
-pub type RequesterResult<T> = Result<T, RequesterError>;
+pub type Result<T> = core::result::Result<T, RequesterError>;
