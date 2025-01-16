@@ -67,11 +67,7 @@ where
         Ok(())
     }
 
-    pub async fn watch_auction(
-        &self,
-        request_id: &B256,
-        timeout: Duration,
-    ) -> Result<Option<Bid>> {
+    pub async fn watch_auction(&self, request_id: &B256, timeout: Duration) -> Result<Option<Bid>> {
         // Create an instance of the UniversalBombetta contract
         let market_contract =
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());

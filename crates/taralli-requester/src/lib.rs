@@ -49,7 +49,7 @@ where
             config.rpc_provider.clone(),
             config.signer.address(),
             config.market_address,
-            config.proving_system_id.clone(),
+            config.proving_system_id,
         );
         let tracker = RequestTracker::new(config.rpc_provider.clone(), config.market_address);
 

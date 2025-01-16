@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 use taralli_primitives::taralli_systems::id::ProvingSystemParams;
 use taralli_primitives::validation::{
-    validate_nonce, validate_proving_system_information, validate_signature, validate_verification_commitments 
+    validate_nonce, validate_proving_system_information, validate_signature,
+    validate_verification_commitments,
 };
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
@@ -52,7 +53,7 @@ where
         request: &Request<ProvingSystemParams>,
         _latest_timestamp: u64,
     ) -> Result<()> {
-        // all validation checks that are commented out with the exception of signature validation are trusted to 
+        // all validation checks that are commented out with the exception of signature validation are trusted to
         // be done before hand by the server as of now.
 
         //validate_proving_system_id(request, proving_system_ids)?;
