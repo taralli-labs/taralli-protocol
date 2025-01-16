@@ -29,7 +29,7 @@ jobs:
       run: cargo +nightly fmt -- --check
 
     - name: Run clippy
-      run: cargo +nightly clippy --frozen -- -W clippy::perf
+      run: cargo +nightly clippy -- -W clippy::perf
 
     - name: Install cargo-udeps
       run: cargo install cargo-udeps --locked
