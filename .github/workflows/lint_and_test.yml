@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,18 +22,39 @@ jobs:
       uses: dtolnay/rust-toolchain@nightly
       with:
         components: rustfmt, clippy
-    
+
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
-
-    - name: Run build
-      run: cargo build --verbose
 
     - name: Run fmt
       run: cargo +nightly fmt -- --check
 
     - name: Run clippy
       run: cargo +nightly clippy -- -W clippy::perf
+
+    - name: Install cargo-udeps
+      run: cargo install cargo-udeps
+
+    - name: Run cargo udeps (strict for main)
+      run: |
+        if [ "${{ github.ref_name }}" = "main" ]; then
+          cargo +nightly udeps --all-targets
+        else
+          cargo +nightly udeps --all-targets || true
+        fi
+
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Rust (nightly)
+      uses: dtolnay/rust-toolchain@nightly
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
 
     - name: Run tests
       run: cargo test --verbose
