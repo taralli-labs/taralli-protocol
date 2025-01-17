@@ -13,6 +13,9 @@ pub struct ProviderApi {
     server_url: Url,
 }
 
+type StreamResult =
+    Result<Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>>;
+
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
         Self {
@@ -20,9 +23,7 @@ impl ProviderApi {
         }
     }
 
-    pub fn subscribe_to_markets(
-        &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>> {
+    pub fn subscribe_to_markets(&self) -> StreamResult {
         // Attempt to join the URL, log error if it fails
         let url = self
             .server_url
