@@ -14,10 +14,10 @@ use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
+use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
-use taralli_systems::id::ProvingSystemId;
-use taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
 
     // craft proving system information json here
     let proof_info = serde_json::to_value(GnarkProofParams {
-        scheme_config: GnarkSchemeConfig::Groth16Bn254,
+        scheme_config: GnarkConfig::Groth16Bn254,
         r1cs,
         public_inputs: public_inputs.clone(),
         input,
@@ -155,7 +155,7 @@ async fn main() -> Result<()> {
     let signed_request = requester.sign_request(proof_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request, 0)?;
+    requester.validate_request(&signed_request)?;
 
     // TODO: Add a retry policy
     requester

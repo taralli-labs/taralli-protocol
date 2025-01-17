@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use risc0_zkvm::{default_prover, ExecutorEnv, ProveInfo, ProverOpts, Receipt};
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 
 pub struct Risc0Worker {

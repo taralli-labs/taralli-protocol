@@ -6,8 +6,8 @@ use risc0_zkvm::{
 };
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 use tokio::task;
 

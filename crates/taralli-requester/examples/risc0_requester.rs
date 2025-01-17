@@ -11,10 +11,10 @@ use std::env;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
+use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
-use taralli_systems::id::ProvingSystemId;
-use taralli_systems::systems::risc0::Risc0ProofParams;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -150,7 +150,7 @@ async fn main() -> Result<()> {
     let signed_request = requester.sign_request(proof_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request, 0)?;
+    requester.validate_request(&signed_request)?;
 
     // TODO: Add a retry policy
     requester

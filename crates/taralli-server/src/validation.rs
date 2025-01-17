@@ -8,20 +8,14 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
-use taralli_primitives::validation::{
-    validate_amount_constraints, validate_market_address, validate_proving_system_id,
-    validate_signature, validate_time_constraints,
-};
+use taralli_primitives::systems::ProvingSystemInformation;
+use taralli_primitives::validation::validate_request;
 use taralli_primitives::Request;
 use tokio::time::timeout;
 
 pub async fn validate_proof_request<T, P, I>(
     request: &Request<I>,
     app_state: &State<AppState<T, P, Request<I>>>,
-    minimum_allowed_proving_time: u32,
-    maximum_start_delay: u32,
-    maximum_allowed_stake: u128,
     timeout_seconds: Duration,
 ) -> Result<()>
 where
@@ -33,16 +27,15 @@ where
     let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
 
     timeout(timeout_seconds, async {
-        validate_proving_system_id(request, app_state.proving_system_ids())?;
-        validate_market_address(request, app_state.market_address())?;
-        validate_amount_constraints(maximum_allowed_stake, request)?;
-        validate_time_constraints(
-            latest_timestamp,
-            minimum_allowed_proving_time,
-            maximum_start_delay,
+        validate_request(
             request,
+            latest_timestamp,
+            &app_state.market_address(),
+            app_state.minimum_allowed_proving_time(),
+            app_state.maximum_allowed_start_delay(),
+            app_state.maximum_allowed_stake(),
+            &app_state.supported_proving_systems(),
         )?;
-        validate_signature(request)?;
         Ok(())
     })
     .await

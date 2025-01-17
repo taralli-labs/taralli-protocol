@@ -10,7 +10,7 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
+use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::{OnChainProofRequest, Request};
 
 // TODO: add in default builder patterns

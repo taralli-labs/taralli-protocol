@@ -1,5 +1,5 @@
 use reqwest::Client;
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
+use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
 use crate::error::{RequesterError, Result};

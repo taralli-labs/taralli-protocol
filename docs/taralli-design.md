@@ -5,11 +5,10 @@
 The taralli protocol is made up of 6 main components.
 
 1. Bombetta marketplace smart contract(s)
-2. Taralli systems
-3. Taralli primitives
-4. Taralli server
-5. Taralli provider client
-6. Taralli requester client
+2. Taralli primitives
+3. Taralli server
+4. Taralli provider client
+5. Taralli requester client
 
 Currently many parts of the protocol are complete but in pre-alpha/alpha stage with minimal testing as well as some parts being incomplete and still a work in progress. Keep that in mind, all this software is provided as is with no guarantees. For more information on future plans read the [roadmap doc](./roadmap.md).
 
@@ -18,17 +17,17 @@ Currently many parts of the protocol are complete but in pre-alpha/alpha stage w
 - [Bombetta specification](../contracts/docs/bombetta_spec.md)
 - [universalBombetta specification](../contracts/docs/universal_bombetta_spec.md)
 
-### --- Taralli Systems ---
-
-Taralli systems is the crate that defines all "systems" known by the users of the taralli protocol by their respective IDs. Requester clients and/or provider clients can use these types to verbosely describe the computational workload they are requesting/offering to willing buyers. Thus, allowing other parties looking at these data structures at runtime through the protocol's clients to assess their value in order to effectively/quickly check their correctness in place using compile time guarantees from the system types and minimize any runtime analysis that might be needed. Although, system specifications though the taralli systems crate are not necessarily a requirement for using the protocol it is very practical and highly advised to allow the bidding party (requesters & providers) some way, before they take risk by engaging in the auction to secure the request/offer, to have as close to 100% confidence as possible that what compute workload they are buying is what they are indeed trying to buy.
-
-The process to add a new system into the taralli protocol systems crate is as simple as including the addition of the new rust module implementing the system's ProvingSystemInformation trait across a given struct which includes the desried inputs for the computational workload, the prover that validates the compute workload was performed correctly, and the verifier constraints for where/how the proof of computation will be verified in the resolution of the request/offer.
-
-NOTE: Right now only "requests" are supported by the protocol across various systems with plans to add support for "offers" as soon as possible. Reference the roadmap for more info.
-
 ### --- Taralli Primitives ---
 
-Taralli primitives contains types & utilities that are shared between the server and the clients.
+Taralli primitives contains traits/types describing each supported system as well as types/utilities that are shared between the server and the clients.
+
+#### Systems
+
+All systems known by the users of the taralli protocol are organized by their respective IDs within the primitive crate's systems module. Requester clients and/or provider clients can use these types to verbosely describe the computational workload they are requesting/offering to willing buyers. Thus, allowing other parties looking at these data structures at runtime through the protocol's clients to assess their correctness/value. This in order to minimize any runtime analysis that might be needed by opposing parties. Although, system specifications through the primitives crate are not necessarily a requirement for using the protocol it is very practical and highly advised to allow the bidding party (requesters & providers) some way, before they take risk by engaging in an auction to secure the request/offer, to have as close to 100% confidence the request/offer represents what they are wlling to participate in. This goes for both requester as well as provider clients looking to buy/sell specific compute workloads.
+
+The process to add a new system into the taralli protocol systems crate is to include the addition of the new rust module implementing the system's ProvingSystemInformation trait across a given struct which includes the desired inputs for the computational workload, the prover software that validates the compute workload was performed correctly, and the verifier constraints for where/how the proof of computation will be verified in the resolution of the request/offer onchain.
+
+#### Requests
 
 Taralli Primitive's type `Request` describes the exact structure of the request data that is submitted to the server's
 submit api endpoint by requester clients and broadcasted through the Server Side Events (SSE) streams to corresponding subscribers who are listening 
@@ -52,7 +51,7 @@ pub struct Request<I: ProvingSystemInformation> {
 `Request` is made up of the below types
 
 ```rust
-/// ProvingSystemId is enum constructed within the taralli systems id.rs proving_systems! macro
+/// ProvingSystemId is enum constructed within the taralli primitives id.rs proving_systems! macro
 /// this creates an enum variant and string value that represents the system, as well as includes
 /// its associated prover parameters
 proving_systems! {
@@ -64,7 +63,7 @@ proving_systems! {
     // insert new system(s) here
 }
 
-/// ProvingSystemInformation is the trait impl'd over each systems input parameter struct
+/// ProvingSystemInformation is the trait impl'd over each systems' input parameter struct
 /// describing its expected structure, validation logic and also the verifier constraints
 /// for how the compute workload will be verified
 pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
@@ -93,7 +92,9 @@ pub struct ProofRequest {
 }
 ```
 
-The support for requests is detailed above. The support for orders is a WIP and will added soon along with all necessary high level logic and type information. Reference the roadmap doc for more info.
+#### Offers
+
+The support for requests is detailed above. The support for offers is a WIP and will be added soon along with all necessary high level logic and type information. Reference the roadmap doc for more info.
 
 ### --- Taralli Server ---
 
@@ -110,7 +111,7 @@ NOTE: In the future submit will also be used to handle order submissions by prov
 ##### Validation Overview:
 
 NOTE: some of these validation criteria are currently performed/not performed by the taralli protocol server before gossiping 
-the requests/orders to the market participants. This feature of the server validating submissions is open to interpretation 
+the requests/offers to the market participants. This feature of the server validating submissions is open to interpretation 
 and will change overtime as to find a good middle ground between allowing clients to trust the server to save them some time 
 having to re-validate common attributes of submissions while at the same time not limiting the server's throughput by loading 
 it up with many complex validation tasks before simply gossiping the data to clients and allowing clients to do their own validation.
@@ -155,7 +156,7 @@ deadline. Then later resolve the request using the market's resolve() function t
 #### Viewing Offers
 
 A method by which requesting parties looking for specific compute services can view real time available offers being submitted is a work in progress 
-along with the rest of the implementation detail of protocol support for orders. Read the roadmap doc for more info.
+along with the rest of the implementation detail of protocol support for offers. Read the roadmap doc for more info.
 
 #### Server Technical Overview
 
@@ -257,8 +258,8 @@ details in the extraData field of the OnChainProofRequest to make the request to
 
 use the `request builder`
 
-- `proving_system_id` obtained by taralli systems crate definitions
-- `proving_system_information` also obtained by taralli systems crate definitions
+- `proving_system_id` obtained by taralli primitives crate system definitions
+- `proving_system_information` also obtained by taralli primitives crate system definitions
 
 Once the proving system information type has been laid out, the requester fills in the necessary data for this struct using whatever tools necessary given their
 understanding of the compute request they are making to give the provider the necessary information they need to perform the compute task and prove it in the process.
@@ -269,7 +270,7 @@ understanding of the compute request they are making to give the provider the ne
 
 use the provider client
 
-- using proving system id(s) for each market from taralli systems as input, call the subscribe endpoint of the server and receive an SSE stream back.
+- using proving system id(s) for each market from taralli primitives as input, call the subscribe endpoint of the server and receive an SSE stream back.
 
 ##### High level requirements needed to check request viability
 
@@ -335,6 +336,6 @@ The above design doc outlines the taralli protocol's 2 core users, the `requeste
 and `providers` who are looking to sell compute through this marketplace.
 
 - The core smart contract protocol (bombetta market and potentially future market contracts) allows for programmatically defined economic agreements over compute workloads between the 2 parties in a permission-less manor and/or a manor that accepts the underlying security assumptions of the blockchain/smart contracts it executes on.
-- The protocol server which is a simple centralized method by which to communicate the requests/orders offchain from one party to another so they can decide what to do them. (In the future we have plans to remove the server as a central point of failure/trust and will replace it with something more decentralized/permission-less)
+- The protocol server which is a simple centralized method by which to communicate the requests/offers offchain from one party to another so they can decide what to do them. (In the future we have plans to remove the server as a central point of failure/trust and will replace it with something more decentralized/permission-less)
 - The requester client which allows those seeking compute to ask compute providers to fulfill their requests at a given economic cost.
 - The provider client which allows those with compute to fulfill requests from requesters and/or make offers to requesters for specific compute workloads they are willing to run for a certain economic cost.

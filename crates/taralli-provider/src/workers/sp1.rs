@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use sp1_sdk::{HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey};
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::sp1::Sp1ProofParams;
+use taralli_primitives::systems::sp1::Sp1ProofParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 
 pub struct Sp1Worker {
@@ -23,18 +23,7 @@ impl Sp1Worker {
         sp1_proof: &SP1ProofWithPublicValues,
         vk: &SP1VerifyingKey,
     ) -> Result<Bytes> {
-        // @notice Verifies a proof with given public values and vkey.
-        // @param programVKey The verification key for the RISC-V program.
-        // @param publicValues The public values encoded as bytes.
-        // @param proofBytes The proof of the program execution the SP1 zkVM encoded as bytes.
-        // function verifyProof(
-        //     bytes32 programVKey,
-        //     bytes calldata publicValues,
-        //     bytes calldata proofBytes
-        // )
-        // WIP
-
-        // check that proof type is ether groth16 or plonk as these are the only on chain veriable
+        // check that proof type is either groth16 or plonk as these are the only on chain veriable
         // proof types for sp1 proofs
         let proof_bytes = match sp1_proof.proof {
             sp1_sdk::SP1Proof::Plonk(_) | sp1_sdk::SP1Proof::Groth16(_) => Ok(sp1_proof.bytes()),
@@ -63,12 +52,12 @@ impl Sp1Worker {
         &self,
         params: &Sp1ProofParams,
     ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey)> {
-        // run sp1 prover
+        // write inputs
         let mut stdin = SP1Stdin::new();
         stdin.write(&params.inputs);
-
-        // Generate the proof for the given program and input.
+        // setup
         let (pk, vk) = self.prover_client.setup(params.elf.as_slice());
+        // Generate the proof for the given program and input.
         let sp1_proof = self
             .prover_client
             .prove(&pk, stdin)

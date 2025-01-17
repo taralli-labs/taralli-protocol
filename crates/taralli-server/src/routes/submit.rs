@@ -1,7 +1,7 @@
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
-use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
+use taralli_primitives::systems::ProvingSystemInformation;
 use taralli_primitives::Request;
 
 use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
@@ -14,22 +14,10 @@ pub async fn submit_handler<
     app_state: State<AppState<T, P, Request<I>>>,
     Json(request): Json<Request<I>>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let minimum_allowed_proving_time = app_state.minimum_allowed_proving_time();
-    let maximum_allowed_start_delay = app_state.maximum_allowed_start_delay();
-    let maximum_allowed_stake = app_state.maximum_allowed_stake();
     let timeout = app_state.validation_timeout_seconds();
 
     tracing::info!("Validating proof request");
-    match validate_proof_request(
-        &request,
-        &app_state,
-        minimum_allowed_proving_time,
-        maximum_allowed_start_delay,
-        maximum_allowed_stake,
-        timeout,
-    )
-    .await
-    {
+    match validate_proof_request(&request, &app_state, timeout).await {
         Ok(()) => {
             tracing::debug!("Validation successful, attempting to broadcast");
             match app_state.subscription_manager().broadcast(request) {

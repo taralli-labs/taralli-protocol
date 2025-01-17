@@ -4,7 +4,7 @@ use axum::{
     response::sse::{Event, Sse},
 };
 use futures::stream::StreamExt;
-use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
+use taralli_primitives::systems::ProvingSystemInformation;
 use taralli_primitives::Request;
 use tokio_stream::wrappers::BroadcastStream;
 

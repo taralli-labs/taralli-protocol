@@ -4,7 +4,7 @@ use taralli_primitives::alloy::{
     network::Network, primitives::Address, providers::Provider, signers::Signer,
     transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::ProvingSystemId;
+use taralli_primitives::systems::ProvingSystemId;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
