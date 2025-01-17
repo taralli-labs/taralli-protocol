@@ -29,7 +29,7 @@ jobs:
       run: cargo +nightly fmt -- --check
 
     - name: Run clippy
-      run: cargo +nightly clippy -- -W clippy::perf
+      run: cargo +nightly clippy --locked -- -W clippy::perf
 
     - name: Install cargo-udeps
       run: cargo install cargo-udeps --locked
@@ -37,9 +37,9 @@ jobs:
     - name: Run cargo udeps (strict for main)
       run: |
         if [ "${{ github.ref_name }}" = "main" ]; then
-          cargo +nightly udeps --frozen --all-targets
+          cargo +nightly udeps --locked --all-targets
         else
-          cargo +nightly udeps --frozen --all-targets || true
+          cargo +nightly udeps --locked --all-targets || true
         fi
 
   build_and_test:
@@ -55,4 +55,4 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Run tests
-      run: cargo test --frozen --verbose
+      run: cargo test --locked --verbose
