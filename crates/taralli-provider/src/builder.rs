@@ -39,15 +39,18 @@ where
 {
     pub fn new(config: ProviderConfig<T, P, N>) -> Self {
         // Initialize with defaults but override shared values
-        let mut bidder_config = BidderConfig::default();
-        bidder_config.market_address = config.market_address;
-
-        let mut resolver_config = ResolverConfig::default();
-        resolver_config.market_address = config.market_address;
-
-        let mut api_config = ApiConfig::default();
-        api_config.server_url = config.server_url.clone();
-
+        let bidder_config = BidderConfig {
+            market_address: config.market_address,
+            ..Default::default()
+        };
+        let resolver_config = ResolverConfig {
+            market_address: config.market_address,
+            ..Default::default()
+        };
+        let api_config = ApiConfig {
+            server_url: config.server_url.clone(),
+            ..Default::default()
+        };
         Self {
             config,
             workers: HashMap::new(),

@@ -133,7 +133,7 @@ impl AlignedLayerWorker {
                     GnarkSchemeConfig::PlonkBls12_381 => ProvingSystemId::GnarkPlonkBls12_381,
                 };
                 Ok(VerificationData {
-                    proving_system: proving_system,
+                    proving_system,
                     proof,
                     proof_generator_addr: H160::from_slice(self.prover_address.as_slice()),
                     vm_program_code: None,
@@ -241,7 +241,7 @@ impl AlignedLayerWorker {
                 };
 
                 // run gnark prover
-                let proof_output_path = Self::execute_gnark_prover(&gnark_params).await?;
+                let proof_output_path = Self::execute_gnark_prover(gnark_params).await?;
 
                 // Deserialize proof info from go prover output file
                 let aligned_verification_inputs: AlignedVerificationInputs =
@@ -270,7 +270,7 @@ impl AlignedLayerWorker {
                 // use sp1 compute worker to generate proof
                 let prover_client = ProverClient::local();
                 let sp1_worker = Sp1Worker::new(prover_client);
-                let sp1_proof = sp1_worker.generate_proof(&sp1_params)?;
+                let sp1_proof = sp1_worker.generate_proof(sp1_params)?;
 
                 // serialize proof for aligned layer
                 let serialized_proof = bincode::serialize(&sp1_proof)
@@ -292,7 +292,7 @@ impl AlignedLayerWorker {
                 };
 
                 let risc0_worker = Risc0Worker::new(ProverOpts::succinct());
-                let proof_info = risc0_worker.generate_proof(&risc0_params)?;
+                let proof_info = risc0_worker.generate_proof(risc0_params)?;
                 let serialized_proof = bincode::serialize(&proof_info.receipt.inner)
                     .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 

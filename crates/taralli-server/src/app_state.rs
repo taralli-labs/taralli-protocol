@@ -32,6 +32,7 @@ where
     P: Provider<T, Ethereum> + Clone,
     M: Clone,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         rpc_provider: P,
         subscription_manager: Arc<SubscriptionManager<M>>,

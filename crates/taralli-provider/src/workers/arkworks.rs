@@ -23,6 +23,8 @@ use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams
 use tempfile::NamedTempFile;
 use wasmer::Store;
 
+type ProofValues = (Vec<DynSolValue>, Vec<Vec<DynSolValue>>, Vec<DynSolValue>);
+
 #[derive(Default)]
 pub struct ArkworksWorker;
 
@@ -32,9 +34,7 @@ impl ArkworksWorker {
         Self
     }
 
-    fn proof_to_sol_values(
-        proof: &Proof<Bn254>,
-    ) -> Result<(Vec<DynSolValue>, Vec<Vec<DynSolValue>>, Vec<DynSolValue>)> {
+    fn proof_to_sol_values(proof: &Proof<Bn254>) -> Result<ProofValues> {
         fn to_u256<T: std::fmt::Display>(f: T) -> Result<U256> {
             U256::from_str(&f.to_string())
                 .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))

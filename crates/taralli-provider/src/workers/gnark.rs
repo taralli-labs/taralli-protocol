@@ -87,7 +87,7 @@ impl GnarkWorker {
 
     async fn generate_proof(&self, gnark_params: &GnarkProofParams) -> Result<(Vec<u8>, Value)> {
         // run gnark prover
-        let proof_output_path = Self::execute_gnark_prover(&gnark_params).await?;
+        let proof_output_path = Self::execute_gnark_prover(gnark_params).await?;
 
         // Read proof from output file
         let proof = std::fs::read(proof_output_path)
