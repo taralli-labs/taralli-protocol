@@ -1,12 +1,12 @@
 use crate::abi::universal_bombetta::ISignatureTransfer::TokenPermissions;
 use crate::abi::universal_bombetta::VerifierDetails;
 use crate::OnChainProofRequest;
+use crate::systems::VerifierConstraints;
 use alloy::dyn_abi::DynSolValue;
 use alloy::primitives::{address, b256, keccak256, Address, FixedBytes, B256, U256};
 use alloy::signers::Signature;
 use alloy::sol_types::SolValue;
 use lazy_static::lazy_static;
-use taralli_systems::VerifierConstraints;
 
 // type strings
 pub const PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB: &str =

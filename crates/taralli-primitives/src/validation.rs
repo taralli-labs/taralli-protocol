@@ -1,26 +1,72 @@
 use crate::{
-    abi::universal_bombetta::VerifierDetails,
-    request::Request,
-    utils::{compute_permit2_digest, compute_request_witness},
-    PrimitivesError, Result,
+    abi::universal_bombetta::VerifierDetails, request::Request, systems::{ProofConfiguration, ProvingSystemId, ProvingSystemInformation, ProvingSystemParams}, utils::{compute_permit2_digest, compute_request_witness}, PrimitivesError, Result
 };
 use alloy::{primitives::Address, sol_types::SolValue};
-use taralli_systems::{id::ProvingSystemId, ProvingSystemInformation};
 
-pub fn validate_proving_system_id<I: ProvingSystemInformation>(
+/// Validates a request by performing all necessary checks in the correct order
+pub fn validate_request<I: ProvingSystemInformation>(
     request: &Request<I>,
-    proving_system_ids: Vec<ProvingSystemId>,
+    latest_timestamp: u64,
+    minimum_proving_time: u32,
+    maximum_start_delay: u32,
+    maximum_allowed_stake: u128,
+    supported_proving_systems: &[ProvingSystemId],
 ) -> Result<()> {
-    if !proving_system_ids.contains(&request.proving_system_id) {
-        Err(PrimitivesError::ValidationError(
-            "proving system id invalid".to_string(),
-        ))
-    } else {
-        Ok(())
-    }
+    // validate request structure matches the claimed proving system
+    validate_proving_system_structure(request, supported_proving_systems)?;
+    // Then validate all other constraints
+    validate_amount_constraints(maximum_allowed_stake, request)?;
+    validate_time_constraints(latest_timestamp, minimum_proving_time, maximum_start_delay, request)?;
+    validate_signature(request)?;
+    validate_nonce(request)?;
+
+    Ok(())
 }
 
-pub fn validate_proving_system_information<I: ProvingSystemInformation>(
+/// Validates that the request structure matches the claimed proving system
+fn validate_proving_system_structure<I: ProvingSystemInformation>(
+    request: &Request<I>,
+    supported_proving_systems: &[ProvingSystemId],
+) -> Result<()> {
+    // Check if the proving system is supported
+    if !supported_proving_systems.contains(&request.proving_system_id) {
+        return Err(PrimitivesError::ValidationError(
+            "proving system id not supported".to_string(),
+        ));
+    }
+
+    // Validate that the proving system information matches the system ID
+    if request.proving_system_information.proving_system_id() != request.proving_system_id {
+        return Err(PrimitivesError::ValidationError(
+            "proving system information does not match system id".to_string(),
+        ));
+    }
+
+    // Decode and validate verifier details from the request
+    let verifier_details = VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true)
+        .map_err(|e| {
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+        })?;
+
+    // Get the configuration for this proving system
+    let config = I::proof_configuration(&request.proving_system_information);
+    
+    // Validate that the verifier details match the constraints for this proving system
+    config.validate(&verifier_details)
+        .map_err(|e| PrimitivesError::ValidationError(
+            format!("verifier details do not match system constraints: {}", e)
+        ))?;
+
+    // Validate the proving system specific parameters
+    request.proving_system_information.validate_inputs()
+        .map_err(|e| PrimitivesError::ValidationError(
+            format!("invalid proving system parameters: {}", e)
+        ))?;
+
+    Ok(())
+}
+
+/*pub fn validate_proving_system_information<I: ProvingSystemInformation>(
     request: &Request<I>,
 ) -> Result<()> {
     request
@@ -42,7 +88,7 @@ pub fn validate_market_address<I: ProvingSystemInformation>(
     }
 }
 
-pub fn validate_verification_commitments<I: ProvingSystemInformation>(
+pub fn validate_verifier_constraints<I: ProvingSystemInformation>(
     request: &Request<I>,
 ) -> Result<()> {
     let verifier_details =
@@ -52,20 +98,15 @@ pub fn validate_verification_commitments<I: ProvingSystemInformation>(
             },
         )?;
 
-    if I::verifier_constraints() == verifier_details {
-        // TODO
-        Ok(())
-    } else {
-        Err(PrimitivesError::ValidationError(
-            "verifier details mismatch".to_string(),
-        ))
-    }
+    let config = I::proof_configuration(&request.proving_system_information);
+    let is_valid = config.validate(&verifier_details).map_err(|e| PrimitivesError::ValidationError(format!("verifier details do not adhere to constraints: {}", e)))?;
+    Ok(is_valid)
 }
 
 pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Result<()> {
     // TODO
     Ok(())
-}
+}*/
 
 pub fn validate_amount_constraints<I: ProvingSystemInformation>(
     maximum_allowed_stake: u128,
@@ -105,6 +146,12 @@ pub fn validate_time_constraints<I: ProvingSystemInformation>(
         Ok(())
     }
 }
+
+pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Result<()> {
+    // TODO
+    Ok(())
+}
+
 
 pub fn validate_signature<I: ProvingSystemInformation>(request: &Request<I>) -> Result<()> {
     // compute witness
