@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use taralli_primitives::{
     alloy::{network::Network, primitives::Address, providers::Provider, transports::Transport},
-    taralli_systems::id::ProvingSystemId,
+    systems::ProvingSystemId,
 };
 use url::Url;
 

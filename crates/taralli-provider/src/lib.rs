@@ -30,7 +30,7 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::{ProvingSystemId, ProvingSystemParams};
+use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::utils::compute_request_id;
 use taralli_primitives::Request;
 use url::Url;

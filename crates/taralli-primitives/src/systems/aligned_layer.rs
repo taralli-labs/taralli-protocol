@@ -2,11 +2,11 @@ use alloy::primitives::{address, fixed_bytes, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::abi::universal_bombetta::VerifierDetails;
-use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
-use crate::error::Result;
-use crate::systems::{risc0, sp1, gnark};
 use super::system_id::AlignedLayer;
+use crate::abi::universal_bombetta::VerifierDetails;
+use crate::error::Result;
+use crate::systems::{gnark, risc0, sp1};
+use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum UnderlyingProvingSystemParams {
@@ -70,15 +70,18 @@ impl ProvingSystemInformation for AlignedLayerProofParams {
 
     fn proof_configuration(&self) -> &Self::Config {
         static CONFIG: std::sync::OnceLock<AlignedLayerConfig> = std::sync::OnceLock::new();
-        
+
         CONFIG.get_or_init(|| {
             let underlying_config = match &self.underlying_system_params {
-                UnderlyingProvingSystemParams::Risc0(params) => 
-                    UnderlyingConfig::Risc0(params.proof_configuration().clone()),
-                UnderlyingProvingSystemParams::SP1(params) => 
-                    UnderlyingConfig::SP1(params.proof_configuration().clone()),
-                UnderlyingProvingSystemParams::Gnark(params) => 
-                    UnderlyingConfig::Gnark(params.proof_configuration().clone()),
+                UnderlyingProvingSystemParams::Risc0(params) => {
+                    UnderlyingConfig::Risc0(params.proof_configuration().clone())
+                }
+                UnderlyingProvingSystemParams::SP1(params) => {
+                    UnderlyingConfig::SP1(params.proof_configuration().clone())
+                }
+                UnderlyingProvingSystemParams::Gnark(params) => {
+                    UnderlyingConfig::Gnark(params.proof_configuration().clone())
+                }
             };
 
             AlignedLayerConfig {

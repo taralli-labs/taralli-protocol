@@ -8,9 +8,9 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
+use taralli_primitives::{systems::ProvingSystemParams, Request};
 use taralli_server::{
-    app_state::AppState,
+    app_state::{AppState, AppStateConfig},
     config::Config,
     routes::{submit::submit_handler, subscribe::subscribe_handler},
     subscription_manager::SubscriptionManager,
@@ -37,16 +37,16 @@ async fn main() -> Result<()> {
         Default::default();
 
     // initialize state
-    let app_state = AppState::new(
+    let app_state = AppState::new(AppStateConfig {
         rpc_provider,
         subscription_manager,
-        config.market_address,
-        config.proving_system_ids,
-        config.minimum_allowed_proving_time,
-        config.maximum_allowed_start_delay,
-        config.maximum_allowed_stake,
-        Duration::from_secs(config.validation_timeout_seconds as u64),
-    );
+        market_address: config.market_address,
+        proving_system_ids: config.proving_system_ids,
+        minimum_allowed_proving_time: config.minimum_allowed_proving_time,
+        maximum_allowed_start_delay: config.maximum_allowed_start_delay,
+        maximum_allowed_stake: config.maximum_allowed_stake,
+        validation_timeout_seconds: Duration::from_secs(config.validation_timeout_seconds as u64),
+    });
 
     let app = Router::new()
         .route("/submit", post(submit_handler))

@@ -1,5 +1,9 @@
 use crate::{
-    abi::universal_bombetta::VerifierDetails, request::Request, systems::{ProofConfiguration, ProvingSystemId, ProvingSystemInformation, ProvingSystemParams}, utils::{compute_permit2_digest, compute_request_witness}, PrimitivesError, Result
+    abi::universal_bombetta::VerifierDetails,
+    request::Request,
+    systems::{ProofConfiguration, ProvingSystemId, ProvingSystemInformation},
+    utils::{compute_permit2_digest, compute_request_witness},
+    PrimitivesError, Result,
 };
 use alloy::{primitives::Address, sol_types::SolValue};
 
@@ -7,16 +11,21 @@ use alloy::{primitives::Address, sol_types::SolValue};
 pub fn validate_request<I: ProvingSystemInformation>(
     request: &Request<I>,
     latest_timestamp: u64,
+    market_address: &Address,
     minimum_proving_time: u32,
     maximum_start_delay: u32,
     maximum_allowed_stake: u128,
     supported_proving_systems: &[ProvingSystemId],
 ) -> Result<()> {
-    // validate request structure matches the claimed proving system
     validate_proving_system_structure(request, supported_proving_systems)?;
-    // Then validate all other constraints
-    validate_amount_constraints(maximum_allowed_stake, request)?;
-    validate_time_constraints(latest_timestamp, minimum_proving_time, maximum_start_delay, request)?;
+    validate_market_address(request, market_address)?;
+    validate_amount_constraints(request, maximum_allowed_stake)?;
+    validate_time_constraints(
+        request,
+        latest_timestamp,
+        minimum_proving_time,
+        maximum_start_delay,
+    )?;
     validate_signature(request)?;
     validate_nonce(request)?;
 
@@ -43,43 +52,40 @@ fn validate_proving_system_structure<I: ProvingSystemInformation>(
     }
 
     // Decode and validate verifier details from the request
-    let verifier_details = VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true)
-        .map_err(|e| {
-            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-        })?;
+    let verifier_details =
+        VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true).map_err(
+            |e| {
+                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+            },
+        )?;
 
     // Get the configuration for this proving system
     let config = I::proof_configuration(&request.proving_system_information);
-    
+
     // Validate that the verifier details match the constraints for this proving system
-    config.validate(&verifier_details)
-        .map_err(|e| PrimitivesError::ValidationError(
-            format!("verifier details do not match system constraints: {}", e)
-        ))?;
+    config.validate(&verifier_details).map_err(|e| {
+        PrimitivesError::ValidationError(format!(
+            "verifier details do not match system constraints: {}",
+            e
+        ))
+    })?;
 
     // Validate the proving system specific parameters
-    request.proving_system_information.validate_inputs()
-        .map_err(|e| PrimitivesError::ValidationError(
-            format!("invalid proving system parameters: {}", e)
-        ))?;
+    request
+        .proving_system_information
+        .validate_inputs()
+        .map_err(|e| {
+            PrimitivesError::ValidationError(format!("invalid proving system parameters: {}", e))
+        })?;
 
     Ok(())
 }
 
-/*pub fn validate_proving_system_information<I: ProvingSystemInformation>(
-    request: &Request<I>,
-) -> Result<()> {
-    request
-        .proving_system_information
-        .validate_prover_inputs()
-        .map_err(|e| PrimitivesError::ValidationError(e.to_string()))
-}
-
 pub fn validate_market_address<I: ProvingSystemInformation>(
     request: &Request<I>,
-    market_address: Address,
+    market_address: &Address,
 ) -> Result<()> {
-    if request.onchain_proof_request.market != market_address {
+    if &request.onchain_proof_request.market != market_address {
         Err(PrimitivesError::ValidationError(
             "market address invalid".to_string(),
         ))
@@ -88,29 +94,9 @@ pub fn validate_market_address<I: ProvingSystemInformation>(
     }
 }
 
-pub fn validate_verifier_constraints<I: ProvingSystemInformation>(
-    request: &Request<I>,
-) -> Result<()> {
-    let verifier_details =
-        VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true).map_err(
-            |e| {
-                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-            },
-        )?;
-
-    let config = I::proof_configuration(&request.proving_system_information);
-    let is_valid = config.validate(&verifier_details).map_err(|e| PrimitivesError::ValidationError(format!("verifier details do not adhere to constraints: {}", e)))?;
-    Ok(is_valid)
-}
-
-pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Result<()> {
-    // TODO
-    Ok(())
-}*/
-
 pub fn validate_amount_constraints<I: ProvingSystemInformation>(
-    maximum_allowed_stake: u128,
     request: &Request<I>,
+    maximum_allowed_stake: u128,
 ) -> Result<()> {
     if request.onchain_proof_request.maxRewardAmount < request.onchain_proof_request.minRewardAmount
     {
@@ -127,10 +113,10 @@ pub fn validate_amount_constraints<I: ProvingSystemInformation>(
 }
 
 pub fn validate_time_constraints<I: ProvingSystemInformation>(
+    request: &Request<I>,
     latest_timestamp: u64,
     minimum_proving_time: u32,
     maximum_start_delay: u32,
-    request: &Request<I>,
 ) -> Result<()> {
     let start = request.onchain_proof_request.startAuctionTimestamp;
     let end = request.onchain_proof_request.endAuctionTimestamp;
@@ -151,7 +137,6 @@ pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Res
     // TODO
     Ok(())
 }
-
 
 pub fn validate_signature<I: ProvingSystemInformation>(request: &Request<I>) -> Result<()> {
     // compute witness

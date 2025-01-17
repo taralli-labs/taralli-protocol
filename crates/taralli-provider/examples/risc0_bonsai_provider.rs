@@ -4,10 +4,11 @@ use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
+use risc0_zkvm::ProverOpts;
 use std::env;
 use std::str::FromStr;
 use taralli_provider::config::ProviderConfig;
-use taralli_provider::workers::risc0_bonsai::Risc0BonsaiWorker;
+use taralli_provider::workers::risc0::Risc0Worker;
 use taralli_provider::ProviderClient;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -44,7 +45,7 @@ async fn main() -> Result<()> {
 
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
-        .with_worker("risc0-bonsai", Risc0BonsaiWorker::default())?
+        .with_worker("risc0", Risc0Worker::new(ProverOpts::groth16()))?
         .build();
 
     //// run provider client

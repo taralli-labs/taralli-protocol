@@ -1,8 +1,8 @@
 //use alloy::primitives::{address, fixed_bytes, U256};
-use serde::{Deserialize, Serialize};
 use crate::abi::universal_bombetta::VerifierDetails;
+use crate::error::{PrimitivesError, Result};
 use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
-use crate::error::{Result, PrimitivesError};
+use serde::{Deserialize, Serialize};
 
 use super::system_id::Gnark;
 

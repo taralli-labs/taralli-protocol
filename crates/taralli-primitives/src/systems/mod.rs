@@ -5,8 +5,7 @@ use crate::systems::{
     risc0::Risc0ProofParams, sp1::Sp1ProofParams,
 };
 use alloy::primitives::{Address, FixedBytes, U256};
-use serde::{Serialize, Deserialize};
-use std::any::Any;
+use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
 pub mod aligned_layer;
@@ -129,9 +128,9 @@ macro_rules! proving_systems {
 
             fn proof_configuration(&self) -> &Self::Config {
                 static CONFIG: std::sync::OnceLock<ProvingSystemParamsConfig> = std::sync::OnceLock::new();
-                
+
                 CONFIG.get_or_init(|| match self {
-                    $(Self::$variant(params) => 
+                    $(Self::$variant(params) =>
                         ProvingSystemParamsConfig::$variant(params.proof_configuration().clone()),)*
                 })
             }

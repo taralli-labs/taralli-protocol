@@ -6,7 +6,8 @@
 pub mod alloy {
     pub mod primitives {
         pub use alloy::primitives::{
-            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, U256, PrimitiveSignature, B256
+            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, PrimitiveSignature,
+            B256, U256,
         };
     }
 
@@ -48,10 +49,10 @@ pub mod alloy {
 
 // Taralli primitives
 pub mod abi;
-pub mod systems;
 pub mod error;
 pub mod market;
 pub mod request;
+pub mod systems;
 pub mod utils;
 pub mod validation;
 

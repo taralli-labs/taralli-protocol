@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use sp1_sdk::{HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey};
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::sp1::Sp1ProofParams;
+use taralli_primitives::systems::sp1::Sp1ProofParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 
 pub struct Sp1Worker {

@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
         .with_worker(
-            "aligned",
+            "aligned-layer",
             AlignedLayerWorker::new(signer.address(), rpc_url.to_string(), ethers_wallet),
         )?
         .build();

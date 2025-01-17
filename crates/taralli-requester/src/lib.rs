@@ -14,13 +14,11 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Network, providers::Provider, signers::Signer, transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::utils::{
     compute_permit2_digest, compute_request_id, compute_request_witness,
 };
-use taralli_primitives::validation::{
-    validate_amount_constraints, validate_market_address, validate_signature,
-};
+use taralli_primitives::validation::validate_request;
 use taralli_primitives::Request;
 
 pub struct RequesterClient<T, P, N, S>
@@ -59,24 +57,6 @@ where
             builder,
             tracker,
         }
-    }
-
-    pub fn validate_request(
-        &self,
-        request: &Request<ProvingSystemParams>,
-        _latest_timestamp: u64,
-    ) -> Result<()> {
-        validate_market_address(request, self.config.market_address)?;
-        // TODO better design for time constraint checking
-        //validate_time_constraints(
-        //    latest_timestamp,
-        //    self.config.validation.minimum_allowed_proving_time,
-        //    self.config.validation.maximum_start_delay,
-        //    request,
-        //)?;
-        validate_amount_constraints(self.config.validation.maximum_allowed_stake, request)?;
-        validate_signature(request)?;
-        Ok(())
     }
 
     /// sign the inputted proof request and submit it to the taralli server.
@@ -150,5 +130,23 @@ where
         // load signature into proof request
         request.signature = signature;
         Ok(request)
+    }
+
+    pub fn validate_request(&self, request: &Request<ProvingSystemParams>) -> Result<()> {
+        // validate a request built by the requester client
+        let dummy_supported_proving_systems = &[request.proving_system_id];
+        // NOTE: The latest timestamp check as well as supported proving system checks are both no ops as it is assumed
+        //       the requester client is aware of these requirements generally when using the protocol.
+        validate_request(
+            request,
+            request.onchain_proof_request.startAuctionTimestamp - 100,
+            &self.config.market_address,
+            self.config.validation.minimum_allowed_proving_time,
+            self.config.validation.maximum_start_delay,
+            self.config.validation.maximum_allowed_stake,
+            dummy_supported_proving_systems,
+        )?;
+
+        Ok(())
     }
 }

@@ -1,10 +1,10 @@
+use crate::abi::universal_bombetta::VerifierDetails;
+use crate::error::Result;
+use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
+use crate::PrimitivesError;
 use alloy::primitives::{fixed_bytes, U256};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::abi::universal_bombetta::VerifierDetails;
-use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
-use crate::error::Result;
-use crate::PrimitivesError;
 
 use super::system_id::Arkworks;
 
@@ -22,7 +22,9 @@ impl ProofConfiguration for ArkworksConfig {
             has_partial_commitment_result_check: Some(false),
             submitted_partial_commitment_result_offset: Some(U256::ZERO),
             submitted_partial_commitment_result_length: Some(U256::ZERO),
-            predetermined_partial_commitment: Some(fixed_bytes!("0000000000000000000000000000000000000000000000000000000000000000")),
+            predetermined_partial_commitment: Some(fixed_bytes!(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+            )),
         }
     }
 
@@ -33,9 +35,9 @@ impl ProofConfiguration for ArkworksConfig {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArkworksProofParams {
-    pub r1cs: Vec<u8>,     // .r1cs file bytes
-    pub wasm: Vec<u8>,     // .wasm witness generator
-    pub input: Value,      // Circuit input JSON
+    pub r1cs: Vec<u8>, // .r1cs file bytes
+    pub wasm: Vec<u8>, // .wasm witness generator
+    pub input: Value,  // Circuit input JSON
 }
 
 impl ProvingSystemInformation for ArkworksProofParams {

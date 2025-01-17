@@ -1,7 +1,7 @@
 use crate::abi::universal_bombetta::ISignatureTransfer::TokenPermissions;
 use crate::abi::universal_bombetta::VerifierDetails;
-use crate::OnChainProofRequest;
 use crate::systems::VerifierConstraints;
+use crate::OnChainProofRequest;
 use alloy::dyn_abi::DynSolValue;
 use alloy::primitives::{address, b256, keccak256, Address, FixedBytes, B256, U256};
 use alloy::signers::Signature;

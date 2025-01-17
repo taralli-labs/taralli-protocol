@@ -1,8 +1,8 @@
+use crate::abi::universal_bombetta::VerifierDetails;
+use crate::error::Result;
+use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
 use alloy::primitives::{address, fixed_bytes, U256};
 use serde::{Deserialize, Serialize};
-use crate::abi::universal_bombetta::VerifierDetails;
-use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
-use crate::error::Result;
 
 use super::system_id::Risc0;
 

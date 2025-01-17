@@ -1,7 +1,7 @@
 use futures::{Stream, StreamExt};
 use reqwest_eventsource::{Event, EventSource};
 use std::pin::Pin;
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
+use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
 use crate::{
@@ -13,6 +13,9 @@ pub struct ProviderApi {
     server_url: Url,
 }
 
+// type alias for SSE stream returned by the protocol server
+pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>;
+
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
         Self {
@@ -20,9 +23,7 @@ impl ProviderApi {
         }
     }
 
-    pub fn subscribe_to_markets(
-        &self,
-    ) -> Result<Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>> {
+    pub fn subscribe_to_markets(&self) -> Result<RequestStream> {
         // Attempt to join the URL, log error if it fails
         let url = self
             .server_url
