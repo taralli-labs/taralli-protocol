@@ -13,8 +13,8 @@ pub struct ProviderApi {
     server_url: Url,
 }
 
-type StreamResult =
-    Result<Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>>;
+// type alias for SSE stream returned by the protocol server
+pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>;
 
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
@@ -23,7 +23,7 @@ impl ProviderApi {
         }
     }
 
-    pub fn subscribe_to_markets(&self) -> StreamResult {
+    pub fn subscribe_to_markets(&self) -> Result<RequestStream> {
         // Attempt to join the URL, log error if it fails
         let url = self
             .server_url
