@@ -167,7 +167,7 @@ where
 
         // analyze the validity and profitability of the request
         self.analyzer
-            .analyze(&request, 0)
+            .analyze(&request, current_ts)
             .map_err(|e| ProviderError::RequestAnalysisError(e.to_string()))?;
         tracing::info!("analysis done");
 
