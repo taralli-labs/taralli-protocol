@@ -31,16 +31,11 @@ jobs:
     - name: Run clippy
       run: cargo +nightly clippy --locked -- -W clippy::perf
 
-    - name: Install cargo-udeps
-      run: cargo install cargo-udeps --locked
-
-    - name: Run cargo udeps (strict for main)
+    - name: Install and run cargo-udeps (only if target branch is main)
+      if: ${{ github.event.pull_request.base.ref == 'main' }}
       run: |
-        if [ "${{ github.ref_name }}" = "main" ]; then
-          cargo +nightly udeps --locked --all-targets
-        else
-          cargo +nightly udeps --locked --all-targets || true
-        fi
+        cargo install cargo-udeps --locked
+        cargo +nightly udeps --locked --all-targets
 
   build_and_test:
     runs-on: ubuntu-latest
