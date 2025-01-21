@@ -60,7 +60,6 @@ impl Sp1Prover for Sp1RemoteProver {
             .request_async()
             .await
             .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
-        println!("Proof request ID: {}", request_id);
 
         // Wait for proof complete with a timeout
         let _proof = self
