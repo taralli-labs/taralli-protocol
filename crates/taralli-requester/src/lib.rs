@@ -67,24 +67,19 @@ where
         auction_time_length: u64,
     ) -> Result<()> {
         // compute request id
-        let request_id = compute_request_id(
-            &request.onchain_proof_request,
-            request.signature,
-        );
+        let request_id = compute_request_id(&request.onchain_proof_request, request.signature);
 
         // compute resolve deadline timestamp
         let resolve_deadline = request.onchain_proof_request.endAuctionTimestamp
             + request.onchain_proof_request.provingTime as u64;
 
         // setup tracking
-        let auction_tracker = self.tracker.start_auction_tracking(
-            request_id,
-            Duration::from_secs(auction_time_length),
-        );
-        let resolution_tracker = self.tracker.start_resolution_tracking(
-            request_id, 
-            Duration::from_secs(resolve_deadline),
-        );
+        let auction_tracker = self
+            .tracker
+            .start_auction_tracking(request_id, Duration::from_secs(auction_time_length));
+        let resolution_tracker = self
+            .tracker
+            .start_resolution_tracking(request_id, Duration::from_secs(resolve_deadline));
 
         tracing::info!("tracking started for request ID: {}", request_id);
         tracing::info!("submitting request to server");
@@ -102,7 +97,7 @@ where
             let error_body = response.json::<serde_json::Value>().await.map_err(|e| {
                 RequesterError::ServerRequestError(format!("Failed to parse error response: {}", e))
             })?;
-    
+
             return Err(RequesterError::RequestSubmissionFailed(format!(
                 "Server validation failed: {}",
                 error_body["error"].as_str().unwrap_or("Unknown error")

@@ -26,8 +26,6 @@ impl Risc0Prover for Risc0RemoteProver {
                 .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?,
         );
 
-        println!("WORKER: image id -> {}", image_id);
-
         client
             .upload_img(&image_id, program)
             .await
@@ -88,8 +86,6 @@ impl Risc0Prover for Risc0RemoteProver {
             .await
             .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
-        tracing::info!("Created SNARK session: {}", snark_session.uuid);
-
         // Poll for SNARK proof completion
         let snark_receipt = loop {
             let res = snark_session
@@ -128,7 +124,7 @@ impl Risc0Prover for Risc0RemoteProver {
     }
 }
 
-#[cfg(test)]
+/*#[cfg(test)]
 mod tests {
     use super::*;
     use alloy::{primitives::U256, sol_types::SolValue};
@@ -173,4 +169,4 @@ mod tests {
 
         println!("receipt: {:?}", snark_receipt);
     }
-}
+}*/

@@ -44,17 +44,18 @@ where
         request_id: B256,
         timeout: Duration,
     ) -> Result<Option<Bid>> {
-        let market_contract = UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
-        
-        let bid_filter = market_contract
-            .Bid_filter()
-            .topic2(request_id);
-    
-        let event_poller = bid_filter.watch().await
+        let market_contract =
+            UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
+
+        let bid_filter = market_contract.Bid_filter().topic2(request_id);
+
+        let event_poller = bid_filter
+            .watch()
+            .await
             .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-    
+
         let mut bid_stream = event_poller.into_stream();
-        
+
         let result = tokio::time::timeout(timeout, async move {
             while let Some(log_result) = bid_stream.next().await {
                 match log_result {
@@ -70,7 +71,7 @@ where
             None
         })
         .await;
-    
+
         match result {
             Ok(event) => Ok(event),
             Err(_) => {
@@ -85,18 +86,20 @@ where
         &self,
         request_id: B256,
         timeout: Duration,
-    ) -> Result<Option<Resolve>> {  // Changed return type - no longer returning impl Future
-        let market_contract = UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
-    
-        let resolve_filter = market_contract
-            .Resolve_filter()
-            .topic2(request_id);
-    
-        let event_poller = resolve_filter.watch().await
+    ) -> Result<Option<Resolve>> {
+        // Changed return type - no longer returning impl Future
+        let market_contract =
+            UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
+
+        let resolve_filter = market_contract.Resolve_filter().topic2(request_id);
+
+        let event_poller = resolve_filter
+            .watch()
+            .await
             .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-    
+
         let mut resolve_stream = event_poller.into_stream();
-    
+
         let result = tokio::time::timeout(timeout, async move {
             while let Some(log_result) = resolve_stream.next().await {
                 match log_result {
@@ -112,7 +115,7 @@ where
             None
         })
         .await;
-    
+
         match result {
             Ok(event) => Ok(event),
             Err(_) => {
