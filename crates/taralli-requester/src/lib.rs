@@ -63,53 +63,69 @@ where
     /// then start tracking the request auction and resolution on-chain.
     pub async fn submit_and_track_request(
         &self,
-        proof_request: Request<ProvingSystemParams>,
+        request: Request<ProvingSystemParams>,
         auction_time_length: u64,
     ) -> Result<()> {
         // compute request id
         let request_id = compute_request_id(
-            &proof_request.onchain_proof_request,
-            proof_request.signature,
+            &request.onchain_proof_request,
+            request.signature,
         );
 
         // compute resolve deadline timestamp
-        let resolve_deadline = proof_request.onchain_proof_request.endAuctionTimestamp
-            + proof_request.onchain_proof_request.provingTime as u64;
+        let resolve_deadline = request.onchain_proof_request.endAuctionTimestamp
+            + request.onchain_proof_request.provingTime as u64;
 
+        // setup tracking
+        let auction_tracker = self.tracker.start_auction_tracking(
+            request_id,
+            Duration::from_secs(auction_time_length),
+        );
+        let resolution_tracker = self.tracker.start_resolution_tracking(
+            request_id, 
+            Duration::from_secs(resolve_deadline),
+        );
+
+        tracing::info!("tracking started for request ID: {}", request_id);
         tracing::info!("submitting request to server");
-        tracing::info!("request ID: {}", request_id);
 
         // submit signed request to server
         let response = self
             .api
-            .submit_request(proof_request.clone())
+            .submit_request(request.clone())
             .await
             .map_err(|e| RequesterError::ServerRequestError(e.to_string()))?;
 
         // track the request
-        if response.status().is_success() {
-            tracing::info!("submission success, tracking started");
-            self.tracker
-                .track_request(
-                    request_id,
-                    Duration::from_secs(auction_time_length),
-                    Duration::from_secs(resolve_deadline),
-                )
-                .await
-                .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-            tracing::info!("tracking complete");
-            Ok(())
-        } else {
+        if !response.status().is_success() {
             // Parse the error response
             let error_body = response.json::<serde_json::Value>().await.map_err(|e| {
                 RequesterError::ServerRequestError(format!("Failed to parse error response: {}", e))
             })?;
-
-            Err(RequesterError::RequestSubmissionFailed(format!(
+    
+            return Err(RequesterError::RequestSubmissionFailed(format!(
                 "Server validation failed: {}",
                 error_body["error"].as_str().unwrap_or("Unknown error")
-            )))
+            )));
         }
+
+        tracing::info!("Request submitted successfully, waiting for auction result");
+
+        // Wait for auction result
+        let _auction_result = auction_tracker
+            .await
+            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?
+            .ok_or(RequesterError::AuctionTimeoutError())?;
+
+        tracing::info!("Auction completed, waiting for resolution");
+
+        // Wait for resolution
+        let _resolution_result = resolution_tracker
+            .await
+            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
+
+        tracing::info!("Tracking complete");
+        Ok(())
     }
 
     pub async fn sign_request(
