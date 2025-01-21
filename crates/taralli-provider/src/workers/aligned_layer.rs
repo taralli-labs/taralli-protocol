@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use risc0_zkvm::ProverOpts;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sp1_sdk::ProverClient;
+use sp1_sdk::SP1ProofMode;
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Address, Bytes, FixedBytes, U256};
 use taralli_primitives::systems::aligned_layer::{
@@ -25,8 +25,10 @@ use tempfile::NamedTempFile;
 use ethers::core::types::H160;
 use ethers::signers::LocalWallet;
 
-use super::risc0::Risc0Worker;
-use super::sp1::Sp1Worker;
+use super::risc0::local::Risc0LocalProver;
+use super::risc0::Risc0Prover;
+use super::sp1::local::Sp1LocalProver;
+use super::sp1::Sp1Prover;
 
 const ALIGNED_NETWORK: Network = Network::Holesky;
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com"; // holesky testnet batcher url
@@ -267,10 +269,10 @@ impl AlignedLayerWorker {
                     }
                 };
 
-                // use sp1 compute worker to generate proof
-                let prover_client = ProverClient::local();
-                let sp1_worker = Sp1Worker::new(prover_client);
-                let sp1_proof = sp1_worker.generate_proof(sp1_params)?;
+                // Create local SP1 prover with CPU mode
+                let sp1_local_prover = Sp1LocalProver::new(false, SP1ProofMode::Groth16);
+                // compute sp1 proof locally
+                let (sp1_proof, _vk) = sp1_local_prover.generate_proof(sp1_params).await?;
 
                 // serialize proof for aligned layer
                 let serialized_proof = bincode::serialize(&sp1_proof)
@@ -292,9 +294,9 @@ impl AlignedLayerWorker {
                     }
                 };
 
-                let risc0_worker = Risc0Worker::new(ProverOpts::succinct());
-                let proof_info = risc0_worker.generate_proof(risc0_params)?;
-                let serialized_proof = bincode::serialize(&proof_info.receipt.inner)
+                let risc0_local_prover = Risc0LocalProver::new(ProverOpts::succinct());
+                let risc0_receipt = risc0_local_prover.generate_proof(risc0_params).await?;
+                let serialized_proof = bincode::serialize(&risc0_receipt.inner)
                     .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
                 Ok(AlignedVerificationInputs::Risc0 {

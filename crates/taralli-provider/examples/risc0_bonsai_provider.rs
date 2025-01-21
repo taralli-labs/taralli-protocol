@@ -4,10 +4,10 @@ use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
-use risc0_zkvm::ProverOpts;
 use std::env;
 use std::str::FromStr;
 use taralli_provider::config::ProviderConfig;
+use taralli_provider::workers::risc0::remote::Risc0RemoteProver;
 use taralli_provider::workers::risc0::Risc0Worker;
 use taralli_provider::ProviderClient;
 use tracing::Level;
@@ -43,9 +43,12 @@ async fn main() -> Result<()> {
     // build provider client config
     let config = ProviderConfig::new(rpc_provider, market_address, server_url);
 
+    // setup prover
+    let risc0_bonsai_prover = Risc0RemoteProver;
+
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
-        .with_worker("risc0", Risc0Worker::new(ProverOpts::groth16()))?
+        .with_worker("risc0", Risc0Worker::new(risc0_bonsai_prover))?
         .build();
 
     //// run provider client

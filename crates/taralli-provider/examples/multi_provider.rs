@@ -6,13 +6,14 @@ use color_eyre::Result;
 use dotenv::dotenv;
 use ethers::signers::LocalWallet;
 use risc0_zkvm::ProverOpts;
-use sp1_sdk::ProverClient;
 use std::env;
 use std::str::FromStr;
 use taralli_provider::config::ProviderConfig;
 use taralli_provider::workers::aligned_layer::AlignedLayerWorker;
 use taralli_provider::workers::arkworks::ArkworksWorker;
+use taralli_provider::workers::risc0::local::Risc0LocalProver;
 use taralli_provider::workers::risc0::Risc0Worker;
+use taralli_provider::workers::sp1::local::Sp1LocalProver;
 use taralli_provider::workers::sp1::Sp1Worker;
 use taralli_provider::ProviderClient;
 use tracing::Level;
@@ -51,11 +52,15 @@ async fn main() -> Result<()> {
     // build provider client config
     let config = ProviderConfig::new(rpc_provider, market_address, server_url);
 
+    // setup provers
+    let sp1_prover = Sp1LocalProver::new(false, sp1_sdk::SP1ProofMode::Groth16);
+    let risc0_prover = Risc0LocalProver::new(ProverOpts::groth16());
+
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
         .with_worker("arkworks", ArkworksWorker::new())?
-        .with_worker("sp1", Sp1Worker::new(ProverClient::local()))?
-        .with_worker("risc0", Risc0Worker::new(ProverOpts::groth16()))?
+        .with_worker("sp1", Sp1Worker::new(sp1_prover))?
+        .with_worker("risc0", Risc0Worker::new(risc0_prover))?
         .with_worker(
             "aligned-layer",
             AlignedLayerWorker::new(signer.address(), rpc_url.to_string(), ethers_wallet),
