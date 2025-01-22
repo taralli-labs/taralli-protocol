@@ -10,23 +10,25 @@ use async_trait::async_trait;
 use risc0_zkvm::ProverOpts;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sp1_sdk::ProverClient;
+use sp1_sdk::SP1ProofMode;
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Address, Bytes, FixedBytes, U256};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::aligned_layer::{
+use taralli_primitives::systems::aligned_layer::{
     AlignedLayerProofParams, UnderlyingProvingSystemParams,
 };
-use taralli_primitives::taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
-use taralli_primitives::taralli_systems::traits::ProvingSystemInformation;
+use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::systems::sp1::Sp1Config;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 use tempfile::NamedTempFile;
 
 use ethers::core::types::H160;
 use ethers::signers::LocalWallet;
 
-use super::risc0::Risc0Worker;
-use super::sp1::Sp1Worker;
+use super::risc0::local::Risc0LocalProver;
+use super::risc0::Risc0Prover;
+use super::sp1::local::Sp1LocalProver;
+use super::sp1::Sp1Prover;
 
 const ALIGNED_NETWORK: Network = Network::Holesky;
 const BATCHER_URL: &str = "wss://batcher.alignedlayer.com"; // holesky testnet batcher url
@@ -34,12 +36,13 @@ const BATCHER_URL: &str = "wss://batcher.alignedlayer.com"; // holesky testnet b
 #[derive(Debug, Deserialize)]
 pub enum AlignedVerificationInputs {
     Gnark {
-        scheme_config: GnarkSchemeConfig,
+        config: GnarkConfig,
         proof: Vec<u8>,
         public_inputs: Vec<u8>,
         verification_key: Vec<u8>,
     },
     SP1 {
+        config: Sp1Config,
         proof: Vec<u8>,
         vm_program: Vec<u8>,
     },
@@ -122,15 +125,15 @@ impl AlignedLayerWorker {
     ) -> Result<VerificationData> {
         match inputs {
             AlignedVerificationInputs::Gnark {
-                scheme_config,
+                config,
                 proof,
                 public_inputs,
                 verification_key,
             } => {
-                let proving_system = match scheme_config {
-                    GnarkSchemeConfig::Groth16Bn254 => ProvingSystemId::Groth16Bn254,
-                    GnarkSchemeConfig::PlonkBn254 => ProvingSystemId::GnarkPlonkBn254,
-                    GnarkSchemeConfig::PlonkBls12_381 => ProvingSystemId::GnarkPlonkBls12_381,
+                let proving_system = match config {
+                    GnarkConfig::Groth16Bn254 => ProvingSystemId::Groth16Bn254,
+                    GnarkConfig::PlonkBn254 => ProvingSystemId::GnarkPlonkBn254,
+                    GnarkConfig::PlonkBls12_381 => ProvingSystemId::GnarkPlonkBls12_381,
                 };
                 Ok(VerificationData {
                     proving_system,
@@ -141,7 +144,11 @@ impl AlignedLayerWorker {
                     pub_input: Some(public_inputs),
                 })
             }
-            AlignedVerificationInputs::SP1 { proof, vm_program } => Ok(VerificationData {
+            AlignedVerificationInputs::SP1 {
+                config: _,
+                proof,
+                vm_program,
+            } => Ok(VerificationData {
                 proving_system: ProvingSystemId::SP1,
                 proof,
                 proof_generator_addr: H160::from_slice(self.prover_address.as_slice()),
@@ -181,10 +188,10 @@ impl AlignedLayerWorker {
         }
 
         // Build command based on scheme configuration
-        let (scheme, curve) = match gnark_params.scheme_config {
-            GnarkSchemeConfig::Groth16Bn254 => ("groth16", "bn254"),
-            GnarkSchemeConfig::PlonkBn254 => ("plonk", "bn254"),
-            GnarkSchemeConfig::PlonkBls12_381 => ("plonk", "bls12-381"),
+        let (scheme, curve) = match gnark_params.config {
+            GnarkConfig::Groth16Bn254 => ("groth16", "bn254"),
+            GnarkConfig::PlonkBn254 => ("plonk", "bn254"),
+            GnarkConfig::PlonkBls12_381 => ("plonk", "bls12-381"),
         };
 
         // Create the input structure
@@ -223,11 +230,6 @@ impl AlignedLayerWorker {
         &self,
         params: &AlignedLayerProofParams,
     ) -> Result<AlignedVerificationInputs> {
-        // validate prover inputs
-        params
-            .validate_prover_inputs()
-            .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
-
         let aligned_verification_inputs = match params.aligned_proving_system_id.as_str() {
             "Gnark" => {
                 // Handle Gnark
@@ -267,16 +269,17 @@ impl AlignedLayerWorker {
                     }
                 };
 
-                // use sp1 compute worker to generate proof
-                let prover_client = ProverClient::local();
-                let sp1_worker = Sp1Worker::new(prover_client);
-                let sp1_proof = sp1_worker.generate_proof(sp1_params)?;
+                // Create local SP1 prover with CPU mode
+                let sp1_local_prover = Sp1LocalProver::new(false, SP1ProofMode::Groth16);
+                // compute sp1 proof locally
+                let (sp1_proof, _vk) = sp1_local_prover.generate_proof(sp1_params).await?;
 
                 // serialize proof for aligned layer
                 let serialized_proof = bincode::serialize(&sp1_proof)
                     .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
                 Ok(AlignedVerificationInputs::SP1 {
+                    config: sp1_params.proof_config.clone(),
                     proof: serialized_proof,
                     vm_program: sp1_params.elf.clone(),
                 })
@@ -291,9 +294,9 @@ impl AlignedLayerWorker {
                     }
                 };
 
-                let risc0_worker = Risc0Worker::new(ProverOpts::succinct());
-                let proof_info = risc0_worker.generate_proof(risc0_params)?;
-                let serialized_proof = bincode::serialize(&proof_info.receipt.inner)
+                let risc0_prover = Risc0LocalProver::new(ProverOpts::succinct());
+                let receipt = risc0_prover.generate_proof(risc0_params).await?;
+                let serialized_proof = bincode::serialize(&receipt.inner)
                     .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
                 Ok(AlignedVerificationInputs::Risc0 {

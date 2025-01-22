@@ -1,10 +1,47 @@
+use crate::abi::universal_bombetta::VerifierDetails;
 use crate::error::Result;
 use crate::systems::{
     aligned_layer::AlignedLayerProofParams, arkworks::ArkworksProofParams, gnark::GnarkProofParams,
     risc0::Risc0ProofParams, sp1::Sp1ProofParams,
 };
-use crate::{ProvingSystemInformation, VerifierConstraints};
+use alloy::primitives::{Address, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
+
+pub mod aligned_layer;
+pub mod arkworks;
+pub mod gnark;
+pub mod risc0;
+pub mod sp1;
+
+#[derive(Debug, Default)]
+pub struct VerifierConstraints {
+    pub verifier: Option<Address>,
+    pub selector: Option<FixedBytes<4>>,
+    pub is_sha_commitment: Option<bool>,
+    pub public_inputs_offset: Option<U256>,
+    pub public_inputs_length: Option<U256>,
+    pub has_partial_commitment_result_check: Option<bool>,
+    pub submitted_partial_commitment_result_offset: Option<U256>,
+    pub submitted_partial_commitment_result_length: Option<U256>,
+    pub predetermined_partial_commitment: Option<FixedBytes<32>>,
+}
+
+pub trait ProofConfiguration: Debug + Send + Sync + 'static {
+    // return pre-determined verifier constraints of the system
+    fn verifier_constraints(&self) -> VerifierConstraints;
+    // validate verification configuration
+    fn validate(&self, verifier_details: &VerifierDetails) -> Result<()>;
+}
+
+pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
+    type Config: ProofConfiguration;
+    fn proof_configuration(&self) -> Self::Config;
+    // Validate the inputs needed for proof generation
+    fn validate_inputs(&self) -> Result<()>;
+    // return system id based on information type
+    fn proving_system_id(&self) -> ProvingSystemId;
+}
 
 macro_rules! proving_systems {
     ($(($variant:ident, $params:ty, $str:literal)),* $(,)?) => {
@@ -37,7 +74,6 @@ macro_rules! proving_systems {
             }
         }
 
-        // Implement TryFrom for runtime string conversion
         impl TryFrom<&str> for ProvingSystemId {
             type Error = String;
 
@@ -66,17 +102,47 @@ macro_rules! proving_systems {
             }
         }
 
-        impl ProvingSystemInformation for ProvingSystemParams {
-            fn validate_prover_inputs(&self) -> Result<()> {
+        #[derive(Clone, Debug)]
+        pub enum ProvingSystemParamsConfig {
+            $(
+                $variant(<$params as ProvingSystemInformation>::Config),
+            )*
+        }
+
+        impl ProofConfiguration for ProvingSystemParamsConfig {
+            fn verifier_constraints(&self) -> VerifierConstraints {
                 match self {
-                    $(Self::$variant(params) => params.validate_prover_inputs()),*
+                    $(Self::$variant(config) => config.verifier_constraints()),*
                 }
             }
 
-            fn verifier_constraints() -> VerifierConstraints {
-                // This should never be called directly on ProvingSystemParams
-                // Instead, use the specific proving system implementation
-                VerifierConstraints::default()
+            fn validate(&self, verifier_details: &VerifierDetails) -> Result<()> {
+                match self {
+                    $(Self::$variant(config) => config.validate(verifier_details)),*
+                }
+            }
+        }
+
+        impl ProvingSystemInformation for ProvingSystemParams {
+            type Config = ProvingSystemParamsConfig;
+
+            fn proof_configuration(&self) -> Self::Config {
+                match self {
+                    $(Self::$variant(params) =>
+                        ProvingSystemParamsConfig::$variant(params.proof_configuration()),)*
+                }
+            }
+
+            fn validate_inputs(&self) -> Result<()> {
+                match self {
+                    $(Self::$variant(params) => params.validate_inputs()),*
+                }
+            }
+
+            fn proving_system_id(&self) -> ProvingSystemId {
+                match self {
+                    $(Self::$variant(_) => ProvingSystemId::$variant),*
+                }
             }
         }
 

@@ -12,7 +12,7 @@ use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
 use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::systems::sp1::{Sp1Config, Sp1ProofParams};
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
@@ -20,16 +20,6 @@ use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
-/// This is an example workflow a proof request for Risc0 using the taralli protocol:
-/// 1. Read in needed state variables, define rpc provider and define signer
-/// 2. Set up the requester config -- constant values that do not change with each request
-/// 3. Set up the request builder with default values
-/// 4. load in concrete information for a specific proof request.
-///    (reward params, proof data inputs, verification commitment data, etc.)
-/// 5. Extend and finish building the request from default builder to build a specific proof request
-///    using specific inputs
-/// 6. sign the fully built request.
-/// 7. submit the signed request to the server and start tracking its status
 #[tokio::main]
 async fn main() -> Result<()> {
     // setup tracing for client execution
@@ -45,15 +35,13 @@ async fn main() -> Result<()> {
     let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
 
     // proving system information data
-    let risc0_guest_program_path = Path::new("./contracts/test-proof-data/risc0/is-even");
-    let risc0_image_id: FixedBytes<32> =
-        fixed_bytes!("cb7d04f8807ec1b6ffa79c29e4b7c6cb071c1bcc1de2e6c6068882a55ad8f3a8");
+    let sp1_program_path = Path::new("./contracts/test-proof-data/sp1/fibonacci-program");
 
-    // proof input
-    let proof_input = U256::from(1304);
-    let inputs = proof_input.abi_encode();
+    // proof input(s)
+    let inputs = 1000u32;
+
     // load elf binary
-    let elf = std::fs::read(risc0_guest_program_path)?;
+    let elf = std::fs::read(sp1_program_path)?;
 
     // on chain proof request data
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
@@ -64,9 +52,9 @@ async fn main() -> Result<()> {
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
     let auction_length = 60u32; // 1 min
-    let verifier_address = address!("31766974fb795dF3f7d0c010a3D5c55e4bd8113e");
-    let verify_function_selector: FixedBytes<4> = fixed_bytes!("ab750e75");
-    let public_inputs_offset = U256::from(32);
+    let verifier_address = address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1");
+    let verify_function_selector: FixedBytes<4> = fixed_bytes!("41493c60");
+    let public_inputs_offset = U256::from(0);
     let public_inputs_length = U256::from(64);
     let is_sha_commitment = true;
     let has_partial_commitment_result_check = false;
@@ -108,14 +96,15 @@ async fn main() -> Result<()> {
     let builder = builder_default.clone();
 
     // proving system information
-    let proof_info = serde_json::to_value(Risc0ProofParams { elf, inputs })?;
+    let proof_info = serde_json::to_value(Sp1ProofParams {
+        elf,
+        inputs: inputs.to_le_bytes().to_vec(),
+        proof_config: Sp1Config::Groth16,
+    })?;
 
     // load verification commitments
-    // abi encode image id and proof input hash
-    let public_inputs_commitment_preimage = DynSolValue::Tuple(vec![
-        DynSolValue::FixedBytes(risc0_image_id, 32),
-        DynSolValue::Uint(proof_input, 256),
-    ]);
+    let public_inputs_commitment_preimage =
+        DynSolValue::Tuple(vec![DynSolValue::Bytes(inputs.to_le_bytes().to_vec())]);
     let public_inputs_commitment_digest =
         Sha256::digest(public_inputs_commitment_preimage.abi_encode());
     let public_inputs_commitment = B256::from_slice(public_inputs_commitment_digest.as_slice());

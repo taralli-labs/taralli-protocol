@@ -6,7 +6,21 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Ethereum, primitives::Address, providers::Provider, transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::ProvingSystemId;
+use taralli_primitives::systems::ProvingSystemId;
+
+pub struct AppStateConfig<P, M>
+where
+    M: Clone,
+{
+    pub rpc_provider: P,
+    pub subscription_manager: Arc<SubscriptionManager<M>>,
+    pub market_address: Address,
+    pub proving_system_ids: Vec<String>,
+    pub minimum_allowed_proving_time: u32,
+    pub maximum_allowed_start_delay: u32,
+    pub maximum_allowed_stake: u128,
+    pub validation_timeout_seconds: Duration,
+}
 
 // Generic over the type of request so that we can change it later without
 // breaking the API
@@ -32,19 +46,10 @@ where
     P: Provider<T, Ethereum> + Clone,
     M: Clone,
 {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        rpc_provider: P,
-        subscription_manager: Arc<SubscriptionManager<M>>,
-        market_address: Address,
-        proving_system_ids: Vec<String>,
-        minimum_allowed_proving_time: u32,
-        maximum_allowed_start_delay: u32,
-        maximum_allowed_stake: u128,
-        validation_timeout_seconds: Duration,
-    ) -> Self {
+    pub fn new(config: AppStateConfig<P, M>) -> Self {
         // Convert proving system IDs
-        let proving_system_ids = proving_system_ids
+        let proving_system_ids = config
+            .proving_system_ids
             .iter()
             .map(|id| {
                 ProvingSystemId::try_from(id.as_str())
@@ -54,14 +59,14 @@ where
             .expect("failed to convert proving system ids");
 
         Self {
-            rpc_provider,
-            subscription_manager,
-            market_address,
+            rpc_provider: config.rpc_provider,
+            subscription_manager: config.subscription_manager,
+            market_address: config.market_address,
             proving_system_ids,
-            minimum_allowed_proving_time,
-            maximum_allowed_start_delay,
-            maximum_allowed_stake,
-            validation_timeout_seconds,
+            minimum_allowed_proving_time: config.minimum_allowed_proving_time,
+            maximum_allowed_start_delay: config.maximum_allowed_start_delay,
+            maximum_allowed_stake: config.maximum_allowed_stake,
+            validation_timeout_seconds: config.validation_timeout_seconds,
             phantom: PhantomData,
         }
     }
@@ -78,7 +83,7 @@ where
         self.market_address
     }
 
-    pub fn proving_system_ids(&self) -> Vec<ProvingSystemId> {
+    pub fn supported_proving_systems(&self) -> Vec<ProvingSystemId> {
         self.proving_system_ids.clone()
     }
 

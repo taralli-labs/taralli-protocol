@@ -7,8 +7,8 @@ use serde::Serialize;
 use serde_json::Value;
 use std::path::PathBuf;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
-use taralli_primitives::taralli_systems::systems::gnark::{GnarkProofParams, GnarkSchemeConfig};
+use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 use tempfile::NamedTempFile;
 
@@ -47,10 +47,10 @@ impl GnarkWorker {
         }
 
         // Build command based on scheme configuration
-        let (scheme, curve) = match gnark_params.scheme_config {
-            GnarkSchemeConfig::Groth16Bn254 => ("groth16", "bn254"),
-            GnarkSchemeConfig::PlonkBn254 => ("plonk", "bn254"),
-            GnarkSchemeConfig::PlonkBls12_381 => ("plonk", "bls12-381"),
+        let (scheme, curve) = match gnark_params.config {
+            GnarkConfig::Groth16Bn254 => ("groth16", "bn254"),
+            GnarkConfig::PlonkBn254 => ("plonk", "bn254"),
+            GnarkConfig::PlonkBls12_381 => ("plonk", "bls12-381"),
         };
 
         // Create the input structure

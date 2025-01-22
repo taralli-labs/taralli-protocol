@@ -1,7 +1,7 @@
 use futures::{Stream, StreamExt};
 use reqwest_eventsource::{Event, EventSource};
 use std::pin::Pin;
-use taralli_primitives::{taralli_systems::id::ProvingSystemParams, Request};
+use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
 use crate::{

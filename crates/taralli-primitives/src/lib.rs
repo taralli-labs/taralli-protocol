@@ -1,15 +1,14 @@
 //! Core types and traits for the Taralli protocol
 //!
-//! This module re-exports commonly used types from alloy-primitives and taralli-systems
+//! This module re-exports commonly used types from alloy-primitives
 //! to ensure version compatibility and provide a single source of truth.
 
 pub mod alloy {
     pub mod primitives {
-        pub use taralli_systems::alloy::primitives::{
-            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, U256,
+        pub use alloy::primitives::{
+            address, b256, bytes, fixed_bytes, Address, Bytes, FixedBytes, PrimitiveSignature,
+            B256, U256,
         };
-        // Keep additional alloy types that primitives needs
-        pub use alloy::primitives::{PrimitiveSignature, B256};
     }
 
     pub mod network {
@@ -48,25 +47,12 @@ pub mod alloy {
     }
 }
 
-pub mod taralli_systems {
-    pub mod id {
-        pub use taralli_systems::id::*;
-    }
-
-    pub mod systems {
-        pub use taralli_systems::systems::*;
-    }
-
-    pub mod traits {
-        pub use taralli_systems::{ProvingSystemInformation, VerifierConstraints};
-    }
-}
-
 // Taralli primitives
 pub mod abi;
 pub mod error;
 pub mod market;
 pub mod request;
+pub mod systems;
 pub mod utils;
 pub mod validation;
 

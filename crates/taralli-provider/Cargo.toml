@@ -20,12 +20,15 @@ url = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 sha3 = { workspace = true }
-risc0-zkvm = { workspace = true }
+risc0-zkvm = { version = "1.1.2", default-features = false, features = ["client"] }
+bonsai-sdk = { version = "1.2.0", features = ["non_blocking"] }
+bytemuck = "1.21.0"
+hex = "0.4.3"
 eventsource-stream = "0.2.3"
 rand = "0.8.5"
 reqwest-eventsource = "0.6.0"
 config = "0.14.0"
-sp1-sdk = "3.4.0"
+sp1-sdk = "4.0.0"
 ark-circom = "0.5.0"
 ark-bn254 = "0.5.0"
 ark-std = "0.5.0"

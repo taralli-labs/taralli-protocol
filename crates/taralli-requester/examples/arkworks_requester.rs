@@ -14,10 +14,11 @@ use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
+use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::systems::arkworks::ArkworksProofParams;
+use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
-use taralli_systems::id::ProvingSystemId;
-use taralli_systems::systems::arkworks::ArkworksProofParams;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -54,7 +55,7 @@ async fn main() -> Result<()> {
     let input = serde_json::from_reader(inputs_reader)?;
 
     // on chain proof request data
-    let market_address = address!("e05e737478E4f0b886981aD85CF9a59D55413e8b");
+    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
     let reward_token_address = address!("89fF1B147026815cf497AA45D4FDc2DF51Ed7f00");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
@@ -153,7 +154,7 @@ async fn main() -> Result<()> {
     let signed_request = requester.sign_request(proof_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request, 0)?;
+    requester.validate_request(&signed_request)?;
 
     // TODO: Add a retry policy
     requester

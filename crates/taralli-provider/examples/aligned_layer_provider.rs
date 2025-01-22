@@ -1,11 +1,11 @@
 use alloy::network::EthereumWallet;
-use alloy::primitives::address;
 use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
 use std::env;
 use std::str::FromStr;
+use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_provider::config::ProviderConfig;
 use taralli_provider::workers::aligned_layer::AlignedLayerWorker;
 use taralli_provider::ProviderClient;
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
         .on_http(rpc_url.clone());
 
     // market contract
-    let market_address = address!("e05e737478E4f0b886981aD85CF9a59D55413e8b");
+    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
 
     // build provider client config
     let config = ProviderConfig::new(rpc_provider, market_address, server_url);
@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
         .with_worker(
-            "aligned",
+            "aligned-layer",
             AlignedLayerWorker::new(signer.address(), rpc_url.to_string(), ethers_wallet),
         )?
         .build();

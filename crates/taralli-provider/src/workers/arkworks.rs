@@ -17,16 +17,17 @@ use taralli_primitives::{
         dyn_abi::dyn_abi::DynSolValue,
         primitives::{Bytes, FixedBytes, U256},
     },
-    taralli_systems::id::ProvingSystemParams,
+    systems::ProvingSystemParams,
 };
-use taralli_primitives::{taralli_systems::systems::arkworks::ArkworksProofParams, Request};
+use taralli_primitives::{systems::arkworks::ArkworksProofParams, Request};
 use tempfile::NamedTempFile;
 use wasmer::Store;
 
-type ProofValues = (Vec<DynSolValue>, Vec<Vec<DynSolValue>>, Vec<DynSolValue>);
-
 #[derive(Default)]
 pub struct ArkworksWorker;
+
+// type alias for arkworks proof values
+type ProofValues = (Vec<DynSolValue>, Vec<Vec<DynSolValue>>, Vec<DynSolValue>);
 
 /// TODO: make generic over any circuit
 impl ArkworksWorker {

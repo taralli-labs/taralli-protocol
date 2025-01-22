@@ -18,7 +18,9 @@ use bytes::Bytes;
 use futures::stream::MapOk;
 use serde_json::Value;
 use taralli_server::{
-    app_state::AppState, config::Config, subscription_manager::SubscriptionManager,
+    app_state::{AppState, AppStateConfig},
+    config::Config,
+    subscription_manager::SubscriptionManager,
 };
 use tower_http::trace::TraceLayer;
 
@@ -120,16 +122,17 @@ pub async fn setup_app(size: Option<usize>) -> Router {
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url().unwrap());
     let subscription_manager: SubscriptionManager<Value> =
         SubscriptionManager::new(size.unwrap_or(1));
-    let app_state = AppState::new(
+
+    let app_state = AppState::new(AppStateConfig {
         rpc_provider,
-        Arc::new(subscription_manager),
-        config.market_address,
-        config.proving_system_ids.clone(),
-        0,
-        0,
-        0,
-        Duration::from_secs(10),
-    );
+        subscription_manager: Arc::new(subscription_manager),
+        market_address: config.market_address,
+        proving_system_ids: config.proving_system_ids,
+        minimum_allowed_proving_time: 0,
+        maximum_allowed_start_delay: 0,
+        maximum_allowed_stake: 0,
+        validation_timeout_seconds: Duration::from_secs(10),
+    });
 
     Router::new()
         .route("/submit", axum::routing::post(submit_handler_json))

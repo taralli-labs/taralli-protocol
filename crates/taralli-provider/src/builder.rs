@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
-    taralli_systems::id::ProvingSystemId,
+    systems::ProvingSystemId,
 };
 
 use crate::{
@@ -38,19 +38,22 @@ where
     N: Network + Clone,
 {
     pub fn new(config: ProviderConfig<T, P, N>) -> Self {
-        // Initialize with defaults but override shared values
+        // Initialize with defaults
         let bidder_config = BidderConfig {
             market_address: config.market_address,
             ..Default::default()
         };
+
         let resolver_config = ResolverConfig {
             market_address: config.market_address,
             ..Default::default()
         };
+
         let api_config = ApiConfig {
             server_url: config.server_url.clone(),
             ..Default::default()
         };
+
         Self {
             config,
             workers: HashMap::new(),

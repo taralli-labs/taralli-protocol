@@ -14,13 +14,11 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Network, providers::Provider, signers::Signer, transports::Transport,
 };
-use taralli_primitives::taralli_systems::id::ProvingSystemParams;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::utils::{
     compute_permit2_digest, compute_request_id, compute_request_witness,
 };
-use taralli_primitives::validation::{
-    validate_amount_constraints, validate_market_address, validate_signature,
-};
+use taralli_primitives::validation::validate_request;
 use taralli_primitives::Request;
 
 pub struct RequesterClient<T, P, N, S>
@@ -61,75 +59,68 @@ where
         }
     }
 
-    pub fn validate_request(
-        &self,
-        request: &Request<ProvingSystemParams>,
-        _latest_timestamp: u64,
-    ) -> Result<()> {
-        validate_market_address(request, self.config.market_address)?;
-        // TODO better design for time constraint checking
-        //validate_time_constraints(
-        //    latest_timestamp,
-        //    self.config.validation.minimum_allowed_proving_time,
-        //    self.config.validation.maximum_start_delay,
-        //    request,
-        //)?;
-        validate_amount_constraints(self.config.validation.maximum_allowed_stake, request)?;
-        validate_signature(request)?;
-        Ok(())
-    }
-
     /// sign the inputted proof request and submit it to the taralli server.
     /// then start tracking the request auction and resolution on-chain.
     pub async fn submit_and_track_request(
         &self,
-        proof_request: Request<ProvingSystemParams>,
+        request: Request<ProvingSystemParams>,
         auction_time_length: u64,
     ) -> Result<()> {
         // compute request id
-        let request_id = compute_request_id(
-            &proof_request.onchain_proof_request,
-            proof_request.signature,
-        );
+        let request_id = compute_request_id(&request.onchain_proof_request, request.signature);
 
         // compute resolve deadline timestamp
-        let resolve_deadline = proof_request.onchain_proof_request.endAuctionTimestamp
-            + proof_request.onchain_proof_request.provingTime as u64;
+        let resolve_deadline = request.onchain_proof_request.endAuctionTimestamp
+            + request.onchain_proof_request.provingTime as u64;
 
+        // setup tracking
+        let auction_tracker = self
+            .tracker
+            .start_auction_tracking(request_id, Duration::from_secs(auction_time_length));
+        let resolution_tracker = self
+            .tracker
+            .start_resolution_tracking(request_id, Duration::from_secs(resolve_deadline));
+
+        tracing::info!("tracking started for request ID: {}", request_id);
         tracing::info!("submitting request to server");
-        tracing::info!("request ID: {}", request_id);
 
         // submit signed request to server
         let response = self
             .api
-            .submit_request(proof_request.clone())
+            .submit_request(request.clone())
             .await
             .map_err(|e| RequesterError::ServerRequestError(e.to_string()))?;
 
         // track the request
-        if response.status().is_success() {
-            tracing::info!("submission success, tracking started");
-            self.tracker
-                .track_request(
-                    request_id,
-                    Duration::from_secs(auction_time_length),
-                    Duration::from_secs(resolve_deadline),
-                )
-                .await
-                .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
-            tracing::info!("tracking complete");
-            Ok(())
-        } else {
+        if !response.status().is_success() {
             // Parse the error response
             let error_body = response.json::<serde_json::Value>().await.map_err(|e| {
                 RequesterError::ServerRequestError(format!("Failed to parse error response: {}", e))
             })?;
 
-            Err(RequesterError::RequestSubmissionFailed(format!(
+            return Err(RequesterError::RequestSubmissionFailed(format!(
                 "Server validation failed: {}",
                 error_body["error"].as_str().unwrap_or("Unknown error")
-            )))
+            )));
         }
+
+        tracing::info!("Request submitted successfully, waiting for auction result");
+
+        // Wait for auction result
+        let _auction_result = auction_tracker
+            .await
+            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?
+            .ok_or(RequesterError::AuctionTimeoutError())?;
+
+        tracing::info!("Auction completed, waiting for resolution");
+
+        // Wait for resolution
+        let _resolution_result = resolution_tracker
+            .await
+            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
+
+        tracing::info!("Tracking complete");
+        Ok(())
     }
 
     pub async fn sign_request(
@@ -150,5 +141,23 @@ where
         // load signature into proof request
         request.signature = signature;
         Ok(request)
+    }
+
+    pub fn validate_request(&self, request: &Request<ProvingSystemParams>) -> Result<()> {
+        // validate a request built by the requester client
+        let dummy_supported_proving_systems = &[request.proving_system_id];
+        // NOTE: The latest timestamp check as well as supported proving system checks are both no ops as it is assumed
+        //       the requester client is aware of these requirements generally when using the protocol.
+        validate_request(
+            request,
+            request.onchain_proof_request.startAuctionTimestamp - 100,
+            &self.config.market_address,
+            self.config.validation.minimum_allowed_proving_time,
+            self.config.validation.maximum_start_delay,
+            self.config.validation.maximum_allowed_stake,
+            dummy_supported_proving_systems,
+        )?;
+
+        Ok(())
     }
 }
