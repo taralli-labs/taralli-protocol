@@ -105,7 +105,7 @@ async fn main() -> Result<()> {
 
     // craft proving system information json here
     let proof_info = serde_json::to_value(GnarkProofParams {
-        scheme_config: GnarkConfig::Groth16Bn254,
+        config: GnarkConfig::Groth16Bn254,
         r1cs,
         public_inputs: public_inputs.clone(),
         input,

@@ -36,7 +36,7 @@ pub trait ProofConfiguration: Debug + Send + Sync + 'static {
 
 pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
     type Config: ProofConfiguration;
-    fn proof_configuration(&self) -> &Self::Config;
+    fn proof_configuration(&self) -> Self::Config;
     // Validate the inputs needed for proof generation
     fn validate_inputs(&self) -> Result<()>;
     // return system id based on information type
@@ -126,13 +126,11 @@ macro_rules! proving_systems {
         impl ProvingSystemInformation for ProvingSystemParams {
             type Config = ProvingSystemParamsConfig;
 
-            fn proof_configuration(&self) -> &Self::Config {
-                static CONFIG: std::sync::OnceLock<ProvingSystemParamsConfig> = std::sync::OnceLock::new();
-
-                CONFIG.get_or_init(|| match self {
+            fn proof_configuration(&self) -> Self::Config {
+                match self {
                     $(Self::$variant(params) =>
-                        ProvingSystemParamsConfig::$variant(params.proof_configuration().clone()),)*
-                })
+                        ProvingSystemParamsConfig::$variant(params.proof_configuration()),)*
+                }
             }
 
             fn validate_inputs(&self) -> Result<()> {

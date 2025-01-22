@@ -188,7 +188,7 @@ impl AlignedLayerWorker {
         }
 
         // Build command based on scheme configuration
-        let (scheme, curve) = match gnark_params.scheme_config {
+        let (scheme, curve) = match gnark_params.config {
             GnarkConfig::Groth16Bn254 => ("groth16", "bn254"),
             GnarkConfig::PlonkBn254 => ("plonk", "bn254"),
             GnarkConfig::PlonkBls12_381 => ("plonk", "bls12-381"),

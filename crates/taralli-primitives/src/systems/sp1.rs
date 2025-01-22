@@ -14,29 +14,21 @@ pub enum Sp1Config {
 
 impl ProofConfiguration for Sp1Config {
     fn verifier_constraints(&self) -> VerifierConstraints {
-        match self {
-            Self::Groth16 => VerifierConstraints {
-                verifier: Some(address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1")),
-                selector: Some(fixed_bytes!("41493c60")),
-                is_sha_commitment: Some(true),
-                public_inputs_offset: Some(U256::from(0)),
-                public_inputs_length: Some(U256::from(64)),
-                has_partial_commitment_result_check: None,
-                submitted_partial_commitment_result_offset: None,
-                submitted_partial_commitment_result_length: None,
-                predetermined_partial_commitment: None,
-            },
-            Self::Plonk => VerifierConstraints {
-                verifier: Some(address!("d2832Cf1fC8bA210FfABF62Db9A8781153131d16")),
-                selector: Some(fixed_bytes!("41493c60")),
-                is_sha_commitment: Some(true),
-                public_inputs_offset: Some(U256::from(0)),
-                public_inputs_length: Some(U256::from(64)),
-                has_partial_commitment_result_check: None,
-                submitted_partial_commitment_result_offset: None,
-                submitted_partial_commitment_result_length: None,
-                predetermined_partial_commitment: None,
-            },
+        let verifier = match self {
+            Self::Groth16 => address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1"),
+            Self::Plonk => address!("d2832Cf1fC8bA210FfABF62Db9A8781153131d16"),
+        };
+
+        VerifierConstraints {
+            verifier: Some(verifier),
+            selector: Some(fixed_bytes!("41493c60")),
+            is_sha_commitment: Some(true),
+            public_inputs_offset: Some(U256::from(0)),
+            public_inputs_length: Some(U256::from(64)),
+            has_partial_commitment_result_check: None,
+            submitted_partial_commitment_result_offset: None,
+            submitted_partial_commitment_result_length: None,
+            predetermined_partial_commitment: None,
         }
     }
 
@@ -55,8 +47,8 @@ pub struct Sp1ProofParams {
 impl ProvingSystemInformation for Sp1ProofParams {
     type Config = Sp1Config;
 
-    fn proof_configuration(&self) -> &Self::Config {
-        &self.proof_config
+    fn proof_configuration(&self) -> Self::Config {
+        self.proof_config.clone()
     }
 
     fn validate_inputs(&self) -> Result<()> {

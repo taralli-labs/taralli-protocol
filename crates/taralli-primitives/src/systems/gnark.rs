@@ -29,7 +29,7 @@ impl ProofConfiguration for GnarkConfig {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GnarkProofParams {
-    pub scheme_config: GnarkConfig,
+    pub config: GnarkConfig,
     pub r1cs: Vec<u8>,
     pub public_inputs: serde_json::Value,
     pub input: serde_json::Value,
@@ -38,8 +38,8 @@ pub struct GnarkProofParams {
 impl ProvingSystemInformation for GnarkProofParams {
     type Config = GnarkConfig;
 
-    fn proof_configuration(&self) -> &Self::Config {
-        &self.scheme_config
+    fn proof_configuration(&self) -> Self::Config {
+        self.config.clone()
     }
 
     fn validate_inputs(&self) -> Result<()> {

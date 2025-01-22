@@ -38,9 +38,8 @@ pub struct Risc0ProofParams {
 impl ProvingSystemInformation for Risc0ProofParams {
     type Config = Risc0Config;
 
-    fn proof_configuration(&self) -> &Self::Config {
-        static CONFIG: std::sync::OnceLock<Risc0Config> = std::sync::OnceLock::new();
-        CONFIG.get_or_init(|| Risc0Config)
+    fn proof_configuration(&self) -> Self::Config {
+        Risc0Config
     }
 
     fn validate_inputs(&self) -> Result<()> {

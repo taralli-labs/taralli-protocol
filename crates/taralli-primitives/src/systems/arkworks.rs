@@ -43,9 +43,8 @@ pub struct ArkworksProofParams {
 impl ProvingSystemInformation for ArkworksProofParams {
     type Config = ArkworksConfig;
 
-    fn proof_configuration(&self) -> &Self::Config {
-        static CONFIG: std::sync::OnceLock<ArkworksConfig> = std::sync::OnceLock::new();
-        CONFIG.get_or_init(|| ArkworksConfig)
+    fn proof_configuration(&self) -> Self::Config {
+        ArkworksConfig
     }
 
     fn validate_inputs(&self) -> Result<()> {

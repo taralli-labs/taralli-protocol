@@ -68,28 +68,24 @@ pub struct AlignedLayerProofParams {
 impl ProvingSystemInformation for AlignedLayerProofParams {
     type Config = AlignedLayerConfig;
 
-    fn proof_configuration(&self) -> &Self::Config {
-        static CONFIG: std::sync::OnceLock<AlignedLayerConfig> = std::sync::OnceLock::new();
-
-        CONFIG.get_or_init(|| {
-            let underlying_config = match &self.underlying_system_params {
-                UnderlyingProvingSystemParams::Risc0(params) => {
-                    UnderlyingConfig::Risc0(params.proof_configuration().clone())
-                }
-                UnderlyingProvingSystemParams::SP1(params) => {
-                    UnderlyingConfig::SP1(params.proof_configuration().clone())
-                }
-                UnderlyingProvingSystemParams::Gnark(params) => {
-                    UnderlyingConfig::Gnark(params.proof_configuration().clone())
-                }
-            };
-
-            AlignedLayerConfig {
-                aligned_proving_system_id: self.aligned_proving_system_id.clone(),
-                proving_system_aux_commitment: self.proving_system_aux_commitment,
-                underlying_config,
+    fn proof_configuration(&self) -> Self::Config {
+        let underlying_config = match &self.underlying_system_params {
+            UnderlyingProvingSystemParams::Risc0(params) => {
+                UnderlyingConfig::Risc0(params.proof_configuration())
             }
-        })
+            UnderlyingProvingSystemParams::SP1(params) => {
+                UnderlyingConfig::SP1(params.proof_configuration())
+            }
+            UnderlyingProvingSystemParams::Gnark(params) => {
+                UnderlyingConfig::Gnark(params.proof_configuration())
+            }
+        };
+
+        AlignedLayerConfig {
+            aligned_proving_system_id: self.aligned_proving_system_id.clone(),
+            proving_system_aux_commitment: self.proving_system_aux_commitment,
+            underlying_config,
+        }
     }
 
     fn validate_inputs(&self) -> Result<()> {
