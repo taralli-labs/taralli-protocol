@@ -3,16 +3,10 @@ use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
-use ethers::signers::LocalWallet;
-use risc0_zkvm::ProverOpts;
 use std::env;
 use std::str::FromStr;
 use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_provider::config::ProviderConfig;
-use taralli_provider::workers::aligned_layer::AlignedLayerWorker;
-use taralli_provider::workers::arkworks::ArkworksWorker;
-use taralli_provider::workers::risc0::local::Risc0LocalProver;
-use taralli_provider::workers::risc0::Risc0Worker;
 use taralli_provider::workers::sp1::local::Sp1LocalProver;
 use taralli_provider::workers::sp1::Sp1Worker;
 use taralli_provider::ProviderClient;
@@ -38,33 +32,23 @@ async fn main() -> Result<()> {
     let signer = PrivateKeySigner::from_str(priv_key)?;
     // build wallet for sending txs
     let wallet = EthereumWallet::new(signer.clone());
-    // need dummy ethers wallet for aligned layer sdk
-    let ethers_wallet = priv_key.parse::<LocalWallet>()?;
     // build provider
     let rpc_provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .wallet(wallet)
-        .on_http(rpc_url.clone());
-
+        .on_http(rpc_url);
     // market contract
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
 
     // build provider client config
     let config = ProviderConfig::new(rpc_provider, market_address, server_url);
 
-    // setup provers
+    // setup prover
     let sp1_prover = Sp1LocalProver::new(false, sp1_sdk::SP1ProofMode::Groth16);
-    let risc0_prover = Risc0LocalProver::new(ProverOpts::groth16());
 
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
-        .with_worker("arkworks", ArkworksWorker::new())?
-        .with_worker("sp1", Sp1Worker::new(sp1_prover))?
-        .with_worker("risc0", Risc0Worker::new(risc0_prover))?
-        .with_worker(
-            "aligned-layer",
-            AlignedLayerWorker::new(signer.address(), rpc_url.to_string(), ethers_wallet),
-        )?
+        .with_worker("risc0", Sp1Worker::new(sp1_prover))?
         .build();
 
     //// run provider client

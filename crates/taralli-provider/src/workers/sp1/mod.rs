@@ -1,24 +1,23 @@
-use std::str::FromStr;
+pub mod local; // local sp1 prover
+pub mod remote; // succint network sp1 prover
 
-use crate::error::{ProviderError, Result};
-use crate::worker::{ComputeWorker, WorkResult};
+use crate::{
+    error::{ProviderError, Result},
+    worker::{ComputeWorker, WorkResult},
+};
+use alloy::{
+    dyn_abi::DynSolValue,
+    primitives::{Bytes, FixedBytes},
+};
 use async_trait::async_trait;
-use sp1_sdk::{HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey};
-use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
-use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::systems::sp1::Sp1ProofParams;
-use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::Request;
+use sp1_sdk::{HashableKey, SP1ProofWithPublicValues, SP1VerifyingKey};
+use std::str::FromStr;
+use taralli_primitives::{
+    systems::{sp1::Sp1ProofParams, ProvingSystemParams},
+    Request,
+};
 
-pub struct Sp1Worker {
-    prover_client: ProverClient,
-}
-
-impl Sp1Worker {
-    pub fn new(prover_client: ProverClient) -> Self {
-        Self { prover_client }
-    }
-
+pub trait Sp1ProofFormatter {
     fn format_opaque_submission(
         sp1_proof: &SP1ProofWithPublicValues,
         vk: &SP1VerifyingKey,
@@ -47,28 +46,30 @@ impl Sp1Worker {
     fn compute_partial_commitment() -> Result<FixedBytes<32>> {
         Ok(FixedBytes::new([0u8; 32]))
     }
-
-    pub fn generate_proof(
-        &self,
-        params: &Sp1ProofParams,
-    ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey)> {
-        // write inputs
-        let mut stdin = SP1Stdin::new();
-        stdin.write(&params.inputs);
-        // setup
-        let (pk, vk) = self.prover_client.setup(params.elf.as_slice());
-        // Generate the proof for the given program and input.
-        let sp1_proof = self
-            .prover_client
-            .prove(&pk, stdin)
-            .run()
-            .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
-        Ok((sp1_proof, vk))
-    }
 }
 
 #[async_trait]
-impl ComputeWorker for Sp1Worker {
+pub trait Sp1Prover {
+    async fn generate_proof(
+        &self,
+        params: &Sp1ProofParams,
+    ) -> Result<(SP1ProofWithPublicValues, SP1VerifyingKey)>;
+}
+
+pub struct Sp1Worker<P: Sp1Prover> {
+    prover: P,
+}
+
+impl<P: Sp1Prover> Sp1Worker<P> {
+    pub fn new(prover: P) -> Self {
+        Self { prover }
+    }
+}
+
+impl<P: Sp1Prover> Sp1ProofFormatter for Sp1Worker<P> {}
+
+#[async_trait]
+impl<P: Sp1Prover + Send + Sync> ComputeWorker for Sp1Worker<P> {
     async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
         let params = match &request.proving_system_information {
@@ -81,9 +82,7 @@ impl ComputeWorker for Sp1Worker {
         };
 
         tracing::info!("Sp1 worker: execution started");
-        let (sp1_proof, vk) = self.generate_proof(&params).map_err(|e| {
-            ProviderError::WorkerExecutionFailed(format!("Failed to generate proof: {}", e))
-        })?;
+        let (sp1_proof, vk) = self.prover.generate_proof(&params).await?;
 
         tracing::info!("prover execution finished");
         let opaque_submission = Self::format_opaque_submission(&sp1_proof, &vk)?;

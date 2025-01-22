@@ -1,13 +1,13 @@
 use alloy::network::EthereumWallet;
-use alloy::primitives::address;
 use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
-use risc0_zkvm::ProverOpts;
 use std::env;
 use std::str::FromStr;
+use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_provider::config::ProviderConfig;
+use taralli_provider::workers::risc0::remote::Risc0RemoteProver;
 use taralli_provider::workers::risc0::Risc0Worker;
 use taralli_provider::ProviderClient;
 use tracing::Level;
@@ -38,14 +38,17 @@ async fn main() -> Result<()> {
         .wallet(wallet)
         .on_http(rpc_url);
     // market contract
-    let market_address = address!("e05e737478E4f0b886981aD85CF9a59D55413e8b");
+    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
 
     // build provider client config
     let config = ProviderConfig::new(rpc_provider, market_address, server_url);
 
+    // setup prover
+    let risc0_bonsai_prover = Risc0RemoteProver;
+
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
-        .with_worker("risc0", Risc0Worker::new(ProverOpts::groth16()))?
+        .with_worker("risc0", Risc0Worker::new(risc0_bonsai_prover))?
         .build();
 
     //// run provider client
