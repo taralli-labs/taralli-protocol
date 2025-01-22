@@ -162,11 +162,7 @@ mod tests {
 
         let params = Risc0ProofParams { elf, inputs };
 
-        println!("TEST: generating proof");
-
         // Call generate_proof
         let snark_receipt = Risc0RemoteProver.generate_proof(&params).await.unwrap();
-
-        println!("receipt: {:?}", snark_receipt);
     }
 }*/
