@@ -2,7 +2,7 @@
 
 ## ---------- Overview ----------
 
-The taralli protocol is made up of 6 main components.
+The taralli protocol is made up of 5 main components.
 
 1. Bombetta marketplace smart contract(s)
 2. Taralli primitives
@@ -26,6 +26,37 @@ Taralli primitives contains traits/types describing each supported system as wel
 All systems known by the users of the taralli protocol are organized by their respective IDs within the primitive crate's systems module. Requester clients and/or provider clients can use these types to verbosely describe the computational workload they are requesting/offering to willing buyers. Thus, allowing other parties looking at these data structures at runtime through the protocol's clients to assess their correctness/value. This in order to minimize any runtime analysis that might be needed by opposing parties. Although, system specifications through the primitives crate are not necessarily a requirement for using the protocol it is very practical and highly advised to allow the bidding party (requesters & providers) some way, before they take risk by engaging in an auction to secure the request/offer, to have as close to 100% confidence the request/offer represents what they are wlling to participate in. This goes for both requester as well as provider clients looking to buy/sell specific compute workloads.
 
 The process to add a new system into the taralli protocol systems crate is to include the addition of the new rust module implementing the system's ProvingSystemInformation trait across a given struct which includes the desired inputs for the computational workload, the prover software that validates the compute workload was performed correctly, and the verifier constraints for where/how the proof of computation will be verified in the resolution of the request/offer onchain.
+
+```rust
+#[derive(Debug, Default)]
+pub struct VerifierConstraints {
+    pub verifier: Option<Address>,
+    pub selector: Option<FixedBytes<4>>,
+    pub is_sha_commitment: Option<bool>,
+    pub public_inputs_offset: Option<U256>,
+    pub public_inputs_length: Option<U256>,
+    pub has_partial_commitment_result_check: Option<bool>,
+    pub submitted_partial_commitment_result_offset: Option<U256>,
+    pub submitted_partial_commitment_result_length: Option<U256>,
+    pub predetermined_partial_commitment: Option<FixedBytes<32>>,
+}
+
+pub trait ProofConfiguration: Debug + Send + Sync + 'static {
+    // return pre-determined verifier constraints of the system
+    fn verifier_constraints(&self) -> VerifierConstraints;
+    // validate verification configuration
+    fn validate(&self, verifier_details: &VerifierDetails) -> Result<()>;
+}
+
+pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
+    type Config: ProofConfiguration;
+    fn proof_configuration(&self) -> Self::Config;
+    // Validate the inputs needed for proof generation
+    fn validate_inputs(&self) -> Result<()>;
+    // return system id based on information type
+    fn proving_system_id(&self) -> ProvingSystemId;
+}
+```
 
 #### Requests
 
