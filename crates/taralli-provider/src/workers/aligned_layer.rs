@@ -294,9 +294,9 @@ impl AlignedLayerWorker {
                     }
                 };
 
-                let risc0_local_prover = Risc0LocalProver::new(ProverOpts::succinct());
-                let risc0_receipt = risc0_local_prover.generate_proof(risc0_params).await?;
-                let serialized_proof = bincode::serialize(&risc0_receipt.inner)
+                let risc0_prover = Risc0LocalProver::new(ProverOpts::succinct());
+                let receipt = risc0_prover.generate_proof(risc0_params).await?;
+                let serialized_proof = bincode::serialize(&receipt.inner)
                     .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
                 Ok(AlignedVerificationInputs::Risc0 {
