@@ -13,8 +13,7 @@ Taralli protocol is a verifiable compute marketplace built on top of ethereum. T
 
 **`protocol crates`**
 
-- [systems](./crates/taralli-systems/): defines types for existing systems and their respective IDs by which requests/offers for/of compute using these systems can be made.
-- [primitives](./crates/taralli-primitives/): defines shared types and functionality that is used across the protocol server as well as clients to interact with the protocol.
+- [primitives](./crates/taralli-primitives/): defines shared types and functionality that is used throughout the protocol (system definitions, system IDs, common utility functions, etc).
 - [protocol server](./crates/taralli-server/): rust axum api server that facilitates the communication of requests/offers for/of compute between protocol clients.
 - [requester client](./crates/taralli-requester/): rust program for creating, submitting and tracking requests.
 - [provider client](./crates/taralli-provider/): rust program for monitoring incoming requests from the protocol server, selecting requests, processing requests, and resolving requests.
