@@ -82,3 +82,46 @@ impl Sp1Prover for Sp1RemoteProver {
         Ok((proof, vk))
     }
 }
+
+/*#[cfg(test)]
+mod tests {
+    use std::path::Path;
+    use super::*;
+
+    #[tokio::test]
+    async fn test_succint_prover_network() {
+        // Load .env from workspace root
+        dotenv::from_filename("../../.env").expect("Failed to load .env file");
+        // Read API key and URL from environment, or skip test if not available
+        let priv_key = std::env::var("SUCCINCT_PRIVATE_KEY").expect("SUCCINCT_PRIVATE_KEY not set after loading .env");
+        let api_url = std::env::var("SUCCINT_RPC_URL").expect("SUCCINT_RPC_URL not set after loading .env");
+
+        // proving system information data
+        let sp1_program_path = Path::new("./contracts/test-proof-data/sp1/fibonacci-program");
+        let elf = std::fs::read(sp1_program_path).expect("reading elf failed");
+        // proof input(s)
+        let inputs = 1000u32;
+        let input_bytes = inputs.to_le_bytes().to_vec();
+
+        let mut stdin = SP1Stdin::new();
+        stdin.write(&input_bytes);
+
+        // set up succint network prover
+        let prover = ProverClient::builder()
+            .network()
+            .private_key(&priv_key)
+            .rpc_url(&api_url)
+            .build();
+
+        let (pk, _vk) = prover.setup(&elf);
+
+        // Request proof and get the proof ID immediately
+        let request_id = prover.prove(&pk, &stdin).groth16().skip_simulation(true).request_async().await.expect("sp1 proving failed");
+        println!("Proof request ID: {}", request_id);
+
+        // Wait for proof complete with a timeout
+        let proof = prover.wait_proof(request_id, Some(Duration::from_secs(60 * 60))).await.expect("wait proof failed");
+
+        println!("proof: {:?}", proof);
+    }
+}*/

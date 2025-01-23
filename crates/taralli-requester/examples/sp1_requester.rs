@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
         market_address,
         reward_token_address,
         reward_token_decimals,
-        ProvingSystemId::Risc0,
+        ProvingSystemId::Sp1,
     );
 
     // instantiate requester client
