@@ -60,7 +60,6 @@ contract UniversalPorchettaTest is BaseTest {
         // encode opaque submission
         bytes32 offerId = universalPorchetta.computeOfferId(offer);
         bytes memory opaqueSubmission = _getGroth16ProofSubmission();
-        bytes32 submittedPartialCommitment = bytes32(0);
 
         uint256 prestateBobTokenBalance = testToken.balanceOf(bob);
 
