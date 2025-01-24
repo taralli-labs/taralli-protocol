@@ -37,8 +37,8 @@ impl ProofConfiguration for AlignedLayerConfig {
             // AlignedLayerServiceManager.verifyBatchInclusion.selector
             selector: Some(fixed_bytes!("06045a91")),
             is_sha_commitment: Some(false),
-            public_inputs_offset: Some(U256::from(32)),
-            public_inputs_length: Some(U256::from(64)),
+            inputs_offset: Some(U256::from(32)),
+            inputs_length: Some(U256::from(64)),
             has_partial_commitment_result_check: Some(false),
             submitted_partial_commitment_result_offset: Some(U256::ZERO),
             submitted_partial_commitment_result_length: Some(U256::ZERO),

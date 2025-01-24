@@ -1,6 +1,7 @@
 use crate::{
     abi::universal_bombetta::VerifierDetails,
-    request::Request,
+    request::ComputeRequest,
+    offer::ComputeOffer,
     systems::{ProofConfiguration, ProvingSystemId, ProvingSystemInformation},
     utils::{compute_permit2_digest, compute_request_witness},
     PrimitivesError, Result,
@@ -9,7 +10,7 @@ use alloy::{primitives::Address, sol_types::SolValue};
 
 /// Validates a request by performing all necessary checks in the correct order
 pub fn validate_request<I: ProvingSystemInformation>(
-    request: &Request<I>,
+    request: &ComputeRequest<I>,
     latest_timestamp: u64,
     market_address: &Address,
     minimum_proving_time: u32,
@@ -34,7 +35,7 @@ pub fn validate_request<I: ProvingSystemInformation>(
 
 /// Validates that the request structure matches the claimed proving system
 fn validate_proving_system_structure<I: ProvingSystemInformation>(
-    request: &Request<I>,
+    request: &ComputeRequest<I>,
     supported_proving_systems: &[ProvingSystemId],
 ) -> Result<()> {
     // Check if the proving system is supported
@@ -82,7 +83,7 @@ fn validate_proving_system_structure<I: ProvingSystemInformation>(
 }
 
 pub fn validate_market_address<I: ProvingSystemInformation>(
-    request: &Request<I>,
+    request: &ComputeRequest<I>,
     market_address: &Address,
 ) -> Result<()> {
     if &request.onchain_proof_request.market != market_address {
@@ -95,7 +96,7 @@ pub fn validate_market_address<I: ProvingSystemInformation>(
 }
 
 pub fn validate_amount_constraints<I: ProvingSystemInformation>(
-    request: &Request<I>,
+    request: &ComputeRequest<I>,
     maximum_allowed_stake: u128,
 ) -> Result<()> {
     if request.onchain_proof_request.maxRewardAmount < request.onchain_proof_request.minRewardAmount
@@ -113,7 +114,7 @@ pub fn validate_amount_constraints<I: ProvingSystemInformation>(
 }
 
 pub fn validate_time_constraints<I: ProvingSystemInformation>(
-    request: &Request<I>,
+    request: &ComputeRequest<I>,
     latest_timestamp: u64,
     minimum_proving_time: u32,
     maximum_start_delay: u32,
@@ -133,12 +134,12 @@ pub fn validate_time_constraints<I: ProvingSystemInformation>(
     }
 }
 
-pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Result<()> {
+pub fn validate_nonce<I: ProvingSystemInformation>(_request: &ComputeRequest<I>) -> Result<()> {
     // TODO
     Ok(())
 }
 
-pub fn validate_signature<I: ProvingSystemInformation>(request: &Request<I>) -> Result<()> {
+pub fn validate_signature<I: ProvingSystemInformation>(request: &ComputeRequest<I>) -> Result<()> {
     // compute witness
     let witness = compute_request_witness(&request.onchain_proof_request);
     // compute permit digest

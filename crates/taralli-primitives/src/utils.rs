@@ -1,22 +1,29 @@
 use crate::abi::universal_bombetta::ISignatureTransfer::TokenPermissions;
 use crate::abi::universal_bombetta::VerifierDetails;
+use crate::abi::universal_bombetta::UniversalBombetta::ProofRequest;
+use crate::abi::universal_porchetta::UniversalPorchetta::ProofOffer;
 use crate::systems::VerifierConstraints;
-use crate::OnChainProofRequest;
 use alloy::dyn_abi::DynSolValue;
 use alloy::primitives::{address, b256, keccak256, Address, FixedBytes, B256, U256};
 use alloy::signers::Signature;
 use alloy::sol_types::SolValue;
 use lazy_static::lazy_static;
 
-// type strings
+/// type strings
+// bombetta
+pub const FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB: &str =
+    "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address rewardToken,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+pub const PROOF_REQUEST_WITNESS_TYPE_STRING: &str =
+    "ProofRequest(address signer,address market,uint256 nonce,address rewardToken,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+// porchetta
+pub const FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB: &str =
+    "ProofOffer witness)TokenPermissions(address token,uint256 amount)ProofOffer(address signer,address market,uint256 nonce,address rewardToken,uint256 rewardAmount,address stakeToken,uint256 stakeAmount,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+pub const PROOF_OFFER_WITNESS_TYPE_STRING: &str =
+    "ProofOffer(address signer,address market,uint256 nonce,address rewardToken,uint256 rewardAmount,address stakeToken,uint256 stakeAmount,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+// permit2
 pub const PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB: &str =
     "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
-pub const FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB: &str =
-    "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address token,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 publicInputsCommitment,bytes extraData)";
 pub const TOKEN_PERMISSIONS_TYPE_STRING: &str = "TokenPermissions(address token,uint256 amount)";
-pub const PROOF_REQUEST_WITNESS_TYPE_STRING: &str =
-    "ProofRequest(address signer,address market,uint256 nonce,address token,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 publicInputsCommitment,bytes extraData)";
-// constants
 pub const PERMIT2_DOMAIN_SEPARATOR: B256 =
     b256!("2be86a484194028b8e9b1ac40deffff8868bf4ae32fd0a7db12030c6a18227e1");
 pub const PERMIT2_ADDRESS: Address = address!("000000000022D473030F116dDEE9F6B43aC78BA3");
@@ -32,32 +39,34 @@ lazy_static! {
         // Compute hash
         keccak256(&type_hash_preimage)
     };
-    pub static ref PROOF_REQUEST_WITNESS_TYPE_HASH: B256 =
-        keccak256(PROOF_REQUEST_WITNESS_TYPE_STRING.as_bytes());
     pub static ref TOKEN_PERMISSIONS_TYPE_HASH: B256 =
         keccak256(TOKEN_PERMISSIONS_TYPE_STRING.as_bytes());
+    pub static ref PROOF_REQUEST_WITNESS_TYPE_HASH: B256 =
+        keccak256(PROOF_REQUEST_WITNESS_TYPE_STRING.as_bytes());
+    pub static ref PROOF_OFFER_WITNESS_TYPE_HASH: B256 =
+        keccak256(PROOF_OFFER_WITNESS_TYPE_STRING.as_bytes());
 }
 
 pub fn compute_request_id(
-    onchain_proof_request: &OnChainProofRequest,
+    proof_request: &ProofRequest,
     signature: Signature,
 ) -> B256 {
     // encode + hash `extraData` and `signature`
-    let extra_data_hash = keccak256(onchain_proof_request.extraData.abi_encode());
+    let extra_data_hash = keccak256(proof_request.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
 
     // Encode OnChainProofRequest + Signature
     let values = DynSolValue::Tuple(vec![
-        DynSolValue::Address(onchain_proof_request.market),
-        DynSolValue::Uint(onchain_proof_request.nonce, 256),
-        DynSolValue::Address(onchain_proof_request.token),
-        DynSolValue::Uint(onchain_proof_request.maxRewardAmount, 256),
-        DynSolValue::Uint(onchain_proof_request.minRewardAmount, 256),
-        DynSolValue::Uint(U256::from(onchain_proof_request.minimumStake), 128),
-        DynSolValue::Uint(U256::from(onchain_proof_request.startAuctionTimestamp), 64),
-        DynSolValue::Uint(U256::from(onchain_proof_request.endAuctionTimestamp), 64),
-        DynSolValue::Uint(U256::from(onchain_proof_request.provingTime), 32),
-        DynSolValue::FixedBytes(onchain_proof_request.publicInputsCommitment, 32),
+        DynSolValue::Address(proof_request.market),
+        DynSolValue::Uint(proof_request.nonce, 256),
+        DynSolValue::Address(proof_request.rewardToken),
+        DynSolValue::Uint(proof_request.maxRewardAmount, 256),
+        DynSolValue::Uint(proof_request.minRewardAmount, 256),
+        DynSolValue::Uint(U256::from(proof_request.minimumStake), 128),
+        DynSolValue::Uint(U256::from(proof_request.startAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_request.endAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_request.provingTime), 32),
+        DynSolValue::FixedBytes(proof_request.inputsCommitment, 32),
         DynSolValue::FixedBytes(extra_data_hash, 32),
         DynSolValue::FixedBytes(signature_hash, 32),
     ]);
@@ -67,22 +76,22 @@ pub fn compute_request_id(
     keccak256(&preimage)
 }
 
-pub fn compute_request_witness(onchain_proof_request: &OnChainProofRequest) -> FixedBytes<32> {
+pub fn compute_request_witness(proof_request: &ProofRequest) -> FixedBytes<32> {
     // encode witness data
-    let extra_data_hash = keccak256(&onchain_proof_request.extraData);
+    let extra_data_hash = keccak256(&proof_request.extraData);
     let request_witness_values = DynSolValue::Tuple(vec![
         DynSolValue::FixedBytes(*PROOF_REQUEST_WITNESS_TYPE_HASH, 32),
-        DynSolValue::Address(onchain_proof_request.signer),
-        DynSolValue::Address(onchain_proof_request.market),
-        DynSolValue::Uint(onchain_proof_request.nonce, 256),
-        DynSolValue::Address(onchain_proof_request.token),
-        DynSolValue::Uint(onchain_proof_request.maxRewardAmount, 256),
-        DynSolValue::Uint(onchain_proof_request.minRewardAmount, 256),
-        DynSolValue::Uint(U256::from(onchain_proof_request.minimumStake), 128),
-        DynSolValue::Uint(U256::from(onchain_proof_request.startAuctionTimestamp), 64),
-        DynSolValue::Uint(U256::from(onchain_proof_request.endAuctionTimestamp), 64),
-        DynSolValue::Uint(U256::from(onchain_proof_request.provingTime), 32),
-        DynSolValue::FixedBytes(onchain_proof_request.publicInputsCommitment, 32),
+        DynSolValue::Address(proof_request.signer),
+        DynSolValue::Address(proof_request.market),
+        DynSolValue::Uint(proof_request.nonce, 256),
+        DynSolValue::Address(proof_request.rewardToken),
+        DynSolValue::Uint(proof_request.maxRewardAmount, 256),
+        DynSolValue::Uint(proof_request.minRewardAmount, 256),
+        DynSolValue::Uint(U256::from(proof_request.minimumStake), 128),
+        DynSolValue::Uint(U256::from(proof_request.startAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_request.endAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_request.provingTime), 32),
+        DynSolValue::FixedBytes(proof_request.inputsCommitment, 32),
         DynSolValue::FixedBytes(extra_data_hash, 32),
     ]);
 
@@ -90,11 +99,63 @@ pub fn compute_request_witness(onchain_proof_request: &OnChainProofRequest) -> F
     keccak256(request_witness_values.abi_encode())
 }
 
-pub fn compute_permit2_digest(onchain_proof_request: &OnChainProofRequest, witness: B256) -> B256 {
+pub fn compute_offer_id(
+    proof_offer: &ProofOffer,
+    signature: Signature,
+) -> B256 {
+    // encode + hash `extraData` and `signature`
+    let extra_data_hash = keccak256(proof_offer.extraData.abi_encode());
+    let signature_hash = keccak256(signature.as_bytes().abi_encode());
+
+    // Encode OnChainProofRequest + Signature
+    let values = DynSolValue::Tuple(vec![
+        DynSolValue::Address(proof_offer.market),
+        DynSolValue::Uint(proof_offer.nonce, 256),
+        DynSolValue::Address(proof_offer.rewardToken),
+        DynSolValue::Uint(proof_offer.rewardAmount, 256),
+        DynSolValue::Address(proof_offer.stakeToken),
+        DynSolValue::Uint(proof_offer.stakeAmount, 256),
+        DynSolValue::Uint(U256::from(proof_offer.startAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_offer.endAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_offer.provingTime), 32),
+        DynSolValue::FixedBytes(proof_offer.inputsCommitment, 32),
+        DynSolValue::FixedBytes(extra_data_hash, 32),
+        DynSolValue::FixedBytes(signature_hash, 32),
+    ]);
+    let preimage = values.abi_encode();
+
+    // hash encoded preimage to get request id
+    keccak256(&preimage)
+}
+
+pub fn compute_offer_witness(proof_offer: &ProofOffer) -> FixedBytes<32> {
+    // encode witness data
+    let extra_data_hash = keccak256(&proof_offer.extraData);
+    let request_witness_values = DynSolValue::Tuple(vec![
+        DynSolValue::FixedBytes(*PROOF_OFFER_WITNESS_TYPE_HASH, 32),
+        DynSolValue::Address(proof_offer.signer),
+        DynSolValue::Address(proof_offer.market),
+        DynSolValue::Uint(proof_offer.nonce, 256),
+        DynSolValue::Address(proof_offer.rewardToken),
+        DynSolValue::Uint(proof_offer.rewardAmount, 256),
+        DynSolValue::Address(proof_offer.stakeToken),
+        DynSolValue::Uint(U256::from(proof_offer.stakeAmount), 128),
+        DynSolValue::Uint(U256::from(proof_offer.startAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_offer.endAuctionTimestamp), 64),
+        DynSolValue::Uint(U256::from(proof_offer.provingTime), 32),
+        DynSolValue::FixedBytes(proof_offer.inputsCommitment, 32),
+        DynSolValue::FixedBytes(extra_data_hash, 32),
+    ]);
+
+    // hash encoded witness
+    keccak256(request_witness_values.abi_encode())
+}
+
+pub fn compute_permit2_digest(proof_request: &ProofRequest, witness: B256) -> B256 {
     // encode token permissions data
     let token_permissions = TokenPermissions {
-        token: onchain_proof_request.token,
-        amount: onchain_proof_request.maxRewardAmount,
+        token: proof_request.rewardToken,
+        amount: proof_request.maxRewardAmount,
     };
     let token_permissions_bytes = token_permissions.abi_encode();
     let token_permissions_hash_preimage = [
@@ -110,9 +171,9 @@ pub fn compute_permit2_digest(onchain_proof_request: &OnChainProofRequest, witne
     let data_hash_preimage = DynSolValue::Tuple(vec![
         DynSolValue::FixedBytes(*PERMIT_TYPE_HASH, 32),
         DynSolValue::FixedBytes(token_permissions_hash, 32),
-        DynSolValue::Address(onchain_proof_request.market),
-        DynSolValue::Uint(onchain_proof_request.nonce, 256),
-        DynSolValue::Uint(U256::from(onchain_proof_request.endAuctionTimestamp), 64),
+        DynSolValue::Address(proof_request.market),
+        DynSolValue::Uint(proof_request.nonce, 256),
+        DynSolValue::Uint(U256::from(proof_request.endAuctionTimestamp), 64),
         DynSolValue::FixedBytes(witness, 32),
     ])
     .abi_encode();
@@ -143,11 +204,11 @@ impl PartialEq<VerifierDetails> for VerifierConstraints {
                 .is_sha_commitment
                 .is_none_or(|sha| sha == details.isShaCommitment)
             && self
-                .public_inputs_offset
-                .is_none_or(|o| o == details.publicInputsOffset)
+                .inputs_offset
+                .is_none_or(|o| o == details.inputsOffset)
             && self
-                .public_inputs_length
-                .is_none_or(|l| l == details.publicInputsLength)
+                .inputs_length
+                .is_none_or(|l| l == details.inputsLength)
             && self
                 .has_partial_commitment_result_check
                 .is_none_or(|c| c == details.hasPartialCommitmentResultCheck)
@@ -178,19 +239,19 @@ mod tests {
     ];
 
     // Mock setup function to generate sample OnChainProofRequest and other inputs
-    fn get_mock_proof_request() -> OnChainProofRequest {
-        OnChainProofRequest {
+    fn get_mock_proof_request() -> ProofRequest {
+        ProofRequest {
             signer: address!("0000000000000000000000000000000000000003"),
             market: address!("0000000000000000000000000000000000000003"),
             nonce: U256::ZERO,
-            token: address!("0000000000000000000000000000000000000003"),
+            rewardToken: address!("0000000000000000000000000000000000000003"),
             maxRewardAmount: U256::ZERO,
             minRewardAmount: U256::ZERO,
             minimumStake: 0,
             startAuctionTimestamp: 0,
             endAuctionTimestamp: 0,
             provingTime: 0,
-            publicInputsCommitment: b256!(
+            inputsCommitment: b256!(
                 "0000000000000000000000000000000000000000000000000000000000000000"
             ),
             extraData: Bytes::from(""),
