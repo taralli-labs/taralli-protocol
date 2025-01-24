@@ -53,7 +53,7 @@ contract UniversalBombettaInvariant is BaseTest {
         for (uint256 i = 0; i < actor.fetchActiveRequestsIdsLength(); i++) {
             bytes32 requestId = actor.activeRequestIds(i);
             if (!actor.hasBeenResolved(requestId)) {
-                (,,,, uint256 requestReward,,,) = universalBombetta.activeJobData(requestId);
+                (,,,, uint256 requestReward,,,) = universalBombetta.activeProofRequestData(requestId);
                 tokenBalanceTotal += requestReward;
             }
         }
@@ -65,8 +65,8 @@ contract UniversalBombettaInvariant is BaseTest {
         for (uint256 i = 0; i < actor.fetchActiveRequestsIdsLength(); i++) {
             bytes32 requestId = actor.activeRequestIds(i);
             if (!actor.hasBeenResolved(requestId)) {
-                (,,,,, uint256 proverStake,,) = universalBombetta.activeJobData(requestId);
-                ethBalanceTotal += proverStake;
+                (,,,,, uint256 providerStake,,) = universalBombetta.activeProofRequestData(requestId);
+                ethBalanceTotal += providerStake;
             }
         }
         return ethBalanceTotal;

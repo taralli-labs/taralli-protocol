@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-error InvalidRequest();
+// general
 error AuctionEnded();
-error InvalidTimestamp();
 error InvalidResolver();
-error InvalidPublicInputsCommitmentField();
+error InvalidInputsCommitmentField();
 error InvalidExpectedPartialCommitmentResultField();
+// bombetta
+error InvalidRequest();
+error InvalidTimestamp();
+// porchetta
+error InvalidOffer();
