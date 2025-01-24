@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
         .with_worker("risc0", Risc0Worker::new(risc0_prover))?
-        .build();
+        .build()?;
 
     //// run provider client
     // Subscribes to the server and receives back an SSE stream or fails.

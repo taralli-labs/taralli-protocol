@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
     );
 
     // instantiate requester client
-    let requester = RequesterClient::new(config);
+    let requester = RequesterClient::new(config)?;
 
     // set builder defaults
     let builder_default = requester

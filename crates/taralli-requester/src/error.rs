@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum RequesterError {
+    #[error("Requester client builder error: {0}")]
+    BuilderError(String),
     #[error("Failed to submit request: {0}")]
     RequestSubmissionFailed(String),
     #[error("Error when tracking request: {0}")]
@@ -33,6 +35,8 @@ pub enum RequesterError {
     ValidationError(String),
     #[error("Primitives error: {0}")]
     PrimitivesError(#[from] PrimitivesError),
+    #[error("API key error: {0}")]
+    ApiKeyError(String),
 }
 
 pub type Result<T> = core::result::Result<T, RequesterError>;

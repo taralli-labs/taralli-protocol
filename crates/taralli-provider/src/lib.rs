@@ -60,7 +60,7 @@ where
         market_address: Address,
         server_url: Url,
         workers: HashMap<ProvingSystemId, Box<dyn ComputeWorker>>,
-    ) -> Self {
+    ) -> Result<Self> {
         let supported_systems: Vec<_> = workers.keys().cloned().collect();
 
         // Create base config
@@ -71,7 +71,7 @@ where
             server_url,
             request_timeout: 30,
             max_retries: 3,
-        });
+        })?;
 
         let analyzer = RequestAnalyzer::new(
             rpc_provider.clone(),
@@ -101,14 +101,14 @@ where
 
         let worker_manager = WorkerManager::new(workers);
 
-        Self {
+        Ok(Self {
             config,
             api,
             analyzer,
             bidder,
             resolver,
             worker_manager,
-        }
+        })
     }
 
     pub fn builder(config: ProviderConfig<T, P, N>) -> ProviderClientBuilder<T, P, N> {
@@ -119,6 +119,7 @@ where
         let mut stream = self
             .api
             .subscribe_to_markets()
+            .await
             .map_err(|e| ProviderError::ServerRequestError(e.to_string()))?;
         tracing::info!("subscribed to markets, waiting for incoming requests");
         while let Some(result) = stream.next().await {
