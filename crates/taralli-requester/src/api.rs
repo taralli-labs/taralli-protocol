@@ -2,6 +2,7 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
 };
+use taralli_common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
@@ -17,19 +18,14 @@ impl RequesterApi {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
 
-        // Todo: enum for env and usable in all crates
-        let env = match std::env::var("ENV") {
-            Ok(env) => env,
-            Err(_) => "DEVELOPMENT".to_string(),
-        };
-
-        if env == "PRODUCTION" {
+        if Environment::from_env_var() == Environment::Production {
             if let Ok(api_key) = std::env::var("API_KEY") {
                 headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
             } else {
                 return Err(RequesterError::ApiKeyError("API_KEY not found".to_string()));
             }
         }
+
         Ok(Self {
             client: Client::builder()
                 .default_headers(headers)

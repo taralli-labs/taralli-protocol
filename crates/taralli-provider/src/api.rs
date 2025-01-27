@@ -3,6 +3,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
 use serde_json::from_str;
 use std::pin::Pin;
+use taralli_common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
@@ -27,13 +28,7 @@ impl ProviderApi {
             headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
         }
 
-        // Todo: enum for env and usable in all crates
-        let env = match std::env::var("ENV") {
-            Ok(env) => env,
-            Err(_) => "DEVELOPMENT".to_string(),
-        };
-
-        if env == "PRODUCTION" {
+        if Environment::from_env_var() == Environment::Production {
             if let Ok(api_key) = std::env::var("API_KEY") {
                 headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
             } else {
