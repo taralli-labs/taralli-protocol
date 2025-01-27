@@ -67,29 +67,32 @@ impl ProviderApi {
             )));
         }
 
-        // Convert the response stream into a stream of SSE events
-        let stream = response
+        // Turn the response body into a byte stream:
+        let byte_stream = response
             .bytes_stream()
             .map_err(|e| ProviderError::RequestParsingError(e.to_string()));
 
-        // Attempt to create the EventSource, log error if it fails
-        Ok(Box::pin(stream.filter_map(|event| async move {
-            match event {
-                Ok(bytes) => {
-                    let message = String::from_utf8(bytes.to_vec()).ok()?;
-                    match from_str::<Request<ProvingSystemParams>>(&message) {
-                        Ok(proof_request) => Some(Ok(proof_request)),
-                        Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
-                            "Failed to parse proof request: {}",
-                            e
-                        )))),
-                    }
-                }
+        // Wrap that in an SSE parser:
+        let sse_stream = eventsource_stream::EventStream::new(byte_stream)
+            .map_err(|e| ProviderError::RequestParsingError(e.to_string()));
+
+        // Convert the SSE `Event`s into our JSON type
+        let parsed_stream = sse_stream.filter_map(|event_result| async move {
+            match event_result {
+                Ok(event) => match from_str::<Request<ProvingSystemParams>>(&event.data) {
+                    Ok(req) => Some(Ok(req)),
+                    Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
+                        "Failed to parse proof request from incoming event: {}",
+                        e
+                    )))),
+                },
                 Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
-                    "Stream encountered an error: {}",
+                    "EventSource encountered an error: {}",
                     e
                 )))),
             }
-        })))
+        });
+
+        Ok(Box::pin(parsed_stream))
     }
 }
