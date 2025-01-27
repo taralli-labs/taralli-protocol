@@ -16,4 +16,4 @@ cargo test -- --nocapture
 ```
 
 ### Running
-We can use our examples (`cargo run --bin server`, `cargo run --example simple_request`) to validate the rate limiting. Mind you, I have yet to inser the logic to direct said example's reqs to port 8081. If you don't do it, requests will flow just fine.
+We can use our examples (`cargo run --bin server`, `cargo run --example simple_request`) to validate the rate limiting. Mind you, I have yet to insert the logic to direct said example's reqs to port 8081. If you don't do it, requests will flow just fine.
