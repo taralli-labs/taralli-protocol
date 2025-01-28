@@ -34,12 +34,14 @@ A full roadmap doc is provided [here](./docs/roadmap.md) outlining what changes 
 root .env
 ```
 SERVER_URL= required for clients
+API_KEY= required if you're running server with auth, otherwise not
 RPC_URL= required for server and clients
 REQUESTER_PRIVATE_KEY= required for clients
 PROVIDER_PRIVATE_KEY= required for clients
 RISC0_PROVER=prove
 BONSAI_API_URL=https://api.bonsai.xyz/
 BONSAI_API_KEY= required for using risc0 bonsai api
+ENV= equivalent to the API_KEY, otherwise, default to DEVELOPMENT
 ```
 contracts/ .env
 ```
