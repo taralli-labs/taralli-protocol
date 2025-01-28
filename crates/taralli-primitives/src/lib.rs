@@ -49,6 +49,7 @@ pub mod alloy {
 
 // Taralli primitives
 pub mod abi;
+pub mod common;
 pub mod error;
 pub mod market;
 pub mod request;

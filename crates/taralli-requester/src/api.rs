@@ -2,7 +2,7 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
 };
-use taralli_common::types::Environment;
+use taralli_primitives::common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 

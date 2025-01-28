@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 taralli-primitives = { workspace = true }
-taralli-common = { workspace = true }
 alloy = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }

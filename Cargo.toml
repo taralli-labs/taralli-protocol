@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "crates/taralli-common",
     "crates/taralli-primitives",
     "crates/taralli-provider",
     "crates/taralli-requester",
@@ -20,7 +19,6 @@ all = "warn"
 
 [workspace.dependencies]
 taralli-primitives = { path = "crates/taralli-primitives" }
-taralli-common = { path = "crates/taralli-common" }
 alloy = { version = "0.8.0", default-features = false, features = [
     "full",
     "reqwest-rustls-tls",

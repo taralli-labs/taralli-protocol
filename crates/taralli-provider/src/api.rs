@@ -3,7 +3,7 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::Client;
 use serde_json::from_str;
 use std::pin::Pin;
-use taralli_common::types::Environment;
+use taralli_primitives::common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
 use url::Url;
 
