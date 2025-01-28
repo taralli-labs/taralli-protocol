@@ -14,25 +14,25 @@ pub struct RequesterApi {
 }
 
 impl RequesterApi {
-    pub fn new(server_url: Url) -> Result<Self> {
+    pub fn new(server_url: Url) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
 
         if Environment::from_env_var() == Environment::Production {
-            if let Ok(api_key) = std::env::var("API_KEY") {
-                headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
-            } else {
-                return Err(RequesterError::ApiKeyError("API_KEY not found".to_string()));
-            }
+            let api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
+            headers.insert(
+                "x-api-key",
+                HeaderValue::from_str(&api_key).expect("API_KEY is invalid as a header"),
+            );
         }
 
-        Ok(Self {
+        Self {
             client: Client::builder()
                 .default_headers(headers)
                 .build()
-                .map_err(|e| RequesterError::BuilderError(e.to_string()))?,
+                .expect("Failed to build reqwest client"),
             server_url,
-        })
+        }
     }
 
     pub async fn submit_request(

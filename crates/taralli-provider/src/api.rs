@@ -21,7 +21,7 @@ pub struct ProviderApi {
 pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>;
 
 impl ProviderApi {
-    pub fn new(config: ApiConfig) -> Result<Self> {
+    pub fn new(config: ApiConfig) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Accept", HeaderValue::from_static("text/event-stream"));
         if let Ok(api_key) = std::env::var("API_KEY") {
@@ -29,20 +29,20 @@ impl ProviderApi {
         }
 
         if Environment::from_env_var() == Environment::Production {
-            if let Ok(api_key) = std::env::var("API_KEY") {
-                headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
-            } else {
-                return Err(ProviderError::ApiKeyError("API_KEY not found".to_string()));
-            }
+            let api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
+            headers.insert(
+                "x-api-key",
+                HeaderValue::from_str(&api_key).expect("API_KEY is invalid as a header"),
+            );
         }
 
-        Ok(Self {
+        Self {
             client: Client::builder()
                 .default_headers(headers)
                 .build()
-                .map_err(|e| ProviderError::BuilderError(e.to_string()))?,
+                .expect("Failed to build reqwest client"),
             server_url: config.server_url,
-        })
+        }
     }
 
     pub async fn subscribe_to_markets(&self) -> Result<RequestStream> {

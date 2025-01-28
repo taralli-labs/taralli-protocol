@@ -41,8 +41,8 @@ where
     N: Network + Clone,
     S: Signer + Clone,
 {
-    pub fn new(config: RequesterConfig<T, P, N, S>) -> Result<Self> {
-        let api = RequesterApi::new(config.taralli_server_url.clone())?;
+    pub fn new(config: RequesterConfig<T, P, N, S>) -> Self {
+        let api = RequesterApi::new(config.taralli_server_url.clone());
         let builder = RequestBuilder::new(
             config.rpc_provider.clone(),
             config.signer.address(),
@@ -51,12 +51,12 @@ where
         );
         let tracker = RequestTracker::new(config.rpc_provider.clone(), config.market_address);
 
-        Ok(Self {
+        Self {
             config,
             api,
             builder,
             tracker,
-        })
+        }
     }
 
     /// sign the inputted proof request and submit it to the taralli server.

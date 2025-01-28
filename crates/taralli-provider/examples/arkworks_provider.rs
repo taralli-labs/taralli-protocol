@@ -46,7 +46,7 @@ async fn main() -> Result<()> {
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)
         .with_worker("arkworks", ArkworksWorker::new())?
-        .build()?;
+        .build();
 
     //// run provider client
     // Subscribes to the server and receives back an SSE stream or fails.

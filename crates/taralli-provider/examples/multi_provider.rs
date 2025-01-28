@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
             "aligned-layer",
             AlignedLayerWorker::new(signer.address(), rpc_url.to_string(), ethers_wallet),
         )?
-        .build()?;
+        .build();
 
     //// run provider client
     // Subscribes to the server and receives back an SSE stream or fails.

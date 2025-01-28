@@ -110,7 +110,7 @@ where
         self
     }
 
-    pub fn build(self) -> Result<ProviderClient<T, P, N>> {
+    pub fn build(self) -> ProviderClient<T, P, N> {
         if self.workers.is_empty() {
             panic!("No workers registered. Provider must support at least one system.");
         }
@@ -125,19 +125,19 @@ where
         };
 
         // Create components
-        let api = ProviderApi::new(self.api_config)?;
+        let api = ProviderApi::new(self.api_config);
         let analyzer = RequestAnalyzer::new(self.config.rpc_provider.clone(), analyzer_config);
         let bidder = RequestBidder::new(self.config.rpc_provider.clone(), self.bidder_config);
         let resolver = RequestResolver::new(self.config.rpc_provider.clone(), self.resolver_config);
         let worker_manager = WorkerManager::new(self.workers);
 
-        Ok(ProviderClient {
+        ProviderClient {
             config: self.config,
             api,
             analyzer,
             bidder,
             resolver,
             worker_manager,
-        })
+        }
     }
 }
