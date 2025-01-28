@@ -54,8 +54,8 @@ async fn main() -> Result<()> {
     let auction_length = 60u32; // 1 min
     let verifier_address = address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1");
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("41493c60");
-    let public_inputs_offset = U256::from(0);
-    let public_inputs_length = U256::from(64);
+    let inputs_offset = U256::from(0);
+    let inputs_length = U256::from(64);
     let is_sha_commitment = true;
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
@@ -114,8 +114,8 @@ async fn main() -> Result<()> {
         verifier: verifier_address,
         selector: verify_function_selector,
         isShaCommitment: is_sha_commitment,
-        publicInputsOffset: public_inputs_offset,
-        publicInputsLength: public_inputs_length,
+        inputsOffset: inputs_offset,
+        inputsLength: inputs_length,
         hasPartialCommitmentResultCheck: has_partial_commitment_result_check,
         submittedPartialCommitmentResultOffset: submitted_partial_commitment_result_offset,
         submittedPartialCommitmentResultLength: submitted_partial_commitment_result_length,

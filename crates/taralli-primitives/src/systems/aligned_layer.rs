@@ -2,8 +2,123 @@ use alloy::primitives::{address, fixed_bytes, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use crate::error::Result;
+use crate::systems::ProvingSystemParams;
+use crate::systems::{CompositeSystem, ProvingSystem, SystemConfig, VerifierConstraints};
+
 use super::system_id::AlignedLayer;
-use crate::abi::universal_bombetta::VerifierDetails;
+use super::SystemInputs;
+
+// Core configuration for AlignedLayer
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AlignedLayerConfig {
+    pub underlying_system: Box<ProvingSystemParams>,
+}
+
+impl SystemConfig for AlignedLayerConfig {
+    fn verifier_constraints(&self) -> VerifierConstraints {
+        VerifierConstraints {
+            verifier: Some(address!("58F280BeBE9B34c9939C3C39e0890C81f163B623")),
+            selector: Some(fixed_bytes!("06045a91")),
+            is_sha_commitment: Some(false),
+            inputs_offset: Some(U256::from(32)),
+            inputs_length: Some(U256::from(64)),
+            has_partial_commitment_result_check: Some(false),
+            submitted_partial_commitment_result_offset: Some(U256::ZERO),
+            submitted_partial_commitment_result_length: Some(U256::ZERO),
+            predetermined_partial_commitment: Some(FixedBytes::ZERO),
+        }
+    }
+
+    fn validate_request(&self, details: &ProofRequestVerifierDetails) -> Result<()> {
+        // Validate both aligned layer constraints and underlying system
+        match *self.underlying_system.clone() {
+            ProvingSystemParams::Risc0(params) => params.config().validate_request(details)?,
+            ProvingSystemParams::Sp1(params) => params.config().validate_request(details)?,
+            ProvingSystemParams::Gnark(params) => params.config().validate_request(details)?,
+            _ => {
+                return Err(crate::PrimitivesError::InvalidSystem(
+                    "Unsupported underlying system".into(),
+                ))
+            }
+        };
+        Ok(())
+    }
+
+    fn validate_offer(&self, details: &ProofOfferVerifierDetails) -> Result<()> {
+        // Similar validation for offers
+        match *self.underlying_system.clone() {
+            ProvingSystemParams::Risc0(params) => params.config().validate_offer(details)?,
+            ProvingSystemParams::Sp1(params) => params.config().validate_offer(details)?,
+            ProvingSystemParams::Gnark(params) => params.config().validate_offer(details)?,
+            _ => {
+                return Err(crate::PrimitivesError::InvalidSystem(
+                    "Unsupported underlying system".into(),
+                ))
+            }
+        }
+        Ok(())
+    }
+}
+
+impl CompositeSystem for AlignedLayerConfig {
+    type UnderlyingSystem = ProvingSystemParams;
+
+    fn underlying_system(&self) -> &Self::UnderlyingSystem {
+        &self.underlying_system
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AlignedLayerProofParams {
+    pub aligned_proving_system_id: String,
+    pub config: AlignedLayerConfig,
+    pub proving_system_aux_commitment: FixedBytes<32>,
+}
+
+impl ProvingSystem for AlignedLayerProofParams {
+    type Config = AlignedLayerConfig;
+    type Inputs = Value;
+
+    fn system_id(&self) -> super::ProvingSystemId {
+        AlignedLayer
+    }
+
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn inputs(&self) -> SystemInputs {
+        self.config.underlying_system.inputs()
+    }
+
+    fn validate_inputs(&self) -> Result<()> {
+        // Validate both aligned layer inputs and underlying system
+        match *self.config.underlying_system.clone() {
+            ProvingSystemParams::Risc0(params) => params.validate_inputs()?,
+            ProvingSystemParams::Sp1(params) => params.validate_inputs()?,
+            ProvingSystemParams::Gnark(params) => params.validate_inputs()?,
+            _ => {
+                return Err(crate::PrimitivesError::InvalidSystem(
+                    "Unsupported underlying system".into(),
+                ))
+            }
+        }
+        Ok(())
+    }
+}
+
+/*use std::marker::PhantomData;
+use alloy::primitives::{address, fixed_bytes, FixedBytes, U256};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use super::system_id::AlignedLayer;
+use super::{OfferConfig, RequestConfig};
 use crate::error::Result;
 use crate::systems::{gnark, risc0, sp1};
 use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
@@ -16,25 +131,21 @@ pub enum UnderlyingProvingSystemParams {
 }
 
 #[derive(Clone, Debug)]
-pub struct AlignedLayerConfig {
+pub struct AlignedLayerConfig<T> {
     pub aligned_proving_system_id: String,
     pub proving_system_aux_commitment: FixedBytes<32>,
-    pub underlying_config: UnderlyingConfig,
+    pub underlying_config: T,
 }
 
-#[derive(Clone, Debug)]
-pub enum UnderlyingConfig {
-    Risc0(risc0::Risc0Config),
-    SP1(sp1::Sp1Config),
-    Gnark(gnark::GnarkConfig),
-}
+pub type AlignedLayerRequestConfig = AlignedLayerConfig<RequestConfig>;
+pub type AlignedLayerOfferConfig = AlignedLayerConfig<OfferConfig>;
 
-impl ProofConfiguration for AlignedLayerConfig {
+impl ProofConfiguration for AlignedLayerRequestConfig {
+    type VerifierDetails = ProofRequestVerifierDetails;
+
     fn verifier_constraints(&self) -> VerifierConstraints {
         VerifierConstraints {
-            // AlignedLayerServiceManager contract
             verifier: Some(address!("58F280BeBE9B34c9939C3C39e0890C81f163B623")),
-            // AlignedLayerServiceManager.verifyBatchInclusion.selector
             selector: Some(fixed_bytes!("06045a91")),
             is_sha_commitment: Some(false),
             inputs_offset: Some(U256::from(32)),
@@ -46,14 +157,30 @@ impl ProofConfiguration for AlignedLayerConfig {
         }
     }
 
-    fn validate(&self, verifier_details: &VerifierDetails) -> Result<()> {
-        // Validate underlying system's configuration
-        match &self.underlying_config {
-            UnderlyingConfig::Risc0(config) => config.validate(verifier_details)?,
-            UnderlyingConfig::SP1(config) => config.validate(verifier_details)?,
-            UnderlyingConfig::Gnark(config) => config.validate(verifier_details)?,
+    fn validate(&self, verifier_details: &Self::VerifierDetails) -> Result<()> {
+        self.underlying_config.validate(verifier_details)
+    }
+}
+
+impl ProofConfiguration for AlignedLayerOfferConfig {
+    type VerifierDetails = ProofOfferVerifierDetails;
+
+    fn verifier_constraints(&self) -> VerifierConstraints {
+        VerifierConstraints {
+            verifier: Some(address!("58F280BeBE9B34c9939C3C39e0890C81f163B623")),
+            selector: Some(fixed_bytes!("06045a91")),
+            is_sha_commitment: Some(false),
+            inputs_offset: Some(U256::from(32)),
+            inputs_length: Some(U256::from(64)),
+            has_partial_commitment_result_check: Some(false),
+            submitted_partial_commitment_result_offset: Some(U256::ZERO),
+            submitted_partial_commitment_result_length: Some(U256::ZERO),
+            predetermined_partial_commitment: Some(FixedBytes::ZERO),
         }
-        Ok(())
+    }
+
+    fn validate(&self, verifier_details: &Self::VerifierDetails) -> Result<()> {
+        self.underlying_config.validate(verifier_details)
     }
 }
 
@@ -66,18 +193,39 @@ pub struct AlignedLayerProofParams {
 }
 
 impl ProvingSystemInformation for AlignedLayerProofParams {
-    type Config = AlignedLayerConfig;
+    type RequestConfig = AlignedLayerRequestConfig;
+    type OfferConfig = AlignedLayerOfferConfig;
 
-    fn proof_configuration(&self) -> Self::Config {
+    fn request_configuration(&self) -> Self::RequestConfig {
         let underlying_config = match &self.underlying_system_params {
             UnderlyingProvingSystemParams::Risc0(params) => {
-                UnderlyingConfig::Risc0(params.proof_configuration())
+                RequestConfig::Risc0(params.request_configuration())
             }
             UnderlyingProvingSystemParams::SP1(params) => {
-                UnderlyingConfig::SP1(params.proof_configuration())
+                RequestConfig::SP1(params.request_configuration())
             }
             UnderlyingProvingSystemParams::Gnark(params) => {
-                UnderlyingConfig::Gnark(params.proof_configuration())
+                RequestConfig::Gnark(params.request_configuration())
+            }
+        };
+
+        AlignedLayerConfig {
+            aligned_proving_system_id: self.aligned_proving_system_id.clone(),
+            proving_system_aux_commitment: self.proving_system_aux_commitment,
+            underlying_config,
+        }
+    }
+
+    fn offer_configuration(&self) -> Self::OfferConfig {
+        let underlying_config = match &self.underlying_system_params {
+            UnderlyingProvingSystemParams::Risc0(params) => {
+                OfferConfig::Risc0(params.offer_configuration())
+            }
+            UnderlyingProvingSystemParams::SP1(params) => {
+                OfferConfig::SP1(params.offer_configuration())
+            }
+            UnderlyingProvingSystemParams::Gnark(params) => {
+                OfferConfig::Gnark(params.offer_configuration())
             }
         };
 
@@ -89,7 +237,6 @@ impl ProvingSystemInformation for AlignedLayerProofParams {
     }
 
     fn validate_inputs(&self) -> Result<()> {
-        // Validate underlying system's inputs
         match &self.underlying_system_params {
             UnderlyingProvingSystemParams::Risc0(params) => params.validate_inputs()?,
             UnderlyingProvingSystemParams::SP1(params) => params.validate_inputs()?,
@@ -102,59 +249,4 @@ impl ProvingSystemInformation for AlignedLayerProofParams {
         AlignedLayer
     }
 }
-
-/*use alloy::primitives::{address, fixed_bytes, FixedBytes, U256};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
-use crate::error::Result;
-use crate::{ProvingSystemInformation, VerifierConstraints};
-
-// aligned layer supported proving systems
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum UnderlyingProvingSystemParams {
-    Risc0(crate::systems::risc0::Risc0ProofParams),
-    SP1(crate::systems::sp1::Sp1ProofParams),
-    Gnark(crate::systems::gnark::GnarkProofParams),
-}
-
-// prover api
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AlignedLayerProofParams {
-    pub aligned_proving_system_id: String,
-    pub proving_system_aux_commitment: FixedBytes<32>,
-    pub prover_inputs: Value,
-    pub underlying_system_params: UnderlyingProvingSystemParams,
-}
-
-// prover api
-impl ProvingSystemInformation for AlignedLayerProofParams {
-    fn validate_prover_inputs(&self) -> Result<()> {
-        // TODO:
-        // check aligned layer params
-
-        // Validate the underlying system's inputs
-        match &self.underlying_system_params {
-            UnderlyingProvingSystemParams::Risc0(params) => params.validate_prover_inputs()?,
-            UnderlyingProvingSystemParams::SP1(params) => params.validate_prover_inputs()?,
-            UnderlyingProvingSystemParams::Gnark(params) => params.validate_prover_inputs()?,
-        }
-        Ok(())
-    }
-
-    fn verifier_constraints() -> VerifierConstraints {
-        VerifierConstraints {
-            // AlignedLayerServiceManager contract
-            verifier: Some(address!("58F280BeBE9B34c9939C3C39e0890C81f163B623")),
-            // AlignedLayerServiceManager.verifyBatchInclusion.selector
-            selector: Some(fixed_bytes!("06045a91")),
-            is_sha_commitment: Some(false),
-            public_inputs_offset: Some(U256::from(32)),
-            public_inputs_length: Some(U256::from(64)),
-            has_partial_commitment_result_check: Some(false),
-            submitted_partial_commitment_result_offset: Some(U256::ZERO),
-            submitted_partial_commitment_result_length: Some(U256::ZERO),
-            predetermined_partial_commitment: Some(FixedBytes::ZERO),
-        }
-    }
-}*/
+*/

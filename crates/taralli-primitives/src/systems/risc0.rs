@@ -1,15 +1,21 @@
-use crate::abi::universal_bombetta::VerifierDetails;
-use crate::error::Result;
-use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
 use alloy::primitives::{address, fixed_bytes, U256};
 use serde::{Deserialize, Serialize};
 
+use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use crate::error::Result;
+use crate::systems::{ProvingSystem, SystemConfig, VerifierConstraints};
+
 use super::system_id::Risc0;
+use super::SystemInputs;
 
-#[derive(Clone, Debug)]
-pub struct Risc0Config;
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Risc0ProofParams {
+    pub elf: Vec<u8>,
+    pub inputs: Vec<u8>,
+}
 
-impl ProofConfiguration for Risc0Config {
+impl SystemConfig for Risc0ProofParams {
     fn verifier_constraints(&self) -> VerifierConstraints {
         VerifierConstraints {
             verifier: Some(address!("31766974fb795dF3f7d0c010a3D5c55e4bd8113e")),
@@ -24,30 +30,37 @@ impl ProofConfiguration for Risc0Config {
         }
     }
 
-    fn validate(&self, _verifier_details: &VerifierDetails) -> Result<()> {
+    fn validate_request(&self, _details: &ProofRequestVerifierDetails) -> Result<()> {
+        Ok(())
+    }
+
+    fn validate_offer(&self, _details: &ProofOfferVerifierDetails) -> Result<()> {
         Ok(())
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Risc0ProofParams {
-    pub elf: Vec<u8>,
-    pub inputs: Vec<u8>,
-}
+impl ProvingSystem for Risc0ProofParams {
+    type Config = Self;
+    type Inputs = Vec<u8>;
 
-impl ProvingSystemInformation for Risc0ProofParams {
-    type Config = Risc0Config;
+    fn system_id(&self) -> super::ProvingSystemId {
+        Risc0
+    }
 
-    fn proof_configuration(&self) -> Self::Config {
-        Risc0Config
+    fn config(&self) -> &Self::Config {
+        self
+    }
+
+    fn inputs(&self) -> SystemInputs {
+        SystemInputs::Bytes(self.inputs.clone())
     }
 
     fn validate_inputs(&self) -> Result<()> {
-        // TODO: Validate ELF and inputs
+        if self.elf.is_empty() || self.inputs.is_empty() {
+            return Err(crate::PrimitivesError::ProverInputsError(
+                "elf or inputs bytes cannot be empty".to_string(),
+            ));
+        }
         Ok(())
-    }
-
-    fn proving_system_id(&self) -> super::ProvingSystemId {
-        Risc0
     }
 }

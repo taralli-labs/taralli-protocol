@@ -1,22 +1,32 @@
-use crate::abi::universal_bombetta::VerifierDetails;
-use crate::error::Result;
-use crate::systems::{ProofConfiguration, ProvingSystemInformation, VerifierConstraints};
 use alloy::primitives::{address, fixed_bytes, U256};
 use serde::{Deserialize, Serialize};
 
-use super::system_id::Sp1;
+use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use crate::error::Result;
+use crate::systems::{MultiModeSystem, ProvingSystem, SystemConfig, VerifierConstraints};
 
+use super::system_id::Sp1;
+use super::SystemInputs;
+
+// SP1 proving mode
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum Sp1Config {
+pub enum Sp1Mode {
     Groth16,
     Plonk,
 }
 
-impl ProofConfiguration for Sp1Config {
+// Core configuration for SP1
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Sp1Config {
+    pub mode: Sp1Mode,
+}
+
+impl SystemConfig for Sp1Config {
     fn verifier_constraints(&self) -> VerifierConstraints {
-        let verifier = match self {
-            Self::Groth16 => address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1"),
-            Self::Plonk => address!("d2832Cf1fC8bA210FfABF62Db9A8781153131d16"),
+        let verifier = match self.mode {
+            Sp1Mode::Groth16 => address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1"),
+            Sp1Mode::Plonk => address!("d2832Cf1fC8bA210FfABF62Db9A8781153131d16"),
         };
 
         VerifierConstraints {
@@ -32,31 +42,53 @@ impl ProofConfiguration for Sp1Config {
         }
     }
 
-    fn validate(&self, _verifier_details: &VerifierDetails) -> Result<()> {
+    fn validate_request(&self, _details: &ProofRequestVerifierDetails) -> Result<()> {
         Ok(())
+    }
+
+    fn validate_offer(&self, _details: &ProofOfferVerifierDetails) -> Result<()> {
+        Ok(())
+    }
+}
+
+// Implement MultiModeSystem to indicate SP1 supports multiple proving modes
+impl MultiModeSystem for Sp1Config {
+    type Mode = Sp1Mode;
+
+    fn proving_mode(&self) -> &Self::Mode {
+        &self.mode
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Sp1ProofParams {
-    pub elf: Vec<u8>,
-    pub inputs: Vec<u8>,
-    pub proof_config: Sp1Config,
+    pub config: Sp1Config,
+    pub elf: Vec<u8>,    // ELF binary containing the program
+    pub inputs: Vec<u8>, // Program inputs
 }
 
-impl ProvingSystemInformation for Sp1ProofParams {
+impl ProvingSystem for Sp1ProofParams {
     type Config = Sp1Config;
+    type Inputs = Vec<u8>;
 
-    fn proof_configuration(&self) -> Self::Config {
-        self.proof_config.clone()
+    fn system_id(&self) -> super::ProvingSystemId {
+        Sp1
+    }
+
+    fn config(&self) -> &Self::Config {
+        &self.config
+    }
+
+    fn inputs(&self) -> SystemInputs {
+        SystemInputs::Bytes(self.inputs.clone())
     }
 
     fn validate_inputs(&self) -> Result<()> {
-        // TODO: Validate ELF and inputs
+        if self.elf.is_empty() || self.inputs.is_empty() {
+            return Err(crate::PrimitivesError::ProverInputsError(
+                "elf or inputs bytes cannot be empty".to_string(),
+            ));
+        }
         Ok(())
-    }
-
-    fn proving_system_id(&self) -> super::ProvingSystemId {
-        Sp1
     }
 }

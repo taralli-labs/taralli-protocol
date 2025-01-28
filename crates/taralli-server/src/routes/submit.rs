@@ -1,18 +1,14 @@
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
-use taralli_primitives::systems::ProvingSystemInformation;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::systems::ProvingSystem;
 
 use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
 
-pub async fn submit_handler<
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
->(
-    app_state: State<AppState<T, P, Request<I>>>,
-    Json(request): Json<Request<I>>,
+pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone, S: ProvingSystem>(
+    app_state: State<AppState<T, P, ComputeRequest<S>>>,
+    Json(request): Json<ComputeRequest<S>>,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let timeout = app_state.validation_timeout_seconds();
 

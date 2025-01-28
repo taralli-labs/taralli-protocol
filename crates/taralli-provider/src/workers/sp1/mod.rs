@@ -14,7 +14,7 @@ use sp1_sdk::{HashableKey, SP1ProofWithPublicValues, SP1VerifyingKey};
 use std::str::FromStr;
 use taralli_primitives::{
     systems::{sp1::Sp1ProofParams, ProvingSystemParams},
-    Request,
+    request::ComputeRequest,
 };
 
 pub trait Sp1ProofFormatter {
@@ -70,9 +70,9 @@ impl<P: Sp1Prover> Sp1ProofFormatter for Sp1Worker<P> {}
 
 #[async_trait]
 impl<P: Sp1Prover + Send + Sync> ComputeWorker for Sp1Worker<P> {
-    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &ComputeRequest<ProvingSystemParams>) -> Result<WorkResult> {
         // prover parameters introspection
-        let params = match &request.proving_system_information {
+        let params = match &request.proving_system {
             ProvingSystemParams::Sp1(params) => params.clone(),
             _ => {
                 return Err(ProviderError::WorkerExecutionFailed(

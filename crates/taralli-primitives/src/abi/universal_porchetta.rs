@@ -19,3 +19,5 @@ sol! {
         uint256 inputsLength;
     }
 }
+
+pub type ProofOfferVerifierDetails = VerifierDetails;

@@ -32,7 +32,7 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::utils::compute_request_id;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
 use url::Url;
 
 pub struct ProviderClient<T, P, N>
@@ -123,18 +123,18 @@ where
         tracing::info!("subscribed to markets, waiting for incoming requests");
         while let Some(result) = stream.next().await {
             match result {
-                Ok(proof_request) => {
+                Ok(request) => {
                     let request_id = compute_request_id(
-                        &proof_request.onchain_proof_request,
-                        proof_request.signature,
+                        &request.proof_request,
+                        request.signature,
                     );
                     tracing::info!(
-                        "Incoming proof request - proving system id: {:?}, onchain proof request: {:?}, request ID: {:?}",
-                        proof_request.proving_system_id,
-                        proof_request.onchain_proof_request,
+                        "Incoming request - proving system id: {:?}, proof request: {:?}, request ID: {:?}",
+                        request.proving_system_id,
+                        request.proof_request,
                         request_id
                     );
-                    if let Err(e) = self.process_request(request_id, proof_request).await {
+                    if let Err(e) = self.process_request(request_id, request).await {
                         tracing::error!("Failed to process proof request: {:?}", e);
                     }
                 }
@@ -149,7 +149,7 @@ where
     async fn process_request(
         &self,
         request_id: FixedBytes<32>,
-        request: Request<ProvingSystemParams>,
+        request: ComputeRequest<ProvingSystemParams>,
     ) -> Result<()> {
         // Fetch latest block timestamp
         // TODO: remove this call from the request processing work flow, instead passing it in as input from another external process
@@ -174,9 +174,9 @@ where
         // Submit a bid for the request
         self.bidder
             .submit_bid(
-                request.onchain_proof_request.clone(),
+                request.proof_request.clone(),
                 request.signature,
-                request.onchain_proof_request.minRewardAmount,
+                request.proof_request.minRewardAmount,
                 current_ts,
             )
             .await

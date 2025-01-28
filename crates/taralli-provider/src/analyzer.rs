@@ -3,7 +3,7 @@ use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::validation::validate_request;
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
-    Request,
+    request::ComputeRequest,
 };
 
 use crate::{config::AnalyzerConfig, error::Result};
@@ -34,7 +34,7 @@ where
 
     pub fn analyze(
         &self,
-        request: &Request<ProvingSystemParams>,
+        request: &ComputeRequest<ProvingSystemParams>,
         latest_timestamp: u64,
     ) -> Result<()> {
         // general correctness checks

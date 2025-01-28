@@ -10,7 +10,7 @@ use crate::worker::{ComputeWorker, WorkResult};
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
 
 // Shared traits & functionality for all RISC0 workers
 pub trait Risc0ProofFormatter {
@@ -55,8 +55,8 @@ impl<P: Risc0Prover> Risc0ProofFormatter for Risc0Worker<P> {}
 
 #[async_trait]
 impl<P: Risc0Prover + Send + Sync> ComputeWorker for Risc0Worker<P> {
-    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
-        let params = match &request.proving_system_information {
+    async fn execute(&self, request: &ComputeRequest<ProvingSystemParams>) -> Result<WorkResult> {
+        let params = match &request.proving_system {
             ProvingSystemParams::Risc0(params) => params.clone(),
             _ => {
                 return Err(ProviderError::WorkerExecutionFailed(

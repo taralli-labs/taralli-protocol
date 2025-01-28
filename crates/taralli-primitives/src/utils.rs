@@ -1,6 +1,6 @@
 use crate::abi::universal_bombetta::ISignatureTransfer::TokenPermissions;
-use crate::abi::universal_bombetta::VerifierDetails;
 use crate::abi::universal_bombetta::UniversalBombetta::ProofRequest;
+use crate::abi::universal_bombetta::VerifierDetails;
 use crate::abi::universal_porchetta::UniversalPorchetta::ProofOffer;
 use crate::systems::VerifierConstraints;
 use alloy::dyn_abi::DynSolValue;
@@ -47,10 +47,7 @@ lazy_static! {
         keccak256(PROOF_OFFER_WITNESS_TYPE_STRING.as_bytes());
 }
 
-pub fn compute_request_id(
-    proof_request: &ProofRequest,
-    signature: Signature,
-) -> B256 {
+pub fn compute_request_id(proof_request: &ProofRequest, signature: Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_request.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
@@ -99,10 +96,7 @@ pub fn compute_request_witness(proof_request: &ProofRequest) -> FixedBytes<32> {
     keccak256(request_witness_values.abi_encode())
 }
 
-pub fn compute_offer_id(
-    proof_offer: &ProofOffer,
-    signature: Signature,
-) -> B256 {
+pub fn compute_offer_id(proof_offer: &ProofOffer, signature: Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_offer.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
@@ -203,12 +197,8 @@ impl PartialEq<VerifierDetails> for VerifierConstraints {
             && self
                 .is_sha_commitment
                 .is_none_or(|sha| sha == details.isShaCommitment)
-            && self
-                .inputs_offset
-                .is_none_or(|o| o == details.inputsOffset)
-            && self
-                .inputs_length
-                .is_none_or(|l| l == details.inputsLength)
+            && self.inputs_offset.is_none_or(|o| o == details.inputsOffset)
+            && self.inputs_length.is_none_or(|l| l == details.inputsLength)
             && self
                 .has_partial_commitment_result_check
                 .is_none_or(|c| c == details.hasPartialCommitmentResultCheck)

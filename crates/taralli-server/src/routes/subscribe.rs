@@ -4,18 +4,14 @@ use axum::{
     response::sse::{Event, Sse},
 };
 use futures::stream::StreamExt;
-use taralli_primitives::systems::ProvingSystemInformation;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::systems::ProvingSystem;
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::app_state::AppState;
 
-pub async fn subscribe_handler<
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
->(
-    app_state: State<AppState<T, P, Request<I>>>,
+pub async fn subscribe_handler<T: Transport + Clone, P: Provider<T> + Clone, S: ProvingSystem>(
+    app_state: State<AppState<T, P, ComputeRequest<S>>>,
 ) -> Sse<impl futures::Stream<Item = Result<Event, axum::Error>>> {
     let recv_new = app_state.subscription_manager().add_subscription();
     tracing::info!(

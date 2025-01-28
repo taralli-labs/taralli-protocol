@@ -50,7 +50,6 @@ pub mod alloy {
 // Taralli primitives
 pub mod abi;
 pub mod error;
-pub mod offer;
 pub mod market;
 pub mod request;
 pub mod systems;
@@ -58,4 +57,3 @@ pub mod utils;
 pub mod validation;
 
 pub use error::{PrimitivesError, Result};
-pub use request::*;

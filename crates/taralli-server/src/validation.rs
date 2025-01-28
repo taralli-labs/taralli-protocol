@@ -8,20 +8,19 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::systems::ProvingSystemInformation;
-use taralli_primitives::validation::validate_request;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::systems::ProvingSystem;
 use tokio::time::timeout;
 
 pub async fn validate_proof_request<T, P, I>(
-    request: &Request<I>,
-    app_state: &State<AppState<T, P, Request<I>>>,
+    request: &ComputeRequest<I>,
+    app_state: &State<AppState<T, P, ComputeRequest<I>>>,
     timeout_seconds: Duration,
 ) -> Result<()>
 where
     T: Transport + Clone,
     P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
+    I: ProvingSystem,
 {
     // TODO: remove this async process from the validation execution of the server and use input parameter instead
     let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;

@@ -6,10 +6,10 @@ use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
 use std::path::PathBuf;
-use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::{alloy::primitives::{Bytes, FixedBytes}, systems::gnark::GnarkMode};
+use taralli_primitives::systems::gnark::GnarkProofParams;
 use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::Request;
+use taralli_primitives::request::ComputeRequest;
 use tempfile::NamedTempFile;
 
 #[derive(Default)]
@@ -47,17 +47,17 @@ impl GnarkWorker {
         }
 
         // Build command based on scheme configuration
-        let (scheme, curve) = match gnark_params.config {
-            GnarkConfig::Groth16Bn254 => ("groth16", "bn254"),
-            GnarkConfig::PlonkBn254 => ("plonk", "bn254"),
-            GnarkConfig::PlonkBls12_381 => ("plonk", "bls12-381"),
+        let (scheme, curve) = match gnark_params.config.mode {
+            GnarkMode::Groth16Bn254 => ("groth16", "bn254"),
+            GnarkMode::PlonkBn254 => ("plonk", "bn254"),
+            GnarkMode::PlonkBls12_381 => ("plonk", "bls12-381"),
         };
 
         // Create the input structure
         let prover_input = GnarkProverInput {
             r1cs: gnark_params.r1cs.clone(),
             public_inputs: gnark_params.public_inputs.clone(),
-            private_inputs: gnark_params.input.clone(),
+            private_inputs: gnark_params.inputs.clone(),
             scheme_config: scheme.to_string(),
             curve: curve.to_string(),
         };
@@ -99,10 +99,10 @@ impl GnarkWorker {
 
 #[async_trait]
 impl ComputeWorker for GnarkWorker {
-    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &ComputeRequest<ProvingSystemParams>) -> Result<WorkResult> {
         tracing::info!("gnark worker: execution started");
 
-        let params = match &request.proving_system_information {
+        let params = match &request.proving_system {
             ProvingSystemParams::Gnark(params) => params.clone(),
             _ => {
                 return Err(ProviderError::WorkerExecutionFailed(

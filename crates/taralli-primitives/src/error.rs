@@ -16,6 +16,8 @@ pub enum PrimitivesError {
     CommitmentError(String),
     #[error("Prover Inputs validation error: {0}")]
     ProverInputsError(String),
+    #[error("Invalid systems error: {0}")]
+    InvalidSystem(String),
 }
 
 pub type Result<T> = core::result::Result<T, PrimitivesError>;
