@@ -2,8 +2,8 @@ use crate::error::{ProviderError, Result};
 use async_trait::async_trait;
 use std::collections::HashMap;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceRequirements {

@@ -8,7 +8,7 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
-use taralli_primitives::{systems::ProvingSystemParams, request::ComputeRequest};
+use taralli_primitives::{request::ComputeRequest, systems::ProvingSystemParams};
 use taralli_server::{
     app_state::{AppState, AppStateConfig},
     config::Config,

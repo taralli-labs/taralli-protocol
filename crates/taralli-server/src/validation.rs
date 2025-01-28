@@ -10,6 +10,7 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::request::ComputeRequest;
 use taralli_primitives::systems::ProvingSystem;
+use taralli_primitives::validation::request::validate_request;
 use tokio::time::timeout;
 
 pub async fn validate_proof_request<T, P, I>(

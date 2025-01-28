@@ -30,9 +30,9 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
+use taralli_primitives::request::ComputeRequest;
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::utils::compute_request_id;
-use taralli_primitives::request::ComputeRequest;
 use url::Url;
 
 pub struct ProviderClient<T, P, N>
@@ -124,10 +124,7 @@ where
         while let Some(result) = stream.next().await {
             match result {
                 Ok(request) => {
-                    let request_id = compute_request_id(
-                        &request.proof_request,
-                        request.signature,
-                    );
+                    let request_id = compute_request_id(&request.proof_request, request.signature);
                     tracing::info!(
                         "Incoming request - proving system id: {:?}, proof request: {:?}, request ID: {:?}",
                         request.proving_system_id,

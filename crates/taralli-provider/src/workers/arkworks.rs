@@ -19,7 +19,7 @@ use taralli_primitives::{
     },
     systems::ProvingSystemParams,
 };
-use taralli_primitives::{systems::arkworks::ArkworksProofParams, request::ComputeRequest};
+use taralli_primitives::{request::ComputeRequest, systems::arkworks::ArkworksProofParams};
 use tempfile::NamedTempFile;
 use wasmer::Store;
 

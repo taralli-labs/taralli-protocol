@@ -12,7 +12,7 @@ use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
 use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::sp1::{Sp1Config, Sp1ProofParams};
+use taralli_primitives::systems::sp1::{Sp1Config, Sp1Mode, Sp1ProofParams};
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
@@ -99,7 +99,9 @@ async fn main() -> Result<()> {
     let proof_info = serde_json::to_value(Sp1ProofParams {
         elf,
         inputs: inputs.to_le_bytes().to_vec(),
-        proof_config: Sp1Config::Groth16,
+        config: Sp1Config {
+            mode: Sp1Mode::Groth16,
+        },
     })?;
 
     // load verification commitments

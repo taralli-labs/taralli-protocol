@@ -9,8 +9,9 @@ pub mod request;
 
 // Common validation trait for shared fields across all intent types
 pub trait ValidateCommon {
+    type System: ProvingSystem;
     fn proving_system_id(&self) -> ProvingSystemId;
-    fn proving_system(&self) -> impl ProvingSystem;
+    fn proving_system(&self) -> &Self::System;
     fn market_address(&self) -> &Address;
     fn nonce(&self) -> &U256;
     fn start_auction_timestamp(&self) -> u64;
@@ -241,24 +242,4 @@ pub fn validate_nonce<P: ProvingSystem>(_request: &ComputeRequest<P>) -> Result<
     Ok(())
 }
 
-pub fn validate_signature<P: ProvingSystem>(request: &ComputeRequest<P>) -> Result<()> {
-    // compute witness
-    let witness = compute_request_witness(&request.onchain_proof_request);
-    // compute permit digest
-    let computed_digest = compute_permit2_digest(&request.onchain_proof_request, witness);
-    // ec recover signing public key
-    let computed_verifying_key = request
-        .signature
-        .recover_from_prehash(&computed_digest)
-        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
-    let computed_signer = Address::from_public_key(&computed_verifying_key);
-
-    // check signature validity
-    if computed_signer != request.onchain_proof_request.signer {
-        Err(PrimitivesError::ValidationError(
-            "signature invalid: computed signer != request.signer".to_string(),
-        ))
-    } else {
-        Ok(())
-    }
-}*/
+*/

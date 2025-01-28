@@ -14,12 +14,12 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Network, providers::Provider, signers::Signer, transports::Transport,
 };
+use taralli_primitives::request::ComputeRequest;
 use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::utils::{
-    compute_permit2_digest, compute_request_id, compute_request_witness,
+    compute_request_id, compute_request_permit2_digest, compute_request_witness,
 };
-use taralli_primitives::validation::validate_request;
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::validation::request::validate_request;
 
 pub struct RequesterClient<T, P, N, S>
 where
@@ -70,8 +70,8 @@ where
         let request_id = compute_request_id(&request.proof_request, request.signature);
 
         // compute resolve deadline timestamp
-        let resolve_deadline = request.proof_request.endAuctionTimestamp
-            + request.proof_request.provingTime as u64;
+        let resolve_deadline =
+            request.proof_request.endAuctionTimestamp + request.proof_request.provingTime as u64;
 
         // setup tracking
         let auction_tracker = self
@@ -130,7 +130,7 @@ where
         // compute witness
         let witness = compute_request_witness(&request.proof_request);
         // build permit2 digest
-        let permit2_digest = compute_permit2_digest(&request.proof_request, witness);
+        let permit2_digest = compute_request_permit2_digest(&request.proof_request, witness);
         // sign permit2 digest
         let signature = self
             .config

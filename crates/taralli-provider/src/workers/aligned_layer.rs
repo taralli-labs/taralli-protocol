@@ -13,11 +13,11 @@ use serde_json::Value;
 use sp1_sdk::SP1ProofMode;
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Address, Bytes, FixedBytes, U256};
+use taralli_primitives::request::ComputeRequest;
 use taralli_primitives::systems::aligned_layer::AlignedLayerProofParams;
 use taralli_primitives::systems::gnark::{GnarkConfig, GnarkMode, GnarkProofParams};
 use taralli_primitives::systems::sp1::Sp1Config;
 use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::request::ComputeRequest;
 use tempfile::NamedTempFile;
 
 use ethers::core::types::H160;

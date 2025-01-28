@@ -51,6 +51,7 @@ pub mod alloy {
 pub mod abi;
 pub mod error;
 pub mod market;
+pub mod offer;
 pub mod request;
 pub mod systems;
 pub mod utils;

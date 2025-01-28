@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::validation::validate_request;
+use taralli_primitives::validation::request::validate_request;
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
     request::ComputeRequest,
