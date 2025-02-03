@@ -38,12 +38,15 @@ async fn main() -> Result<()> {
     let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
 
     // proving system information data
-    let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
+    let r1cs_data_path = Path::new(
+        "./contracts/test-proof-data/groth16/verify-merkle-path/target/verify-merkle-path.r1cs",
+    );
     let proof_inputs_file =
-        File::open("./contracts/test-proof-data/groth16/multiplier2_js/input.json")?;
-    let proof_public_inputs_file = File::open("./contracts/test-proof-data/groth16/public.json")?;
+        File::open("./contracts/test-proof-data/groth16/verify-merkle-path/input.json")?;
+    let proof_public_inputs_file =
+        File::open("./contracts/test-proof-data/groth16/verify-merkle-path/public.json")?;
     let wasm_path =
-        Path::new("./contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
+        Path::new("./contracts/test-proof-data/groth16/verify-merkle-path/target/verify-merkle-path_js/verify-merkle-path.wasm");
     // buf readers
     let public_inputs_reader = BufReader::new(proof_public_inputs_file);
     let inputs_reader = BufReader::new(proof_inputs_file);
@@ -112,10 +115,10 @@ async fn main() -> Result<()> {
     // load verification commitments
     // abi encode public input number
     // Extract the number directly from the JSON array
-    let public_input_str = public_inputs[0]
-        .as_str()
-        .unwrap_or("failed to grab number from public.json");
-    let u256_public_input = U256::from_str(public_input_str)?;
+    // let public_input_str = public_inputs[0]
+    //     .as_str()
+    //     .unwrap_or("failed to grab number from public.json");
+    let u256_public_input = U256::ZERO;
     let public_inputs_commitment_preimage =
         DynSolValue::Tuple(vec![DynSolValue::Uint(u256_public_input, 256)]);
     // sha256(abi.encode(imageId, proofInputHash))

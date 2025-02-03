@@ -1,9 +1,6 @@
 use alloy::providers::ProviderBuilder;
 use axum::{
-    http::{Response, StatusCode},
-    response::IntoResponse,
-    routing::{get, post},
-    Router,
+    extract::DefaultBodyLimit, http::{Response, StatusCode}, response::IntoResponse, routing::{get, post}, Router
 };
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
@@ -53,6 +50,7 @@ async fn main() -> Result<()> {
         .route("/subscribe", get(subscribe_handler))
         .with_state(app_state)
         .layer(TraceLayer::new_for_http())
+        .layer(DefaultBodyLimit::max(10 * 1024 * 1024)) // 10MB
         .fallback(get(fallback));
 
     let server_url = format!("0.0.0.0:{}", config.server_port);
