@@ -39,12 +39,15 @@ async fn main() -> Result<()> {
     let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
 
     // proving system information data
-    let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
+    let r1cs_data_path = Path::new(
+        "./contracts/test-proof-data/groth16/sha/sha256_test512.r1cs",
+    );
     let proof_inputs_file =
-        File::open("./contracts/test-proof-data/groth16/multiplier2_js/input.json")?;
-    let proof_public_inputs_file = File::open("./contracts/test-proof-data/groth16/public.json")?;
+        File::open("./contracts/test-proof-data/groth16/sha/input.json")?;
+    let proof_public_inputs_file =
+        File::open("./contracts/test-proof-data/groth16/sha/public.json")?;
     let wasm_path =
-        Path::new("./contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
+        Path::new("./contracts/test-proof-data/groth16/sha/sha256_test512_js/sha256_test512.wasm");
     // buf readers
     let public_inputs_reader = BufReader::new(proof_public_inputs_file);
     let inputs_reader = BufReader::new(proof_inputs_file);
@@ -66,8 +69,8 @@ async fn main() -> Result<()> {
     let auction_length = 60u32; // 1 min
     let verifier_address = address!("3D48eB902f38fCF16C2fD9F42cb088d301D16c94");
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("43753b4d");
-    let public_inputs_offset = U256::from(256);
-    let public_inputs_length = U256::from(32);
+    let public_inputs_offset = U256::from(1);
+    let public_inputs_length = U256::from(256);
     let is_sha_commitment = false;
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
