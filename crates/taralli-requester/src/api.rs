@@ -44,6 +44,9 @@ impl RequesterApi {
             .join("/submit")
             .map_err(|e| RequesterError::ServerUrlParsingError(e.to_string()))?;
 
+        let request_json = serde_json::to_string_pretty(&request)
+            .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
+
         let response = self
             .client
             .post(url)

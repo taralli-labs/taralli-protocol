@@ -8,6 +8,7 @@ use color_eyre::Result;
 use dotenv::dotenv;
 use serde_json::Value;
 use sha3::Digest;
+use tokio::time::sleep;
 use std::env;
 use std::fs::File;
 use std::io::BufReader;
@@ -139,26 +140,30 @@ async fn main() -> Result<()> {
     let extra_data = Bytes::from(VerifierDetails::abi_encode(&verifier_details));
 
     // finish building proof request
-    let proof_request = builder
-        .set_new_nonce()
-        .await?
-        .set_reward_params(minimum_stake, min_reward_amount, max_reward_amount)
-        .proving_time(proving_time)
-        .proving_system_information(proof_info)
-        .set_verification_commitment_params(public_inputs_commitment, extra_data)
-        .set_auction_timestamps_from_auction_length()
-        .await?
-        .build(); // convert RequestBuilder into ProofRequest
+    for i in 0..10{
+        let proof_request = builder.clone()
+            .set_new_nonce()
+            .await?
+            .set_reward_params(minimum_stake, min_reward_amount, max_reward_amount)
+            .proving_time(proving_time)
+            .proving_system_information(proof_info.clone())
+            .set_verification_commitment_params(public_inputs_commitment, extra_data.clone())
+            .set_auction_timestamps_from_auction_length()
+            .await?
+            .build(); // convert RequestBuilder into ProofRequest
 
     // sign built request
-    let signed_request = requester.sign_request(proof_request.clone()).await?;
+        let signed_request = requester.sign_request(proof_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request)?;
+    // requester.validate_request(&signed_request)?;
 
     // TODO: Add a retry policy
-    requester
-        .submit_and_track_request(signed_request, auction_length as u64)
-        .await?;
+        requester
+            .submit_and_track_request(signed_request, auction_length as u64)
+            .await.unwrap_or_else(|e| {
+                tracing::error!("Failed to submit request: {}", e);
+            });
+        }
     Ok(())
 }
