@@ -11,7 +11,7 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 
 // TODO: add in default builder patterns

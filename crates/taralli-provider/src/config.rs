@@ -3,31 +3,23 @@ use std::marker::PhantomData;
 use taralli_primitives::{
     alloy::{network::Network, primitives::Address, providers::Provider, transports::Transport},
     systems::ProvingSystemId,
+    validation::request::RequestValidationConfig,
 };
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationConfig {
-    pub minimum_allowed_proving_time: u32,
-    pub maximum_start_delay: u32,
-    pub maximum_allowed_stake: u128,
-}
-
-impl Default for ValidationConfig {
-    fn default() -> Self {
-        Self {
-            minimum_allowed_proving_time: 30,              // 30 secs
-            maximum_start_delay: 300,                      // 5 min
-            maximum_allowed_stake: 1000000000000000000000, // 1000 ether
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyzerConfig {
     pub market_address: Address,
-    pub supported_proving_systems: Vec<ProvingSystemId>,
-    pub validation: ValidationConfig,
+    pub validation_config: RequestValidationConfig,
+}
+
+impl Default for AnalyzerConfig {
+    fn default() -> Self {
+        Self {
+            market_address: Address::ZERO, // Will be set from provider config
+            validation_config: RequestValidationConfig::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -90,6 +82,7 @@ pub struct ProviderConfig<T, P, N> {
     pub rpc_provider: P,
     pub market_address: Address,
     pub server_url: Url,
+    pub validation_config: RequestValidationConfig,
     phantom_data: PhantomData<(T, N)>,
 }
 
@@ -99,11 +92,17 @@ where
     P: Provider<T, N> + Clone,
     N: Network + Clone,
 {
-    pub fn new(rpc_provider: P, market_address: Address, server_url: Url) -> Self {
+    pub fn new(
+        rpc_provider: P,
+        market_address: Address,
+        server_url: Url,
+        validation_config: RequestValidationConfig,
+    ) -> Self {
         Self {
             rpc_provider,
             market_address,
             server_url,
+            validation_config,
             phantom_data: PhantomData,
         }
     }

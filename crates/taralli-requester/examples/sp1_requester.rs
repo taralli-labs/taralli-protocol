@@ -11,7 +11,7 @@ use std::env;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::sp1::{Sp1Config, Sp1Mode, Sp1ProofParams};
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;

@@ -9,7 +9,7 @@ use crate::error::{ProviderError, Result};
 use crate::worker::{ComputeWorker, WorkResult};
 use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::ProvingSystemParams;
 
 // Shared traits & functionality for all RISC0 workers

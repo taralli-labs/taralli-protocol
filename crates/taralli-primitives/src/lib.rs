@@ -23,11 +23,16 @@ pub mod alloy {
     }
 
     pub mod providers {
-        pub use alloy::providers::{Provider, ProviderBuilder};
+        pub use alloy::providers::{Provider, ProviderBuilder, RootProvider};
     }
 
     pub mod transports {
-        pub use alloy::transports::Transport;
+        pub use alloy::transports::{
+            http::{Client, Http},
+            ipc::IpcConnect,
+            ws::WsConnect,
+            Transport,
+        };
     }
 
     pub mod eips {
@@ -50,9 +55,8 @@ pub mod alloy {
 // Taralli primitives
 pub mod abi;
 pub mod error;
-pub mod market;
-pub mod offer;
-pub mod request;
+pub mod intents;
+pub mod markets;
 pub mod systems;
 pub mod utils;
 pub mod validation;
