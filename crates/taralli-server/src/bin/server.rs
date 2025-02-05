@@ -14,7 +14,11 @@ use taralli_primitives::{
 use taralli_server::{
     config::Config,
     postgres::Db,
-    routes::submit::{submit_offer_handler, submit_request_handler},
+    routes::{
+        query::get_active_offers_by_id_handler,
+        submit::{submit_offer_handler, submit_request_handler},
+        subscribe::subscribe_handler,
+    },
     state::{offer::OfferState, request::RequestState, BaseState},
     subscription_manager::SubscriptionManager,
 };
@@ -66,10 +70,15 @@ async fn main() -> Result<()> {
     // Create separate routers for each intent type
     let request_routes = Router::new()
         .route("/submit/request", post(submit_request_handler))
+        .route("/subscribe/", post(subscribe_handler))
         .with_state(request_state);
 
     let offer_routes = Router::new()
         .route("/submit/offer", post(submit_offer_handler))
+        .route(
+            "/query/:proving_system_id",
+            get(get_active_offers_by_id_handler),
+        )
         .with_state(offer_state);
 
     // Merge routers

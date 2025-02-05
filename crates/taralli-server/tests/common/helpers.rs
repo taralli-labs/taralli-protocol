@@ -36,7 +36,7 @@ pub const MAX_BODY_SIZE: usize = 1024 * 1024; // 1 MB limit
 pub fn submit_request_body(input: Option<String>) -> Request<Body> {
     Request::builder()
         .method("POST")
-        .uri("/submit")
+        .uri("/submit/request")
         .header("Content-Type", "application/json")
         .body(Body::from(input.unwrap_or("{}".to_owned())))
         .unwrap()
@@ -161,7 +161,7 @@ pub async fn setup_app(size: Option<usize>) -> Router {
     let value_state = ValueState::new(base_state, subscription_manager);
 
     Router::new()
-        .route("/request", axum::routing::post(submit_handler_json))
+        .route("/submit/request", axum::routing::post(submit_handler_json))
         .route("/subscribe", axum::routing::get(subscribe_handler_json))
         .with_state(value_state)
         .layer(TraceLayer::new_for_http())
