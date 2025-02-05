@@ -32,33 +32,11 @@ pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
 ) -> Result<impl IntoResponse> {
     validate_intent(&offer, &app_state).await?;
 
-    let mut conn = app_state
-        .intent_db()
-        .pool
-        .get()
-        .await
-        .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-
-    let transaction = conn
-        .transaction()
-        .await
-        .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-
-    match app_state
-        .intent_db()
-        .store_offer(&offer, &transaction)
-        .await
-    {
-        Ok(_) => {
-            transaction
-                .commit()
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-            Ok((
-                StatusCode::CREATED,
-                Json(json!({"message": "Offer stored successfully"})),
-            ))
-        }
+    match app_state.intent_db().store_offer(&offer).await {
+        Ok(_) => Ok((
+            StatusCode::CREATED,
+            Json(json!({"message": "Offer stored successfully"})),
+        )),
         Err(e) => Err(e),
     }
 }

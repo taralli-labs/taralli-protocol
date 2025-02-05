@@ -10,4 +10,4 @@ CREATE TABLE offers (
 );
 
 CREATE INDEX idx_offers_proving_system ON offers(proving_system_id);
-CREATE INDEX idx_offers_end_timestamp ON offers USING BRIN ((proof_offer->>'endAuctionTimestamp'));
+CREATE INDEX idx_offers_expiration ON offers(expiration_timestamp);

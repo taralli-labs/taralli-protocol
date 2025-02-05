@@ -8,7 +8,7 @@ use taralli_primitives::{
     systems::{ProvingSystem, ProvingSystemId},
     utils::compute_offer_id,
 };
-use tokio_postgres::{Config, NoTls, Row, Transaction};
+use tokio_postgres::{Config, NoTls, Row};
 
 pub const INSERT_OFFER: &str = "
     INSERT INTO offers (offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp, created_at, expired_at)
@@ -18,14 +18,14 @@ pub const INSERT_OFFER: &str = "
 
 pub const UPDATE_EXPIRED_OFFERS: &str = "
     UPDATE offers
-    SET = expired_at = NOW()
-    WHERE offers.expiration_timestamp < NOW()
+    SET expired_at = NOW()
+    WHERE offers.expiration_timestamp > NOW()
     AND expired_at IS NULL
     RETURNING offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp, created_at, expired_at;
 ";
 
 pub const GET_OFFER_BY_ID: &str = "
-    SELECT * FROM offers
+    SELECT (offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp, created_at, expired_at) FROM offers
     WHERE offers.proving_system_id = $1
     AND offers.expired_at IS NULL;
 ";
@@ -101,7 +101,6 @@ impl Db {
     pub async fn store_offer<S: ProvingSystem>(
         &self,
         offer: &ComputeOffer<S>,
-        transaction: &Transaction<'_>,
     ) -> Result<StoredOffer> {
         let offer_id = compute_offer_id(&offer.proof_offer, offer.signature);
         let proving_system_bytes = serde_json::to_vec(&offer.proving_system)
@@ -110,11 +109,18 @@ impl Db {
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
         let expiration_timestamp = offer.proof_offer.endAuctionTimestamp as i64;
 
-        let prepared_stmt = transaction
+        let conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+
+        let prepared_stmt = conn
             .prepare(INSERT_OFFER)
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-        let row = transaction
+
+        let row = conn
             .query_one(
                 &prepared_stmt,
                 &[
