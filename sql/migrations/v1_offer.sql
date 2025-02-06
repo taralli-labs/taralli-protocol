@@ -1,6 +1,6 @@
 CREATE TABLE offers (
     offer_id BYTEA PRIMARY KEY,
-    proving_system_id VARCHAR NOT NULL,  -- Store as string, parse to enum
+    proving_system_id TEXT NOT NULL,  -- Store as string, parse to enum
     proving_system BYTEA NOT NULL,       -- Serialized proving system data
     proof_offer BYTEA NOT NULL,          -- Serialized UniversalPorchetta::ProofOffer
     signature BYTEA NOT NULL,

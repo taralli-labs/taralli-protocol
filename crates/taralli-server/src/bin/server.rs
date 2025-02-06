@@ -54,7 +54,7 @@ async fn main() -> Result<()> {
         Default::default();
 
     // initialize intent database
-    let offer_db = Db::new().await;
+    let intent_db = Db::new().await;
 
     let base_state = BaseState::new(
         rpc_provider.clone(),
@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
 
     let request_state = RequestState::new(base_state.clone(), subscription_manager);
 
-    let offer_state = OfferState::new(base_state, offer_db);
+    let offer_state = OfferState::new(base_state, intent_db);
 
     // Create separate routers for each intent type
     let request_routes = Router::new()
