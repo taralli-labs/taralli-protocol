@@ -201,22 +201,19 @@ mod tests {
     async fn test_compute_request_id() {
         let mock_request = get_mock_proof_request();
         let signature = Signature::try_from(&DUMMY_SIGNATURE_BYTES[..]).unwrap();
-        let local_result = compute_request_id(&mock_request, signature);
-        println!("Local result: {:?}", local_result);
+        let _local_result = compute_request_id(&mock_request, signature);
     }
 
     #[tokio::test]
     async fn test_compute_request_witness() {
         let mock_request = get_mock_proof_request();
-        let local_result = compute_request_witness(&mock_request);
-        println!("Local result: {:?}", local_result);
+        let _local_result = compute_request_witness(&mock_request);
     }
 
     #[tokio::test]
     async fn test_compute_permit2_digest() {
         let mock_request = get_mock_proof_request();
         let witness = b256!("e6a6cf5ad10b2e60506ffc96bf4d74f8853c100ded900069fc5dc42faa55c1fa");
-        let local_result = compute_permit2_digest(&mock_request, witness);
-        println!("local digest: {}", local_result);
+        let _local_result = compute_permit2_digest(&mock_request, witness);
     }
 }

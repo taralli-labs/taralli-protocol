@@ -15,7 +15,7 @@ use tokio::time::timeout;
 
 pub async fn validate_proof_request<T, P, I>(
     request: &Request<I>,
-    app_state: &State<AppState<T, P, Request<I>>>,
+    app_state: &State<AppState<T, P>>,
     timeout_seconds: Duration,
 ) -> Result<()>
 where

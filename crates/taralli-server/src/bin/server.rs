@@ -8,11 +8,10 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
 use std::{sync::Arc, time::Duration};
-use taralli_primitives::{systems::ProvingSystemParams, Request};
 use taralli_server::{
     app_state::{AppState, AppStateConfig},
     config::Config,
-    routes::{submit::submit_handler, subscribe::subscribe_handler},
+    routes::{submit::submit_handler, subscribe::websocket_subscribe_handler},
     subscription_manager::SubscriptionManager,
 };
 use tokio::net::TcpListener;
@@ -33,8 +32,7 @@ async fn main() -> Result<()> {
         .init();
 
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
-    let subscription_manager: Arc<SubscriptionManager<Request<ProvingSystemParams>>> =
-        Default::default();
+    let subscription_manager: Arc<SubscriptionManager> = Default::default();
 
     // initialize state
     let app_state = AppState::new(AppStateConfig {
@@ -50,7 +48,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/submit", post(submit_handler))
-        .route("/subscribe", get(subscribe_handler))
+        .route("/subscribe", get(websocket_subscribe_handler))
         .with_state(app_state)
         .layer(TraceLayer::new_for_http())
         .fallback(get(fallback));

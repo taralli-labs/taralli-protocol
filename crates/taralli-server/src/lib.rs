@@ -1,4 +1,5 @@
 pub mod app_state;
+pub mod brotli;
 pub mod config;
 pub mod error;
 pub mod routes;
