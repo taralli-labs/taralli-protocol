@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use axum::body::to_bytes;
+use futures::Stream;
 use hyper::StatusCode;
 use serde_json::{json, Value};
 use taralli_primitives::systems::ProvingSystemId;
@@ -31,8 +34,7 @@ async fn test_submit_with_no_subscribers() {
 #[tokio::test]
 async fn test_broadcast_single() {
     let router = setup_app(None).await;
-    // println!("Router: {:?}", router);
-    let stream = subscribe(router, &[ProvingSystemId::Arkworks, ProvingSystemId::Gnark]).await;
+    let _stream = subscribe(router, &[ProvingSystemId::Arkworks]).await;
 }
 
 #[tokio::test]
@@ -69,39 +71,16 @@ async fn test_single_subscriber_multiple_systems() {
     let router = setup_app(Some(3)).await;
 
     // We now pass multiple IDs, each generating system_ids=arkworks&system_ids=risc0
-    /*let stream = subscribe(router.clone(), &[
+    let mut stream = subscribe(router.clone(), &[
         ProvingSystemId::Arkworks, 
-        ProvingSystemId::Risc0
+        ProvingSystemId::Risc0,
+        ProvingSystemId::Gnark,
+        ProvingSystemId::Sp1,
+        ProvingSystemId::AlignedLayer
     ]).await;
-    
-    // spawn a task to read from `stream` (SSE) if needed:
-    let stream_task = tokio::spawn(async move {
-        let mut stream = Box::pin(stream);
-        while let Some(result) = stream.next().await {
-            println!("Received: {:?}", result);
-        }
-    });
 
     // Give time for subscription setup
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;*/
-
-}
-
-/*#[tokio::test]
-async fn test_single_subscriber_multiple_systems() {
-    let app = setup_app(Some(3)).await;
-
-    // Create a single subscriber listening to multiple systems
-    let response = app
-        .clone()
-        .oneshot(subscribe_request_body(&[
-            ProvingSystemId::Arkworks,
-            ProvingSystemId::Risc0,
-        ]))
-        .await
-        .unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-    let mut stream = response.into_body().into_data_stream();
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     // Submit simple messages
     let arkworks_msg = json!({
@@ -114,16 +93,16 @@ async fn test_single_subscriber_multiple_systems() {
         "message": "test2"
     }).to_string();
 
-    let submit1 = submit(app.clone(), Some(arkworks_msg.to_string())).await;
+    let submit1 = submit(router.clone(), arkworks_msg.to_string()).await;
     assert_eq!(submit1.status(), StatusCode::OK);
 
-    let submit2 = submit(app.clone(), Some(risc0_msg.to_string())).await;
+    let submit2 = submit(router.clone(), risc0_msg.to_string()).await;
     assert_eq!(submit2.status(), StatusCode::OK);
 
     // Verify we receive both messages on the single stream
     for _ in 0..2 {
         if let Some(Ok(event_data)) = stream.next().await {
-            let data = String::from_utf8(event_data.to_vec()).unwrap();
+            let data = String::from_utf8(event_data.into()).unwrap();
             assert!(
                 data.contains("test1") || data.contains("test2"),
                 "Received unexpected message: {}",
@@ -137,23 +116,22 @@ async fn test_single_subscriber_multiple_systems() {
 
 #[tokio::test]
 async fn test_multiple_subscribers_single_system() {
-    let app = setup_app(Some(3)).await;
+    let router = setup_app(Some(3)).await;
 
     // Create three separate subscribers all listening to Arkworks
     let mut streams = Vec::new();
     for _ in 0..3 {
-        let response = app
-            .clone()
-            .oneshot(subscribe_request_body(&[ProvingSystemId::Arkworks]))
-            .await
-            .unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
-        streams.push(response.into_body().into_data_stream());
+        let stream = subscribe(router.clone(), &[ProvingSystemId::Arkworks]).await;
+        streams.push(stream);
     }
 
-    // Submit a single message
-    let msg = r#"{"proving_system_id": "arkworks", "message": "test"}"#;
-    let submit_response = submit(app.clone(), Some(msg.to_string())).await;
+    // Submit simple messages
+    let arkworks_msg = json!({
+        "proving_system_id": "arkworks",
+        "message": "test1"
+    }).to_string();
+
+    let submit_response = submit(router.clone(), arkworks_msg.to_string()).await;
     assert_eq!(submit_response.status(), StatusCode::OK);
 
     // Verify each subscriber receives the message
@@ -161,8 +139,8 @@ async fn test_multiple_subscribers_single_system() {
         if let Some(Ok(event_data)) = stream.next().await {
             println!("Subscriber {} received message", i);
             assert_eq!(
-                String::from_utf8(event_data.to_vec()).unwrap(),
-                format!("data: {}\n\n", msg)
+                String::from_utf8(event_data.into()).unwrap(),
+                format!("data: {}\n\n", arkworks_msg)
             );
         } else {
             panic!("Subscriber {} didn't receive message", i);
@@ -170,81 +148,200 @@ async fn test_multiple_subscribers_single_system() {
     }
 }
 
-#[tokio::test]
+/*#[tokio::test]
 async fn test_multiple_subscribers_multiple_systems() {
-    let app = setup_app(Some(3)).await;
+    let router = setup_app(Some(3)).await;
 
     // Create subscribers with different system combinations
     let mut streams = Vec::new();
 
-    // Subscriber 1: Arkworks only
-    let response1 = app
-        .clone()
-        .oneshot(subscribe_request_body(&[ProvingSystemId::Arkworks]))
-        .await
-        .unwrap();
-    streams.push((
-        vec![ProvingSystemId::Arkworks],
-        response1.into_body().into_data_stream(),
-    ));
+    let stream1 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::Risc0,
+        ProvingSystemId::Gnark,
+        ProvingSystemId::Sp1,
+        ProvingSystemId::AlignedLayer
+        ]).await;
+    streams.push(stream1);
 
-    // Subscriber 2: Risc0 only
-    let response2 = app
-        .clone()
-        .oneshot(subscribe_request_body(&[ProvingSystemId::Risc0]))
-        .await
-        .unwrap();
-    streams.push((
-        vec![ProvingSystemId::Risc0],
-        response2.into_body().into_data_stream(),
-    ));
+    let stream2 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::Risc0,
+        ]).await;
+    streams.push(stream2);
 
-    // Subscriber 3: Both systems
-    let response3 = app
-        .clone()
-        .oneshot(subscribe_request_body(&[
-            ProvingSystemId::Arkworks,
-            ProvingSystemId::Risc0,
-        ]))
-        .await
-        .unwrap();
-    streams.push((
-        vec![ProvingSystemId::Arkworks, ProvingSystemId::Risc0],
-        response3.into_body().into_data_stream(),
-    ));
+    let stream3 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::AlignedLayer,
+        ]).await;
+    streams.push(stream3);
 
-    // Submit messages to both systems
-    let arkworks_msg = r#"{"proving_system_id": "arkworks", "message": "test1"}"#;
-    let risc0_msg = r#"{"proving_system_id": "risc0", "message": "test2"}"#;
+    let stream4 = subscribe(router.clone(), &[ProvingSystemId::Sp1]).await;
+    streams.push(stream4);
+    
+    // Submit messages to all systems
+    // Submit simple messages
+    let arkworks_msg = json!({
+        "proving_system_id": "arkworks",
+        "message": "test1"
+    }).to_string();
+    
+    let risc0_msg = json!({
+        "proving_system_id": "risc0",
+        "message": "test2"
+    }).to_string();
 
-    let submit1 = submit(app.clone(), Some(arkworks_msg.to_string())).await;
+    let gnark_msg = json!({
+        "proving_system_id": "gnark",
+        "message": "test3"
+    }).to_string();
+
+    let sp1_msg = json!({
+        "proving_system_id": "sp1",
+        "message": "test4"
+    }).to_string();
+
+    let aligned_layer_msg = json!({
+        "proving_system_id": "aligned-layer",
+        "message": "test5"
+    }).to_string();
+
+    let submit1 = submit(router.clone(), arkworks_msg.to_string()).await;
     assert_eq!(submit1.status(), StatusCode::OK);
 
-    let submit2 = submit(app.clone(), Some(risc0_msg.to_string())).await;
+    let submit2 = submit(router.clone(), risc0_msg.to_string()).await;
     assert_eq!(submit2.status(), StatusCode::OK);
 
-    // Verify each subscriber receives appropriate messages
-    for (i, (systems, mut stream)) in streams.into_iter().enumerate() {
-        let expected_msgs = systems.len();
-        let mut received = 0;
+    let submit3 = submit(router.clone(), gnark_msg.to_string()).await;
+    assert_eq!(submit1.status(), StatusCode::OK);
 
-        for _ in 0..expected_msgs {
-            if let Some(Ok(event_data)) = stream.next().await {
-                let data = String::from_utf8(event_data.to_vec()).unwrap();
-                assert!(
-                    (systems.contains(&ProvingSystemId::Arkworks) && data.contains("test1"))
-                        || (systems.contains(&ProvingSystemId::Risc0) && data.contains("test2")),
-                    "Subscriber {} received unexpected message: {}",
-                    i,
-                    data
-                );
-                received += 1;
-            }
+    let submit4 = submit(router.clone(), sp1_msg.to_string()).await;
+    assert_eq!(submit2.status(), StatusCode::OK);
+
+    let submit5 = submit(router.clone(), aligned_layer_msg.to_string()).await;
+    assert_eq!(submit1.status(), StatusCode::OK);
+
+    // Verify each subscriber receives the message
+    for (i, mut stream) in streams.into_iter().enumerate() {
+        if let Some(Ok(event_data)) = stream.next().await {
+            println!("Subscriber {} received message", i);
+            assert_eq!(
+                String::from_utf8(event_data.into()).unwrap(),
+                format!("data: {}\n\n", arkworks_msg)
+            );
+        } else {
+            panic!("Subscriber {} didn't receive message", i);
         }
-        assert_eq!(
-            received, expected_msgs,
-            "Subscriber {} didn't receive all expected messages",
-            i
-        );
     }
+
 }*/
+
+#[tokio::test]
+async fn test_multiple_subscribers_multiple_systems() {
+    let router = setup_app(Some(10)).await;
+    
+    // Create subscribers for different combinations of systems
+    let stream1 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::Risc0,
+        ProvingSystemId::Gnark,
+        ProvingSystemId::Sp1,
+        ProvingSystemId::AlignedLayer
+    ]).await;
+    
+    let stream2 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::Risc0,
+    ]).await;
+    
+    let stream3 = subscribe(router.clone(), &[
+        ProvingSystemId::Arkworks,
+        ProvingSystemId::AlignedLayer,
+    ]).await;
+    
+    let stream4 = subscribe(router.clone(), &[ProvingSystemId::Sp1]).await;
+
+    // Create test messages for different systems
+    let arkworks_msg = json!({
+        "proving_system_id": "arkworks",
+        "data": "test_arkworks_data"
+    }).to_string();
+    
+    let risc0_msg = json!({
+        "proving_system_id": "risc0",
+        "data": "test_risc0_data"
+    }).to_string();
+
+    let gnark_msg = json!({
+        "proving_system_id": "gnark",
+        "data": "test_gnark_data"
+    }).to_string();
+
+    let sp1_msg = json!({
+        "proving_system_id": "sp1",
+        "data": "test_sp1_data"
+    }).to_string();
+
+    let aligned_msg = json!({
+        "proving_system_id": "aligned-layer",
+        "data": "test_aligned_data"
+    }).to_string();
+
+    // Submit all messages
+    submit(router.clone(), arkworks_msg.clone()).await;
+    submit(router.clone(), risc0_msg.clone()).await;
+    submit(router.clone(), gnark_msg.clone()).await;
+    submit(router.clone(), sp1_msg.clone()).await;
+    submit(router.clone(), aligned_msg.clone()).await;
+
+    // Collect messages from all streams for a short duration
+    let timeout = Duration::from_millis(100);
+    
+    let messages1 = collect_messages(stream1, timeout).await;
+    let messages2 = collect_messages(stream2, timeout).await;
+    let messages3 = collect_messages(stream3, timeout).await;
+    let messages4 = collect_messages(stream4, timeout).await;
+
+    // Verify stream1 (subscribed to all) received all messages
+    assert_eq!(messages1.len(), 5);
+    assert!(messages1.iter().any(|msg| msg.contains("test_arkworks_data")));
+    assert!(messages1.iter().any(|msg| msg.contains("test_risc0_data")));
+    assert!(messages1.iter().any(|msg| msg.contains("test_gnark_data")));
+    assert!(messages1.iter().any(|msg| msg.contains("test_sp1_data")));
+    assert!(messages1.iter().any(|msg| msg.contains("test_aligned_data")));
+
+    // Verify stream2 (Arkworks, Risc0) received only its messages
+    assert_eq!(messages2.len(), 2);
+    assert!(messages2.iter().any(|msg| msg.contains("test_arkworks_data")));
+    assert!(messages2.iter().any(|msg| msg.contains("test_risc0_data")));
+
+    // Verify stream3 (Arkworks, AlignedLayer) received only its messages
+    assert_eq!(messages3.len(), 2);
+    assert!(messages3.iter().any(|msg| msg.contains("test_arkworks_data")));
+    assert!(messages3.iter().any(|msg| msg.contains("test_aligned_data")));
+
+    // Verify stream4 (Sp1 only) received only its message
+    assert_eq!(messages4.len(), 1);
+    assert!(messages4.iter().any(|msg| msg.contains("test_sp1_data")));
+}
+
+// Helper function to collect messages from a stream for a given duration
+async fn collect_messages(
+    mut stream: impl Stream<Item = Result<String, axum::Error>> + Unpin,
+    timeout: Duration,
+) -> Vec<String> {
+    let mut messages = Vec::new();
+    
+    let collection_task = async {
+        while let Some(Ok(msg)) = stream.next().await {
+            messages.push(msg);
+        }
+    };
+
+    tokio::select! {
+        _ = collection_task => {},
+        _ = tokio::time::sleep(timeout) => {},
+    }
+
+    messages
+}
