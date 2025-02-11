@@ -66,12 +66,18 @@ pub trait ProvingSystem: Send + Sync + Clone + Serialize + 'static {
     fn validate_inputs(&self) -> Result<()>;
 }
 
+// Helper macro to count the number of variants - define this first
+macro_rules! count {
+    () => (0usize);
+    ($head:tt $(,$tail:tt)*) => (1usize + count!($($tail),*));
+}
+
 // Macro for generating system IDs and basic infrastructure
 macro_rules! proving_systems {
     (
         $(
             $(#[$attr:meta])*
-            ($variant:ident, $params:ty, $str:literal)
+            ($variant:ident, $str:literal, $params:ty)
         ),* $(,)?
     ) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -101,7 +107,15 @@ macro_rules! proving_systems {
                     $(Self::$variant => $str),*
                 }
             }
+            pub const fn all() -> [ProvingSystemId; {count!($($variant),*)}] {
+                use ProvingSystemId::*;
+                [
+                    $($variant),*
+                ]
+            }
         }
+
+        pub const SYSTEMS: [ProvingSystemId; {count!($($variant),*)}] = ProvingSystemId::all();
 
         impl TryFrom<&str> for ProvingSystemId {
             type Error = String;
@@ -187,9 +201,9 @@ macro_rules! proving_systems {
 }
 
 proving_systems! {
-    (AlignedLayer, AlignedLayerProofParams, "aligned-layer"),
-    (Arkworks, ArkworksProofParams, "arkworks"),
-    (Gnark, GnarkProofParams, "gnark"),
-    (Risc0, Risc0ProofParams, "risc0"),
-    (Sp1, Sp1ProofParams, "sp1")
+    (AlignedLayer, "aligned-layer", AlignedLayerProofParams),
+    (Arkworks, "arkworks", ArkworksProofParams),
+    (Gnark, "gnark", GnarkProofParams),
+    (Risc0, "risc0", Risc0ProofParams),
+    (Sp1, "sp1", Sp1ProofParams)
 }

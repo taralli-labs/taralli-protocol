@@ -14,7 +14,7 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Network, providers::Provider, signers::Signer, transports::Transport,
 };
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::utils::{
     compute_request_id, compute_request_permit2_digest, compute_request_witness,
@@ -31,7 +31,7 @@ where
     pub config: RequesterConfig<T, P, N, S>,
     pub api: RequesterApi,
     pub builder: RequestBuilder<T, P, N>,
-    tracker: RequestTracker<T, P, N>,
+    pub tracker: RequestTracker<T, P, N>,
 }
 
 impl<T, P, N, S> RequesterClient<T, P, N, S>
@@ -145,19 +145,7 @@ where
 
     pub fn validate_request(&self, request: &ComputeRequest<ProvingSystemParams>) -> Result<()> {
         // validate a request built by the requester client
-        let dummy_supported_proving_systems = &[request.proving_system_id];
-        // NOTE: The latest timestamp check as well as supported proving system checks are both no ops as it is assumed
-        //       the requester client is aware of these requirements generally when using the protocol.
-        validate_request(
-            request,
-            request.proof_request.startAuctionTimestamp - 100,
-            &self.config.market_address,
-            self.config.validation.minimum_allowed_proving_time,
-            self.config.validation.maximum_start_delay,
-            self.config.validation.maximum_allowed_stake,
-            dummy_supported_proving_systems,
-        )?;
-
+        validate_request(request, &self.config.validation_config.specific)?;
         Ok(())
     }
 }

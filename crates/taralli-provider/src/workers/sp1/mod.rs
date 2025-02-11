@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use sp1_sdk::{HashableKey, SP1ProofWithPublicValues, SP1VerifyingKey};
 use std::str::FromStr;
 use taralli_primitives::{
-    request::ComputeRequest,
+    intents::ComputeRequest,
     systems::{sp1::Sp1ProofParams, ProvingSystemParams},
 };
 

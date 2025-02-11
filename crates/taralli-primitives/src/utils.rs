@@ -146,7 +146,7 @@ pub fn compute_offer_id(proof_offer: &ProofOffer, signature: Signature) -> B256 
     let extra_data_hash = keccak256(proof_offer.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
 
-    // Encode OnChainProofRequest + Signature
+    // Encode ProofRequest + Signature
     let values = DynSolValue::Tuple(vec![
         DynSolValue::Address(proof_offer.market),
         DynSolValue::Uint(proof_offer.nonce, 256),

@@ -6,7 +6,7 @@ use async_trait::async_trait;
 use serde::Serialize;
 use serde_json::Value;
 use std::path::PathBuf;
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::gnark::GnarkProofParams;
 use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::{

@@ -1,55 +1,100 @@
-use super::{validate_common, ValidateCommon};
+use alloy::primitives::{Address, FixedBytes, U256};
+use serde::{Deserialize, Serialize};
+
+use crate::Result;
 use crate::{
-    abi::universal_bombetta::ProofRequestVerifierDetails,
-    request::ComputeRequest,
+    abi::universal_bombetta::UniversalBombetta::ProofRequest,
+    intents::ComputeRequest,
     systems::{ProvingSystem, ProvingSystemId},
     utils::{compute_request_permit2_digest, compute_request_witness},
-    PrimitivesError, Result,
+    PrimitivesError,
 };
-use alloy::primitives::{Address, FixedBytes, U256};
 
-// ComputeRequest specific validation
-impl<P: ProvingSystem> ValidateCommon for ComputeRequest<P> {
-    type System = P;
+use super::{
+    CommonValidationConfig, FromMetaConfig, ProofCommon, Validate, ValidationConfig,
+    ValidationMetaConfig,
+};
+
+// Specific config for requests
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RequestSpecificConfig {
+    pub maximum_allowed_stake: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RequestValidationConfig {
+    pub common: CommonValidationConfig,
+    pub specific: RequestSpecificConfig,
+}
+
+impl ValidationConfig for RequestValidationConfig {
+    fn common(&self) -> &CommonValidationConfig {
+        &self.common
+    }
+}
+
+impl FromMetaConfig for RequestValidationConfig {
+    fn from_meta(meta: &ValidationMetaConfig) -> Self {
+        Self {
+            common: meta.common.clone(),
+            specific: meta.request.clone(),
+        }
+    }
+}
+
+// Implement for both proof types
+impl ProofCommon for ProofRequest {
+    fn market(&self) -> &Address {
+        &self.market
+    }
+    fn nonce(&self) -> &U256 {
+        &self.nonce
+    }
+    fn start_auction_timestamp(&self) -> u64 {
+        self.startAuctionTimestamp
+    }
+    fn end_auction_timestamp(&self) -> u64 {
+        self.endAuctionTimestamp
+    }
+    fn proving_time(&self) -> u32 {
+        self.provingTime
+    }
+    fn inputs_commitment(&self) -> FixedBytes<32> {
+        self.inputsCommitment
+    }
+}
+
+// Implement for ComputeRequest
+impl<P: ProvingSystem> Validate for ComputeRequest<P> {
+    type Config = RequestValidationConfig;
+
     fn proving_system_id(&self) -> ProvingSystemId {
         self.proving_system_id
     }
 
-    fn proving_system(&self) -> &Self::System {
+    fn proving_system(&self) -> &impl ProvingSystem {
         &self.proving_system
     }
 
-    fn market_address(&self) -> &Address {
-        &self.proof_request.market
+    fn proof_common(&self) -> &impl ProofCommon {
+        &self.proof_request
     }
 
-    fn nonce(&self) -> &U256 {
-        &self.proof_request.nonce
-    }
-
-    fn start_auction_timestamp(&self) -> u64 {
-        self.proof_request.startAuctionTimestamp
-    }
-
-    fn end_auction_timestamp(&self) -> u64 {
-        self.proof_request.endAuctionTimestamp
-    }
-
-    fn proving_time(&self) -> u32 {
-        self.proof_request.provingTime
-    }
-
-    fn inputs_commitment(&self) -> FixedBytes<32> {
-        self.proof_request.inputsCommitment
+    fn validate_specific(&self, config: &Self::Config) -> Result<()> {
+        // Request-specific validation
+        validate_request(self, &config.specific)
     }
 }
 
-pub trait ValidateRequest: ValidateCommon {
-    fn reward_token(&self) -> &Address;
-    fn min_reward_amount(&self) -> &U256;
-    fn max_reward_amount(&self) -> &U256;
-    fn minimum_stake(&self) -> &u128;
-    fn verifier_details(&self) -> &ProofRequestVerifierDetails;
+pub fn validate_request<P: ProvingSystem>(
+    request: &ComputeRequest<P>,
+    config: &RequestSpecificConfig,
+) -> Result<()> {
+    // Request-specific validation logic
+    validate_signature(request)?;
+    validate_amount_constraints(request, config.maximum_allowed_stake)?;
+    validate_verifier_details(request)?;
+    Ok(())
 }
 
 pub fn validate_amount_constraints<P: ProvingSystem>(
@@ -93,27 +138,4 @@ pub fn validate_signature<P: ProvingSystem>(request: &ComputeRequest<P>) -> Resu
     } else {
         Ok(())
     }
-}
-
-pub fn validate_request<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    latest_timestamp: u64,
-    market_address: &Address,
-    minimum_proving_time: u32,
-    maximum_start_delay: u32,
-    maximum_allowed_stake: u128,
-    supported_proving_systems: &[ProvingSystemId],
-) -> Result<()> {
-    validate_common(
-        request,
-        latest_timestamp,
-        market_address,
-        minimum_proving_time,
-        maximum_start_delay,
-        supported_proving_systems,
-    )?;
-    validate_amount_constraints(request, maximum_allowed_stake)?;
-    validate_verifier_details(request)?;
-    validate_signature(request)?;
-    Ok(())
 }
