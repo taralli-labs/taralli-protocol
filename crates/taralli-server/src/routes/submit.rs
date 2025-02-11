@@ -1,64 +1,46 @@
-use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
-use taralli_primitives::systems::ProvingSystemInformation;
-use taralli_primitives::Request;
+use taralli_primitives::alloy::{providers::Provider, transports::Transport};
+use taralli_primitives::intents::{ComputeOffer, ComputeRequest};
+use taralli_primitives::systems::ProvingSystemParams;
 
-use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
+use crate::error::{Result, ServerError};
+use crate::state::offer::OfferState;
+use crate::state::request::RequestState;
+use crate::validation::validate_intent;
 
-pub async fn submit_handler<
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
->(
-    app_state: State<AppState<T, P, Request<I>>>,
-    Json(request): Json<Request<I>>,
-) -> Result<impl IntoResponse, impl IntoResponse> {
-    let timeout = app_state.validation_timeout_seconds();
+pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone>(
+    State(app_state): State<RequestState<T, P>>,
+    Json(request): Json<ComputeRequest<ProvingSystemParams>>,
+) -> Result<impl IntoResponse> {
+    validate_intent(&request, &app_state).await?;
+    match app_state
+        .subscription_manager()
+        .broadcast(request.proving_system_id, request)
+        .await
+    {
+        Ok(recv_count) => Ok((
+            StatusCode::OK,
+            Json(json!({
+                "message": "Proof request broadcast to providers",
+                "broadcast_receivers": recv_count
+            })),
+        )),
+        Err(_) => Err(ServerError::NoProvidersAvailable()),
+    }
+}
 
-    tracing::info!("Validating proof request");
-    match validate_proof_request(&request, &app_state, timeout).await {
-        Ok(()) => {
-            tracing::debug!("Validation successful, attempting to broadcast");
-            match app_state.subscription_manager().broadcast(request) {
-                Ok(recv_count) => {
-                    tracing::info!(
-                        "Submitted request was broadcast to {} receivers",
-                        recv_count
-                    );
-                    Ok((
-                        StatusCode::OK,
-                        Json(json!({
-                            "message": "Proof request accepted and submitted to Proof Providers.",
-                            "broadcast_receivers": recv_count
-                        })),
-                    ))
-                }
-                Err(_) => {
-                    tracing::debug!("No active subscribers to receive the broadcast");
-                    Err((
-                        StatusCode::BAD_REQUEST,
-                        Json(json!({
-                            "error": "No providers subscribed to listen for this request."
-                        })),
-                    ))
-                }
-            }
-        }
-        Err(e) => {
-            tracing::warn!("Validation failed: {:?}", e);
-            let status = match e {
-                ServerError::ValidationTimeout(_) => StatusCode::REQUEST_TIMEOUT,
-                _ => StatusCode::BAD_REQUEST,
-            };
+pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
+    State(app_state): State<OfferState<T, P>>,
+    Json(offer): Json<ComputeOffer<ProvingSystemParams>>,
+) -> Result<impl IntoResponse> {
+    validate_intent(&offer, &app_state).await?;
 
-            Err((
-                status,
-                Json(json!({
-                    "error": e.to_string(),
-                    "error_type": format!("{:?}", e)
-                })),
-            ))
-        }
+    match app_state.intent_db().store_offer(&offer).await {
+        Ok(_) => Ok((
+            StatusCode::CREATED,
+            Json(json!({"message": "Offer stored successfully"})),
+        )),
+        Err(e) => Err(e),
     }
 }

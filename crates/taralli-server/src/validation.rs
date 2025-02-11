@@ -1,45 +1,39 @@
-use crate::app_state::AppState;
-use crate::error::{Result, ServerError};
-use axum::extract::State;
-use std::time::Duration;
+use crate::{
+    error::{Result, ServerError},
+    state::BaseState,
+};
 use taralli_primitives::alloy::{
     eips::BlockId,
     network::{BlockTransactionsKind, Ethereum},
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::systems::ProvingSystemInformation;
-use taralli_primitives::validation::validate_request;
-use taralli_primitives::Request;
+use taralli_primitives::validation::{FromMetaConfig, Validate};
 use tokio::time::timeout;
 
-pub async fn validate_proof_request<T, P, I>(
-    request: &Request<I>,
-    app_state: &State<AppState<T, P, Request<I>>>,
-    timeout_seconds: Duration,
+pub async fn validate_intent<T: Transport + Clone, P: Provider<T> + Clone, I>(
+    intent: &I,
+    app_state: &BaseState<T, P>,
 ) -> Result<()>
 where
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
+    I: Validate,
+    I::Config: FromMetaConfig,
 {
-    // TODO: remove this async process from the validation execution of the server and use input parameter instead
+    // TODO: separate this timestamp fetch from the validation execution of the server
     let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
+    let validation_timeout_seconds = app_state.validation_timeout_seconds();
+    let intent_validation_config = I::Config::from_meta(app_state.validation_config());
 
-    timeout(timeout_seconds, async {
-        validate_request(
-            request,
+    timeout(validation_timeout_seconds, async {
+        intent.validate(
             latest_timestamp,
             &app_state.market_address(),
-            app_state.minimum_allowed_proving_time(),
-            app_state.maximum_allowed_start_delay(),
-            app_state.maximum_allowed_stake(),
-            &app_state.supported_proving_systems(),
-        )?;
-        Ok(())
+            &intent_validation_config,
+        )
     })
     .await
-    .map_err(|_| ServerError::ValidationTimeout(timeout_seconds.as_secs()))?
+    .map_err(|_| ServerError::ValidationTimeout(validation_timeout_seconds.as_secs()))?
+    .map_err(ServerError::from)
 }
 
 async fn get_latest_timestamp<P: Provider<T, Ethereum> + Clone, T: Transport + Clone>(

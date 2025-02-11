@@ -1,6 +1,7 @@
 use crate::abi::universal_bombetta::ISignatureTransfer::TokenPermissions;
-use crate::abi::universal_bombetta::VerifierDetails;
+use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
 use crate::abi::universal_bombetta::UniversalBombetta::ProofRequest;
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
 use crate::abi::universal_porchetta::UniversalPorchetta::ProofOffer;
 use crate::systems::VerifierConstraints;
 use alloy::dyn_abi::DynSolValue;
@@ -29,11 +30,21 @@ pub const PERMIT2_DOMAIN_SEPARATOR: B256 =
 pub const PERMIT2_ADDRESS: Address = address!("000000000022D473030F116dDEE9F6B43aC78BA3");
 
 lazy_static! {
-    pub static ref PERMIT_TYPE_HASH: B256 = {
+    pub static ref REQUEST_PERMIT_TYPE_HASH: B256 = {
         // craft preimage
         let type_hash_preimage = [
             PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB.as_bytes(),
             FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB.as_bytes(),
+        ]
+        .concat();
+        // Compute hash
+        keccak256(&type_hash_preimage)
+    };
+    pub static ref OFFER_PERMIT_TYPE_HASH: B256 = {
+        // craft preimage
+        let type_hash_preimage = [
+            PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB.as_bytes(),
+            FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB.as_bytes(),
         ]
         .concat();
         // Compute hash
@@ -47,10 +58,7 @@ lazy_static! {
         keccak256(PROOF_OFFER_WITNESS_TYPE_STRING.as_bytes());
 }
 
-pub fn compute_request_id(
-    proof_request: &ProofRequest,
-    signature: Signature,
-) -> B256 {
+pub fn compute_request_id(proof_request: &ProofRequest, signature: Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_request.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
@@ -99,15 +107,46 @@ pub fn compute_request_witness(proof_request: &ProofRequest) -> FixedBytes<32> {
     keccak256(request_witness_values.abi_encode())
 }
 
-pub fn compute_offer_id(
-    proof_offer: &ProofOffer,
-    signature: Signature,
-) -> B256 {
+pub fn compute_request_permit2_digest(proof_request: &ProofRequest, witness: B256) -> B256 {
+    // encode token permissions data
+    let token_permissions = TokenPermissions {
+        token: proof_request.rewardToken,
+        amount: proof_request.maxRewardAmount,
+    };
+    let token_permissions_bytes = token_permissions.abi_encode();
+    let token_permissions_hash_preimage = [
+        TOKEN_PERMISSIONS_TYPE_HASH.abi_encode(),
+        token_permissions_bytes,
+    ]
+    .concat();
+
+    // hash token permissions encoding
+    let token_permissions_hash = keccak256(&token_permissions_hash_preimage);
+
+    // encode data hash preimage
+    let data_hash_preimage = DynSolValue::Tuple(vec![
+        DynSolValue::FixedBytes(*REQUEST_PERMIT_TYPE_HASH, 32),
+        DynSolValue::FixedBytes(token_permissions_hash, 32),
+        DynSolValue::Address(proof_request.market),
+        DynSolValue::Uint(proof_request.nonce, 256),
+        DynSolValue::Uint(U256::from(proof_request.endAuctionTimestamp), 64),
+        DynSolValue::FixedBytes(witness, 32),
+    ])
+    .abi_encode();
+
+    // hash data hash encoding
+    let data_hash = keccak256(&data_hash_preimage);
+
+    // return the signable eip712 permit2 hash
+    hash_typed_data(PERMIT2_DOMAIN_SEPARATOR, data_hash)
+}
+
+pub fn compute_offer_id(proof_offer: &ProofOffer, signature: Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_offer.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
 
-    // Encode OnChainProofRequest + Signature
+    // Encode ProofRequest + Signature
     let values = DynSolValue::Tuple(vec![
         DynSolValue::Address(proof_offer.market),
         DynSolValue::Uint(proof_offer.nonce, 256),
@@ -151,11 +190,11 @@ pub fn compute_offer_witness(proof_offer: &ProofOffer) -> FixedBytes<32> {
     keccak256(request_witness_values.abi_encode())
 }
 
-pub fn compute_permit2_digest(proof_request: &ProofRequest, witness: B256) -> B256 {
+pub fn compute_offer_permit2_digest(proof_offer: &ProofOffer, witness: B256) -> B256 {
     // encode token permissions data
     let token_permissions = TokenPermissions {
-        token: proof_request.rewardToken,
-        amount: proof_request.maxRewardAmount,
+        token: proof_offer.stakeToken,
+        amount: proof_offer.stakeAmount,
     };
     let token_permissions_bytes = token_permissions.abi_encode();
     let token_permissions_hash_preimage = [
@@ -169,11 +208,11 @@ pub fn compute_permit2_digest(proof_request: &ProofRequest, witness: B256) -> B2
 
     // encode data hash preimage
     let data_hash_preimage = DynSolValue::Tuple(vec![
-        DynSolValue::FixedBytes(*PERMIT_TYPE_HASH, 32),
+        DynSolValue::FixedBytes(*OFFER_PERMIT_TYPE_HASH, 32),
         DynSolValue::FixedBytes(token_permissions_hash, 32),
-        DynSolValue::Address(proof_request.market),
-        DynSolValue::Uint(proof_request.nonce, 256),
-        DynSolValue::Uint(U256::from(proof_request.endAuctionTimestamp), 64),
+        DynSolValue::Address(proof_offer.market),
+        DynSolValue::Uint(proof_offer.nonce, 256),
+        DynSolValue::Uint(U256::from(proof_offer.endAuctionTimestamp), 64),
         DynSolValue::FixedBytes(witness, 32),
     ])
     .abi_encode();
@@ -195,20 +234,16 @@ fn hash_typed_data(domain_separator: B256, data_hash: B256) -> B256 {
     keccak256(final_hash_preimage)
 }
 
-impl PartialEq<VerifierDetails> for VerifierConstraints {
-    fn eq(&self, details: &VerifierDetails) -> bool {
+impl PartialEq<ProofRequestVerifierDetails> for VerifierConstraints {
+    fn eq(&self, details: &ProofRequestVerifierDetails) -> bool {
         // Check each constraint only if it's specified
         self.verifier.is_none_or(|v| v == details.verifier)
             && self.selector.is_none_or(|s| s == details.selector)
             && self
                 .is_sha_commitment
                 .is_none_or(|sha| sha == details.isShaCommitment)
-            && self
-                .inputs_offset
-                .is_none_or(|o| o == details.inputsOffset)
-            && self
-                .inputs_length
-                .is_none_or(|l| l == details.inputsLength)
+            && self.inputs_offset.is_none_or(|o| o == details.inputsOffset)
+            && self.inputs_length.is_none_or(|l| l == details.inputsLength)
             && self
                 .has_partial_commitment_result_check
                 .is_none_or(|c| c == details.hasPartialCommitmentResultCheck)
@@ -221,6 +256,19 @@ impl PartialEq<VerifierDetails> for VerifierConstraints {
             && self
                 .predetermined_partial_commitment
                 .is_none_or(|p| p == details.predeterminedPartialCommitment)
+    }
+}
+
+impl PartialEq<ProofOfferVerifierDetails> for VerifierConstraints {
+    fn eq(&self, details: &ProofOfferVerifierDetails) -> bool {
+        // Check each constraint only if it's specified
+        self.verifier.is_none_or(|v| v == details.verifier)
+            && self.selector.is_none_or(|s| s == details.selector)
+            && self
+                .is_sha_commitment
+                .is_none_or(|sha| sha == details.isShaCommitment)
+            && self.inputs_offset.is_none_or(|o| o == details.inputsOffset)
+            && self.inputs_length.is_none_or(|l| l == details.inputsLength)
     }
 }
 
@@ -277,7 +325,7 @@ mod tests {
     async fn test_compute_permit2_digest() {
         let mock_request = get_mock_proof_request();
         let witness = b256!("e6a6cf5ad10b2e60506ffc96bf4d74f8853c100ded900069fc5dc42faa55c1fa");
-        let local_result = compute_permit2_digest(&mock_request, witness);
+        let local_result = compute_request_permit2_digest(&mock_request, witness);
         println!("local digest: {}", local_result);
     }
 }

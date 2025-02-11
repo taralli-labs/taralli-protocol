@@ -1,7 +1,7 @@
 use futures::{Stream, StreamExt};
 use reqwest_eventsource::{Event, EventSource};
 use std::pin::Pin;
-use taralli_primitives::{systems::ProvingSystemParams, Request};
+use taralli_primitives::{intents::ComputeRequest, systems::ProvingSystemParams};
 use url::Url;
 
 use crate::{
@@ -14,7 +14,8 @@ pub struct ProviderApi {
 }
 
 // type alias for SSE stream returned by the protocol server
-pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>;
+pub type RequestStream =
+    Pin<Box<dyn Stream<Item = Result<ComputeRequest<ProvingSystemParams>>> + Send>>;
 
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
@@ -36,7 +37,8 @@ impl ProviderApi {
         Ok(Box::pin(event_source.filter_map(|event| async move {
             match event {
                 Ok(Event::Message(message)) => {
-                    match serde_json::from_str::<Request<ProvingSystemParams>>(&message.data) {
+                    match serde_json::from_str::<ComputeRequest<ProvingSystemParams>>(&message.data)
+                    {
                         Ok(proof_request) => Some(Ok(proof_request)),
                         Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
                             "Failed to parse proof request from incoming event: {}",

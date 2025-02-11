@@ -7,12 +7,19 @@ use axum::{
 };
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
-use std::{sync::Arc, time::Duration};
-use taralli_primitives::{systems::ProvingSystemParams, Request};
+use std::time::Duration;
+use taralli_primitives::{
+    intents::ComputeRequest, systems::ProvingSystemParams, validation::ValidationMetaConfig,
+};
 use taralli_server::{
-    app_state::{AppState, AppStateConfig},
     config::Config,
-    routes::{submit::submit_handler, subscribe::subscribe_handler},
+    postgres::Db,
+    routes::{
+        query::get_active_offers_by_id_handler,
+        submit::{submit_offer_handler, submit_request_handler},
+        subscribe::subscribe_handler,
+    },
+    state::{offer::OfferState, request::RequestState, BaseState},
     subscription_manager::SubscriptionManager,
 };
 use tokio::net::TcpListener;
@@ -26,32 +33,57 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = Config::from_file("config.json").context("Failed to load config")?;
+
     // tracing
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(config.log_level()?)
         .init();
 
+    // Setup validation config
+    let validation_config = ValidationMetaConfig {
+        common: config.common_validation_config.clone(),
+        request: config.request_validation_config.clone(),
+        offer: config.offer_validation_config.clone(),
+    };
+
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
-    let subscription_manager: Arc<SubscriptionManager<Request<ProvingSystemParams>>> =
+
+    // setup intent subscription manager
+    let subscription_manager: SubscriptionManager<ComputeRequest<ProvingSystemParams>> =
         Default::default();
 
-    // initialize state
-    let app_state = AppState::new(AppStateConfig {
-        rpc_provider,
-        subscription_manager,
-        market_address: config.market_address,
-        proving_system_ids: config.proving_system_ids,
-        minimum_allowed_proving_time: config.minimum_allowed_proving_time,
-        maximum_allowed_start_delay: config.maximum_allowed_start_delay,
-        maximum_allowed_stake: config.maximum_allowed_stake,
-        validation_timeout_seconds: Duration::from_secs(config.validation_timeout_seconds as u64),
-    });
+    // initialize intent database
+    let intent_db = Db::new().await;
 
-    let app = Router::new()
-        .route("/submit", post(submit_handler))
-        .route("/subscribe", get(subscribe_handler))
-        .with_state(app_state)
+    let base_state = BaseState::new(
+        rpc_provider.clone(),
+        config.market_address,
+        Duration::from_secs(config.validation_timeout_seconds as u64),
+        validation_config.clone(),
+    );
+
+    let request_state = RequestState::new(base_state.clone(), subscription_manager);
+
+    let offer_state = OfferState::new(base_state, intent_db);
+
+    // Create separate routers for each intent type
+    let request_routes = Router::new()
+        .route("/submit/request", post(submit_request_handler))
+        .route("/subscribe/", get(subscribe_handler))
+        .with_state(request_state);
+
+    let offer_routes = Router::new()
+        .route("/submit/offer", post(submit_offer_handler))
+        .route(
+            "/query/:proving_system_id",
+            get(get_active_offers_by_id_handler),
+        )
+        .with_state(offer_state);
+
+    // Merge routers
+    let app = request_routes
+        .merge(offer_routes)
         .layer(TraceLayer::new_for_http())
         .fallback(get(fallback));
 
