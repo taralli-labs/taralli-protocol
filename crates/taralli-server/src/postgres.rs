@@ -11,7 +11,7 @@ use taralli_primitives::{
 use tokio_postgres::{Config, NoTls, Row};
 
 pub const INSERT_OFFER: &str = "
-    INSERT INTO offers (offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp, created_at, expired_at)
+    INSERT INTO offers (offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING offer_id, proving_system_id, proving_system, proof_offer, signature, expiration_timestamp, created_at, expired_at;
 ";
