@@ -6,17 +6,21 @@ use alloy::{
 };
 use axum::{
     body::{Body, BodyDataStream},
-    extract::State,
+    extract::{Query, State},
     http::{Request, StatusCode},
     response::{IntoResponse, Response},
     Json, Router,
 };
+use serde::Deserialize;
 use serde_json::json;
 
 use axum::response::sse::{Event, Sse};
-use taralli_primitives::validation::{
-    offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
-    ValidationMetaConfig,
+use taralli_primitives::{
+    systems::{ProvingSystemId, SYSTEMS},
+    validation::{
+        offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
+        ValidationMetaConfig,
+    },
 };
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -33,19 +37,30 @@ use tower::util::ServiceExt;
 
 pub const MAX_BODY_SIZE: usize = 1024 * 1024; // 1 MB limit
 
-pub fn submit_request_body(input: Option<String>) -> Request<Body> {
+pub fn submit_request_body(input: String) -> Request<Body> {
     Request::builder()
         .method("POST")
         .uri("/submit/request")
         .header("Content-Type", "application/json")
-        .body(Body::from(input.unwrap_or("{}".to_owned())))
+        .body(Body::from(input))
         .unwrap()
 }
 
-pub fn subscribe_request_body() -> Request<Body> {
+pub fn subscribe_request_body(system_ids: &[ProvingSystemId]) -> Request<Body> {
+    // Convert system IDs to query string
+    let query = system_ids
+        .iter()
+        .map(|id| id.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+
+    let uri = format!("/subscribe?system_ids={}", query);
+
+    println!("Subscribe URI: {}", uri); // Debug
+
     Request::builder()
         .method("GET")
-        .uri("/subscribe")
+        .uri(uri)
         .header("Accept", "text/event-stream")
         .body(Body::empty())
         .unwrap()
@@ -59,7 +74,34 @@ where
     T: Transport + Clone,
     P: Provider<T> + Clone,
 {
-    match app_state.subscription_manager().broadcast(request) {
+    // Extract proving_system_id from the request
+    let system_id = match request.get("proving_system_id").and_then(|v| v.as_str()) {
+        Some(id) => match ProvingSystemId::try_from(id) {
+            Ok(id) => id,
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "message": "Invalid proving_system_id"
+                    })),
+                )
+            }
+        },
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "message": "Missing proving_system_id field"
+                })),
+            )
+        }
+    };
+
+    match app_state
+        .subscription_manager()
+        .broadcast(system_id, request)
+        .await
+    {
         Ok(recv_count) => (
             StatusCode::OK,
             Json(json!({
@@ -77,29 +119,68 @@ where
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TestSubscribeQuery {
+    pub system_ids: String,
+}
+
 pub async fn subscribe_handler_json<T, P>(
     app_state: State<ValueState<T, P>>,
+    Query(params): Query<TestSubscribeQuery>,
 ) -> Sse<impl futures::Stream<Item = Result<Event, axum::Error>>>
 where
     T: Transport + Clone,
     P: Provider<T> + Clone,
 {
-    let recv_new = app_state.subscription_manager().add_subscription();
-    Sse::new(BroadcastStream::new(recv_new).map(|result| {
-        result
-            .map_err(axum::Error::new)
-            .and_then(|data| Event::default().json_data(data).map_err(axum::Error::new))
-    }))
+    tracing::debug!("Incoming system_ids: {:?}", params.system_ids);
+    println!("Incoming system_ids: {:?}", params); // Debug
+    let ids = params.system_ids.split(',').collect::<Vec<&str>>();
+    let mut invalid_ids = Vec::new();
+    let mut valid_ids = Vec::new();
+    for id_str in ids {
+        match ProvingSystemId::try_from(id_str) {
+            Ok(id) => valid_ids.push(id),
+            Err(_) => invalid_ids.push(id_str),
+        }
+    }
+
+    println!("Valid IDs: {:?}", valid_ids); // Debug
+    let subscription_manager = app_state.subscription_manager();
+
+    // Subscribe
+    let receivers = subscription_manager.subscribe_to_ids(&valid_ids).await;
+
+    println!("Subscribed to {} systems", receivers.len()); // Debug
+                                                           // Convert each receiver into a stream of SSE events
+    let streams = receivers.into_iter().map(|rx| {
+        BroadcastStream::new(rx).map(|result| {
+            result
+                .map_err(axum::Error::new)
+                .and_then(|data| Event::default().json_data(data).map_err(axum::Error::new))
+        })
+    });
+
+    // Merge all streams into one
+    let merged_stream = futures::stream::select_all(streams);
+
+    Sse::new(merged_stream)
 }
 
-pub async fn submit(app: Router, input: Option<String>) -> Response<Body> {
-    app.oneshot(submit_request_body(Some(input.unwrap_or("{}".to_owned()))))
+pub async fn submit(app: Router, input: String) -> Response<Body> {
+    app.oneshot(submit_request_body(input)).await.unwrap()
+}
+
+pub async fn subscribe(
+    app: Router,
+    system_ids: &[ProvingSystemId],
+) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
+    let subscribe_response = app
+        .clone()
+        .oneshot(subscribe_request_body(system_ids))
         .await
-        .unwrap()
-}
-
-pub async fn subscribe(app: Router) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
-    let subscribe_response = app.clone().oneshot(subscribe_request_body()).await.unwrap();
+        .unwrap();
+    println!("Subscribe response: {:?}", subscribe_response);
+    // log::debug!("Subscribe response: {:?}", subscribe_response);
     assert_eq!(subscribe_response.status(), StatusCode::OK);
     let body_stream = subscribe_response.into_body().into_data_stream();
     // Map the stream of Bytes into SSE Event
@@ -145,6 +226,8 @@ pub async fn setup_app(size: Option<usize>) -> Router {
     let subscription_manager: SubscriptionManager<Value> =
         SubscriptionManager::new(size.unwrap_or(1));
 
+    subscription_manager.init_channels(&SYSTEMS).await;
+
     let validation_meta_config = ValidationMetaConfig {
         common: config.common_validation_config,
         request: config.request_validation_config,
@@ -164,5 +247,6 @@ pub async fn setup_app(size: Option<usize>) -> Router {
         .route("/submit/request", axum::routing::post(submit_handler_json))
         .route("/subscribe", axum::routing::get(subscribe_handler_json))
         .with_state(value_state)
+        // .fallback(|| async { (StatusCode::NOT_FOUND, "Not Found") })
         .layer(TraceLayer::new_for_http())
 }

@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     // Create separate routers for each intent type
     let request_routes = Router::new()
         .route("/submit/request", post(submit_request_handler))
-        .route("/subscribe/", post(subscribe_handler))
+        .route("/subscribe/", get(subscribe_handler))
         .with_state(request_state);
 
     let offer_routes = Router::new()

@@ -13,6 +13,8 @@ pub enum ServerError {
     ValidationTimeout(u64),
     #[error("Submit: validation error -> {0}")]
     ValidationError(String),
+    #[error("Subscribe: invalid system id -> {0}")]
+    SystemIdError(String),
     #[error("Subscription manager: no proof providers available for selected proving system.")]
     NoProvidersAvailable(),
     #[error("Broadcast failed: {0}")]
