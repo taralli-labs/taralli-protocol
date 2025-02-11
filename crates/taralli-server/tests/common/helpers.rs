@@ -15,10 +15,13 @@ use serde::Deserialize;
 use serde_json::json;
 
 use axum::response::sse::{Event, Sse};
-use taralli_primitives::{systems::{ProvingSystemId, SYSTEMS}, validation::{
-    offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
-    ValidationMetaConfig,
-}};
+use taralli_primitives::{
+    systems::{ProvingSystemId, SYSTEMS},
+    validation::{
+        offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
+        ValidationMetaConfig,
+    },
+};
 use tokio_stream::wrappers::BroadcastStream;
 
 use bytes::Bytes;
@@ -47,7 +50,7 @@ pub fn subscribe_request_body(system_ids: &[ProvingSystemId]) -> Request<Body> {
     // Convert system IDs to query string
     let query = system_ids
         .iter()
-        .map(|id| format!("{}", id.as_str()))
+        .map(|id| id.as_str().to_string())
         .collect::<Vec<_>>()
         .join(",");
 
@@ -75,22 +78,30 @@ where
     let system_id = match request.get("proving_system_id").and_then(|v| v.as_str()) {
         Some(id) => match ProvingSystemId::try_from(id) {
             Ok(id) => id,
-            Err(_) => return (
+            Err(_) => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "message": "Invalid proving_system_id"
+                    })),
+                )
+            }
+        },
+        None => {
+            return (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
-                    "message": "Invalid proving_system_id"
-                }))
-            ),
-        },
-        None => return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "message": "Missing proving_system_id field"
-            }))
-        ),
+                    "message": "Missing proving_system_id field"
+                })),
+            )
+        }
     };
 
-    match app_state.subscription_manager().broadcast(system_id, request).await {
+    match app_state
+        .subscription_manager()
+        .broadcast(system_id, request)
+        .await
+    {
         Ok(recv_count) => (
             StatusCode::OK,
             Json(json!({
@@ -129,7 +140,7 @@ where
     for id_str in ids {
         match ProvingSystemId::try_from(id_str) {
             Ok(id) => valid_ids.push(id),
-            Err(_) => invalid_ids.push(id_str.clone()),
+            Err(_) => invalid_ids.push(id_str),
         }
     }
 
@@ -138,9 +149,9 @@ where
 
     // Subscribe
     let receivers = subscription_manager.subscribe_to_ids(&valid_ids).await;
-    
+
     println!("Subscribed to {} systems", receivers.len()); // Debug
-    // Convert each receiver into a stream of SSE events
+                                                           // Convert each receiver into a stream of SSE events
     let streams = receivers.into_iter().map(|rx| {
         BroadcastStream::new(rx).map(|result| {
             result
@@ -156,13 +167,18 @@ where
 }
 
 pub async fn submit(app: Router, input: String) -> Response<Body> {
-    app.oneshot(submit_request_body(input))
-        .await
-        .unwrap()
+    app.oneshot(submit_request_body(input)).await.unwrap()
 }
 
-pub async fn subscribe(app: Router, system_ids: &[ProvingSystemId]) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
-    let subscribe_response = app.clone().oneshot(subscribe_request_body(system_ids)).await.unwrap();
+pub async fn subscribe(
+    app: Router,
+    system_ids: &[ProvingSystemId],
+) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
+    let subscribe_response = app
+        .clone()
+        .oneshot(subscribe_request_body(system_ids))
+        .await
+        .unwrap();
     println!("Subscribe response: {:?}", subscribe_response);
     // log::debug!("Subscribe response: {:?}", subscribe_response);
     assert_eq!(subscribe_response.status(), StatusCode::OK);
@@ -305,7 +321,7 @@ pub async fn subscribe(app: Router, system_ids: &[ProvingSystemId]) -> BodyDataS
 pub async fn subscribe_handler_json<T, P>(
     State(app_state): State<ValueState<T, P>>,
     Query(params): Query<SubscribeQuery>,
-) -> Result<Sse<impl futures::Stream<Item = core::result::Result<axum::response::sse::Event, axum::Error>>>> 
+) -> Result<Sse<impl futures::Stream<Item = core::result::Result<axum::response::sse::Event, axum::Error>>>>
 where
     T: Transport + Clone,
     P: Provider<T, Ethereum> + Clone,
@@ -350,7 +366,7 @@ pub async fn submit(app: Router, input: String) -> Response<Body> {
         .header("Content-Type", "application/json")
         .body(Body::from(input))
         .unwrap();
-    
+
     app.oneshot(request).await.unwrap()
 }
 

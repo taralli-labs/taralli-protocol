@@ -59,11 +59,13 @@ where
     // Convert receivers to SSE streams
     let streams = receivers.into_iter().map(|rx| {
         BroadcastStream::new(rx).map(|result| {
-            result.map_err(|e| axum::Error::new(e)).and_then(|request| {
-                Event::default()
-                    .json_data(request)
-                    .map_err(|e| axum::Error::new(e))
-            })
+            result
+                .map_err(|e| axum::Error::new(e.to_string()))
+                .and_then(|request| {
+                    Event::default()
+                        .json_data(request)
+                        .map_err(|e| axum::Error::new(e.to_string()))
+                })
         })
     });
 
