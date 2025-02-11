@@ -25,7 +25,7 @@ where
 // Generic over the type of request so that we can change it later without
 // breaking the API
 #[derive(Clone)]
-pub struct AppState<T, P, M>
+pub struct AppState<T, P, M = Vec<u8>>
 where
     M: Clone,
 {

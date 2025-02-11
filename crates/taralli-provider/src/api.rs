@@ -1,10 +1,14 @@
-use futures::{Stream, StreamExt, TryStreamExt};
-use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::Client;
-use serde_json::from_str;
+use async_compression::tokio::bufread::BrotliDecoder;
+use futures::{Stream, StreamExt};
+use tokio::net::TcpStream;
+
 use std::pin::Pin;
 use taralli_primitives::common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
+use tokio::io::AsyncReadExt;
+use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
+use tungstenite::handshake::client::generate_key;
+use tungstenite::Message;
 use url::Url;
 
 use crate::{
@@ -13,7 +17,7 @@ use crate::{
 };
 
 pub struct ProviderApi {
-    client: Client,
+    api_key: String,
     server_url: Url,
 }
 
@@ -22,77 +26,143 @@ pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemP
 
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
-        let mut headers = HeaderMap::new();
-        headers.insert("Accept", HeaderValue::from_static("text/event-stream"));
-        if let Ok(api_key) = std::env::var("API_KEY") {
-            headers.insert("x-api-key", HeaderValue::from_str(&api_key).unwrap());
-        }
+        let mut api_key = String::new();
 
         if Environment::from_env_var() == Environment::Production {
-            let api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
-            headers.insert(
-                "x-api-key",
-                HeaderValue::from_str(&api_key).expect("API_KEY is invalid as a header"),
-            );
+            api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
         }
 
         Self {
-            client: Client::builder()
-                .default_headers(headers)
-                .build()
-                .expect("Failed to build reqwest client"),
+            api_key,
             server_url: config.server_url,
         }
     }
 
+    /// Decompress a Brotli-compressed byte vector
+    /// # Arguments
+    /// * `compressed_bytes` - The Brotli-compressed byte vector
+    /// # Returns
+    /// * A byte vector containing the decompressed data
+    async fn decompress_brotli(
+        compressed_bytes: Vec<u8>,
+    ) -> std::result::Result<Vec<u8>, std::io::Error> {
+        let mut decoder = BrotliDecoder::new(tokio::io::BufReader::new(&compressed_bytes[..]));
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed).await?;
+        Ok(decompressed)
+    }
+
+    /// Parse a WebSocket stream into a stream of requests
+    /// # Arguments
+    /// * `stream` - The WebSocket stream
+    /// # Returns
+    /// * A stream of requests
+    /// # Errors
+    /// * If the WebSocket stream is unavailable
+    /// * If the WebSocket stream is not a Brotli-compressed message
+    /// * If the WebSocket stream is not a valid JSON message
+    /// * If the WebSocket stream is not a valid request
+    async fn get_stream(
+        stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
+    ) -> Result<RequestStream> {
+        let (_write, read) = stream.split();
+
+        let parsed_stream = read.filter_map(|message_result| async {
+            match message_result {
+                // This is the only case we care about.
+                // We expect the server to send us Brotli-compressed binary messages.
+                Ok(Message::Binary(compressed_bytes)) => {
+                    tracing::info!("Received Brotli-compressed binary message");
+
+                    // First we need to decompress the bytes.
+                    let decompressed_bytes =
+                        match ProviderApi::decompress_brotli(compressed_bytes.to_vec()).await {
+                            Ok(decompressed) => decompressed,
+                            Err(e) => {
+                                tracing::error!("Failed to decompress WebSocket data: {:?}", e);
+                                return Some(Err(ProviderError::RequestParsingError(format!(
+                                    "Failed to decompress WebSocket data: {e}"
+                                ))));
+                            }
+                        };
+
+                    // Then deserialize the JSON from decompressed bytes
+                    match serde_json::from_slice::<Request<ProvingSystemParams>>(
+                        &decompressed_bytes,
+                    ) {
+                        Ok(parsed) => Some(Ok(parsed)),
+                        Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
+                            "JSON parse error after decompression: {e}"
+                        )))),
+                    }
+                }
+                Ok(Message::Frame(_)) => {
+                    tracing::info!("Received unexpected frame message.");
+                    None
+                }
+                Ok(Message::Text(_)) => {
+                    tracing::info!("Received unexpected text message instead of binary.");
+                    None
+                }
+                Ok(Message::Close(_)) => {
+                    tracing::info!("WebSocket closed by server.");
+                    None
+                }
+                Ok(Message::Ping(_) | Message::Pong(_)) => None,
+                Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
+                    "WebSocket error: {e}"
+                )))),
+            }
+        });
+        Ok(Box::pin(parsed_stream))
+    }
+
     pub async fn subscribe_to_markets(&self) -> Result<RequestStream> {
-        // Attempt to join the URL, log error if it fails
-        let url = self
+        let mut url = self
             .server_url
             .join("/subscribe")
             .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?;
 
-        // Send the GET request
-        let response = self
-            .client
-            .get(url.clone())
-            .send()
-            .await
-            .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?;
+        let scheme = url.scheme().to_string();
 
-        if !response.status().is_success() {
-            return Err(ProviderError::ServerSubscriptionError(format!(
-                "Failed to connect to /subscribe: {}",
-                response.status()
-            )));
-        }
+        let new_scheme = match scheme.as_str() {
+            "http" => "ws",
+            "https" => "wss",
+            other => other,
+        };
+        url.set_scheme(new_scheme).map_err(|_| {
+            ProviderError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
+        })?;
 
-        // Turn the response body into a byte stream:
-        let byte_stream = response
-            .bytes_stream()
-            .map_err(|e| ProviderError::RequestParsingError(e.to_string()));
+        let ws_url = url
+            .join("subscribe")
+            .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?
+            .to_string();
 
-        // Wrap that in an SSE parser:
-        let sse_stream = eventsource_stream::EventStream::new(byte_stream)
-            .map_err(|e| ProviderError::RequestParsingError(e.to_string()));
+        tracing::info!("Connecting to WebSocket: {ws_url}");
 
-        // Convert the SSE `Event`s into our JSON type
-        let parsed_stream = sse_stream.filter_map(|event_result| async move {
-            match event_result {
-                Ok(event) => match from_str::<Request<ProvingSystemParams>>(&event.data) {
-                    Ok(req) => Some(Ok(req)),
-                    Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
-                        "Failed to parse proof request from incoming event: {}",
-                        e
-                    )))),
-                },
-                Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
-                    "EventSource encountered an error: {}",
-                    e
-                )))),
-            }
-        });
+        let request = tungstenite::http::Request::builder()
+            .uri(ws_url)
+            .header(
+                "Host",
+                url.host_str().ok_or_else(|| {
+                    ProviderError::ServerSubscriptionError("Invalid WebSocket host".to_string())
+                })?,
+            )
+            .header("x-api-key", self.api_key.clone())
+            .header("Sec-WebSocket-Key", generate_key())
+            .header("Sec-WebSocket-Version", "13")
+            .header("Connection", "Upgrade")
+            .header("Upgrade", "websocket")
+            .body(())
+            .map_err(|e| {
+                ProviderError::ServerSubscriptionError(format!("Request build error: {e}"))
+            })?;
 
-        Ok(Box::pin(parsed_stream))
+        let (ws_stream, _resp) = connect_async(request).await.map_err(|e| {
+            ProviderError::ServerSubscriptionError(format!("WebSocket connect error: {e}"))
+        })?;
+
+        Self::get_stream(ws_stream).await
     }
 }

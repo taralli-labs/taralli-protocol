@@ -1,26 +1,34 @@
+use crate::brotli::BrotliFile;
+use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
-use taralli_primitives::systems::ProvingSystemInformation;
+use taralli_primitives::systems::ProvingSystemParams;
 use taralli_primitives::Request;
 
-use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
-
-pub async fn submit_handler<
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-    I: ProvingSystemInformation + Clone,
->(
-    app_state: State<AppState<T, P, Request<I>>>,
-    Json(request): Json<Request<I>>,
+pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone>(
+    app_state: State<AppState<T, P>>,
+    BrotliFile {
+        compressed,
+        decompressed,
+    }: BrotliFile,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
+    let request: Request<ProvingSystemParams> =
+        serde_json::from_slice(&decompressed).map_err(|e| {
+            tracing::warn!("Failed to parse JSON: {:?}", e);
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid JSON after Brotli decompression" })),
+            )
+        })?;
+
     let timeout = app_state.validation_timeout_seconds();
 
     tracing::info!("Validating proof request");
     match validate_proof_request(&request, &app_state, timeout).await {
         Ok(()) => {
             tracing::debug!("Validation successful, attempting to broadcast");
-            match app_state.subscription_manager().broadcast(request) {
+            match app_state.subscription_manager().broadcast(compressed) {
                 Ok(recv_count) => {
                     tracing::info!(
                         "Submitted request was broadcast to {} receivers",

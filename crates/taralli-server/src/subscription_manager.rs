@@ -3,7 +3,8 @@ use tokio::sync::broadcast::{self, Receiver};
 use crate::error::{Result, ServerError};
 
 // Generic over a Message type M
-pub struct SubscriptionManager<M>
+// Todo: Remove generic and use only Vec<u8> when removing propagation of Request<ProvingSystemParams> through SSE.
+pub struct SubscriptionManager<M = Vec<u8>>
 where
     M: Clone,
 {
@@ -54,11 +55,17 @@ where
     }
 }
 
+// Should not have this default? Maybe env var
 impl<M> Default for SubscriptionManager<M>
 where
     M: Clone,
 {
     fn default() -> Self {
-        Self::new(1)
+        Self::new(
+            std::env::var("SERVER_SUBSCRIPTION_LAG")
+                .unwrap_or_else(|_| "1".to_string())
+                .parse::<usize>()
+                .unwrap_or(1),
+        )
     }
 }
