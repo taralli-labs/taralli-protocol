@@ -1,26 +1,73 @@
 use axum::{
-    extract::State,
-    response::sse::{Event, Sse},
+    extract::{Query, State},
+    response::sse::{Event, KeepAlive, Sse},
 };
-use futures::stream::StreamExt;
+use futures::stream::{select_all, StreamExt};
+use serde::Deserialize;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
+use taralli_primitives::systems::ProvingSystemId;
 use tokio_stream::wrappers::BroadcastStream;
 
+use crate::error::{Result, ServerError};
 use crate::state::request::RequestState;
 
-pub async fn subscribe_handler<T: Transport + Clone, P: Provider<T> + Clone>(
+#[derive(Debug, Deserialize)]
+pub struct SubscribeQuery {
+    pub system_ids: Vec<String>,
+}
+
+pub async fn subscribe_handler<T, P>(
     State(app_state): State<RequestState<T, P>>,
-) -> Sse<impl futures::Stream<Item = Result<Event, axum::Error>>> {
-    let recv_new = app_state.subscription_manager().add_subscription();
-    tracing::info!(
-        "subscription has been added, receiver count: {}",
-        app_state.subscription_manager().active_subscriptions()
-    );
-    Sse::new(BroadcastStream::new(recv_new).map(|result| {
-        result.map_err(axum::Error::new).and_then(|request| {
-            Event::default()
-                .json_data(request)
-                .map_err(axum::Error::new)
+    Query(params): Query<SubscribeQuery>,
+) -> Result<Sse<impl futures::Stream<Item = core::result::Result<Event, axum::Error>>>>
+where
+    T: Transport + Clone,
+    P: Provider<T> + Clone,
+{
+    // If no system IDs provided, return error
+    if params.system_ids.is_empty() {
+        return Err(ServerError::ValidationError(
+            "No proving system IDs provided".into(),
+        ));
+    }
+
+    // Convert strings to ProvingSystemIds, collecting any invalid IDs
+    let mut invalid_ids = Vec::new();
+    let mut valid_ids = Vec::new();
+
+    for id_str in &params.system_ids {
+        match ProvingSystemId::try_from(id_str.as_str()) {
+            Ok(id) => valid_ids.push(id),
+            Err(_) => invalid_ids.push(id_str.clone()),
+        }
+    }
+
+    // If any invalid IDs were found, return error with details
+    if !invalid_ids.is_empty() {
+        return Err(ServerError::SystemIdError(format!(
+            "Invalid proving system IDs: {}",
+            invalid_ids.join(", ")
+        )));
+    }
+
+    // Get broadcast receivers for each valid system ID
+    let receivers = app_state
+        .subscription_manager()
+        .subscribe_to_ids(&valid_ids)
+        .await;
+
+    // Convert receivers to SSE streams
+    let streams = receivers.into_iter().map(|rx| {
+        BroadcastStream::new(rx).map(|result| {
+            result.map_err(|e| axum::Error::new(e)).and_then(|request| {
+                Event::default()
+                    .json_data(request)
+                    .map_err(|e| axum::Error::new(e))
+            })
         })
-    }))
+    });
+
+    // Merge all streams and create SSE
+    Ok(Sse::new(select_all(streams))
+        .keep_alive(KeepAlive::new().interval(std::time::Duration::from_secs(15))))
 }

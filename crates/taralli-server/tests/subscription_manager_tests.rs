@@ -1,80 +1,133 @@
+use taralli_primitives::systems::ProvingSystemId;
 use taralli_server::subscription_manager::SubscriptionManager;
 
-#[test]
+#[tokio::test]
 /// Ensures a broadcast is sending data correctly.
-fn should_broadcast() {
+async fn should_broadcast() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
-    let mut recv = subscription_manager.add_subscription();
-    subscription_manager.broadcast(1).unwrap();
-    assert_eq!(Some(1), Some(recv.blocking_recv().unwrap()));
+    let mut recv = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
+    subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 1)
+        .await
+        .unwrap();
+    assert_eq!(Some(1), Some(recv.recv().await.unwrap()));
 }
 
-#[test]
-/// Ensures we error out
-fn should_not_broadcast_without_receivers() {
+#[tokio::test]
+async fn should_not_broadcast_without_receivers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
-    assert!(subscription_manager.broadcast(1).is_err());
+    assert!(subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 1)
+        .await
+        .is_err());
 }
 
-#[test]
-/// Ensures only that the 0th item won't be sent to receivers when the buffer is full.
-fn should_receive_lagged() {
+#[tokio::test]
+async fn should_receive_lagged() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(1);
-    assert!(subscription_manager.broadcast(1).is_err());
-    let mut r1 = subscription_manager.add_subscription();
-    subscription_manager.broadcast(2).unwrap();
-    assert_eq!(Some(2), Some(r1.blocking_recv().unwrap()));
+    assert!(subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 1)
+        .await
+        .is_err());
+    let mut recv = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
+    subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 2)
+        .await
+        .unwrap();
+    assert_eq!(Some(2), Some(recv.recv().await.unwrap()));
 }
 
-#[test]
-/// Ensures multiple broadcasts are possible to the same consumer for a given buffer size.
-fn should_broadcast_multiple_times() {
+#[tokio::test]
+async fn should_broadcast_multiple_times() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(10);
-    let mut recv = subscription_manager.add_subscription();
+    let mut recv = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
     for i in 0..10 {
-        subscription_manager.broadcast(i).unwrap();
+        subscription_manager
+            .broadcast(ProvingSystemId::Arkworks, i)
+            .await
+            .unwrap();
     }
     for i in 0..10 {
-        assert_eq!(Some(i), Some(recv.blocking_recv().unwrap()));
+        assert_eq!(Some(i), Some(recv.recv().await.unwrap()));
     }
 }
 
-#[test]
-/// Ensures multiple subscribers are indeed receiving messages.
-fn should_broadcast_multiple_times_to_many_subscribers() {
+#[tokio::test]
+async fn should_broadcast_multiple_times_to_many_subscribers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(10);
-    let mut r1 = subscription_manager.add_subscription();
-    let mut r2 = subscription_manager.add_subscription();
+    let mut r1 = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
+    let mut r2 = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
     for i in 0..10 {
-        subscription_manager.broadcast(i).unwrap();
-        assert_eq!(Some(i), Some(r1.blocking_recv().unwrap()));
-        assert_eq!(Some(i), Some(r2.blocking_recv().unwrap()));
+        subscription_manager
+            .broadcast(ProvingSystemId::Arkworks, i)
+            .await
+            .unwrap();
+        assert_eq!(Some(i), Some(r1.recv().await.unwrap()));
+        assert_eq!(Some(i), Some(r2.recv().await.unwrap()));
     }
 }
 
-#[test]
+#[tokio::test]
 /// Ensures that upon the removal of the receiver (imagine if client connection drops), we no longer keep it alive.
-/// That because `sender.send()` should fail, causing the subscriber removal.
-fn should_drop_receivers() {
+async fn should_drop_receivers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
-    let recv = subscription_manager.add_subscription();
+    let recv = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
     drop(recv);
     // `broadcast()` to no recvs returns errored.
-    let _ = subscription_manager.broadcast(1).unwrap_err();
-    assert_eq!(subscription_manager.active_subscriptions(), 0);
+    let _ = subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 1)
+        .await
+        .unwrap_err();
+    // Check receiver count directly from the channel
+    let count = subscription_manager
+        .get_or_create_sender(ProvingSystemId::Arkworks)
+        .await
+        .receiver_count();
+    assert_eq!(count, 0);
 }
 
-#[test]
+#[tokio::test]
 /// Ensures the removal of one subscriber is not affecting the next one.
-fn should_continue_broadcast_after_subscriber_removed() {
+async fn should_continue_broadcast_after_subscriber_removed() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
-    let r1 = subscription_manager.add_subscription();
-    let mut r2 = subscription_manager.add_subscription();
+    let r1 = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
+    let mut r2 = subscription_manager
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await
+        .remove(0);
     // Simulate one client disconnection and broadcast
     drop(r1);
-    subscription_manager.broadcast(1).unwrap();
+    subscription_manager
+        .broadcast(ProvingSystemId::Arkworks, 1)
+        .await
+        .unwrap();
     // Verify that the remaining subscriber receives the message
-    assert_eq!(Some(1), Some(r2.blocking_recv().unwrap()));
-    // Ensure that the dropped subscriber was removed
-    assert_eq!(subscription_manager.active_subscriptions(), 1);
+    assert_eq!(Some(1), Some(r2.recv().await.unwrap()));
+    // Check receiver count directly from the channel
+    let count = subscription_manager
+        .get_or_create_sender(ProvingSystemId::Arkworks)
+        .await
+        .receiver_count();
+    assert_eq!(count, 1);
 }

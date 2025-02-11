@@ -14,7 +14,11 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
     Json(request): Json<ComputeRequest<ProvingSystemParams>>,
 ) -> Result<impl IntoResponse> {
     validate_intent(&request, &app_state).await?;
-    match app_state.subscription_manager().broadcast(request) {
+    match app_state
+        .subscription_manager()
+        .broadcast(request.proving_system_id, request)
+        .await
+    {
         Ok(recv_count) => Ok((
             StatusCode::OK,
             Json(json!({
