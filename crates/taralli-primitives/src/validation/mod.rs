@@ -1,17 +1,54 @@
 use crate::{
-    systems::{ProvingSystem, ProvingSystemId},
+    systems::{ProvingSystem, ProvingSystemId, SYSTEMS},
     PrimitivesError, Result,
 };
 use alloy::primitives::{Address, FixedBytes, U256};
+use serde::{Deserialize, Serialize};
 
 pub mod offer;
 pub mod request;
 
-// Common validation trait for shared fields across all intent types
-pub trait ValidateCommon {
-    fn proving_system_id(&self) -> ProvingSystemId;
-    fn proving_system(&self) -> impl ProvingSystem;
-    fn market_address(&self) -> &Address;
+// Common validation parameters
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommonValidationConfig {
+    pub minimum_proving_time: u32,
+    pub maximum_start_delay: u32,
+    pub supported_proving_systems: Vec<ProvingSystemId>,
+}
+
+impl Default for CommonValidationConfig {
+    fn default() -> Self {
+        Self {
+            minimum_proving_time: 30, // 30 secs,
+            maximum_start_delay: 300, // 5 mins
+            supported_proving_systems: SYSTEMS.to_vec(),
+        }
+    }
+}
+
+// Trait for type-specific validation configs
+pub trait ValidationConfig: Clone {
+    fn common(&self) -> &CommonValidationConfig;
+}
+
+// Meta config that contains all validation configs
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ValidationMetaConfig {
+    // Common config shared by all intent types
+    pub common: CommonValidationConfig,
+    // Intent-specific configs
+    pub request: request::RequestSpecificConfig,
+    pub offer: offer::OfferSpecificConfig,
+}
+
+// Helper trait to get specific config from meta config
+pub trait FromMetaConfig {
+    fn from_meta(meta: &ValidationMetaConfig) -> Self;
+}
+
+// Common trait for shared fields across all intent type's proof structures
+pub trait ProofCommon {
+    fn market(&self) -> &Address;
     fn nonce(&self) -> &U256;
     fn start_auction_timestamp(&self) -> u64;
     fn end_auction_timestamp(&self) -> u64;
@@ -19,246 +56,94 @@ pub trait ValidateCommon {
     fn inputs_commitment(&self) -> FixedBytes<32>;
 }
 
-// Common validation functions that work with any type implementing ValidateCommon
-pub fn validate_proving_system<T: ValidateCommon>(
-    compute: &T,
-    supported_proving_systems: &[ProvingSystemId],
-) -> Result<()> {
-    // Check if proving system is supported
-    if !supported_proving_systems.contains(&compute.proving_system_id()) {
-        return Err(PrimitivesError::ValidationError(
-            "proving system id not supported".to_string(),
-        ));
-    }
+// Trait for intent types that can be validated
+pub trait Validate: Sized + Clone {
+    type Config: ValidationConfig;
 
-    // Validate that the proving system information matches the system ID
-    if compute.proving_system().system_id() != compute.proving_system_id() {
-        return Err(PrimitivesError::ValidationError(
-            "provided proving system does not match system id".to_string(),
-        ));
-    }
+    fn proving_system_id(&self) -> ProvingSystemId;
+    fn proving_system(&self) -> &impl ProvingSystem;
+    fn proof_common(&self) -> &impl ProofCommon;
 
-    // Validate the proving system specific parameters
-    compute.proving_system().validate_inputs().map_err(|e| {
-        PrimitivesError::ValidationError(format!("invalid proving system parameters: {}", e))
-    })?;
+    fn validate_proving_system(&self, supported_systems: &[ProvingSystemId]) -> Result<()> {
+        if !supported_systems.contains(&self.proving_system_id()) {
+            return Err(PrimitivesError::ValidationError(
+                "unsupported proving system".into(),
+            ));
+        }
 
-    Ok(())
-}
+        // Validate that the proving system information matches the system ID
+        if self.proving_system().system_id() != self.proving_system_id() {
+            return Err(PrimitivesError::ValidationError(
+                "provided proving system does not match system id".into(),
+            ));
+        }
 
-pub fn validate_market_address<T: ValidateCommon>(
-    compute: &T,
-    market_address: &Address,
-) -> Result<()> {
-    if compute.market_address() != market_address {
-        return Err(PrimitivesError::ValidationError(
-            "market address invalid".to_string(),
-        ));
-    }
-    Ok(())
-}
-
-pub fn validate_time_constraints<T: ValidateCommon>(
-    compute: &T,
-    latest_timestamp: u64,
-    minimum_proving_time: u32,
-    maximum_start_delay: u32,
-) -> Result<()> {
-    let start = compute.start_auction_timestamp();
-    let end = compute.end_auction_timestamp();
-
-    if latest_timestamp < start.saturating_sub(maximum_start_delay as u64)
-        || latest_timestamp >= end
-    {
-        return Err(PrimitivesError::ValidationError(
-            "timestamp invalid: out of bounds".to_string(),
-        ));
-    }
-
-    if compute.proving_time() < minimum_proving_time {
-        return Err(PrimitivesError::ValidationError(
-            "proving time invalid: below minimum".to_string(),
-        ));
-    }
-
-    Ok(())
-}
-
-pub fn validate_nonce<T: ValidateCommon>(_compute: &T) -> Result<()> {
-    // TODO: Implement nonce validation logic
-    Ok(())
-}
-
-// Helper function to validate a compute intent's common fields
-pub fn validate_common<T: ValidateCommon>(
-    compute: &T,
-    latest_timestamp: u64,
-    market_address: &Address,
-    minimum_proving_time: u32,
-    maximum_start_delay: u32,
-    supported_proving_systems: &[ProvingSystemId],
-) -> Result<()> {
-    validate_proving_system(compute, supported_proving_systems)?;
-    validate_market_address(compute, market_address)?;
-    validate_time_constraints(
-        compute,
-        latest_timestamp,
-        minimum_proving_time,
-        maximum_start_delay,
-    )?;
-    validate_nonce(compute)?;
-    Ok(())
-}
-
-/*/// Validates a request by performing all necessary checks in the correct order
-pub fn validate_request<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    latest_timestamp: u64,
-    market_address: &Address,
-    minimum_proving_time: u32,
-    maximum_start_delay: u32,
-    maximum_allowed_stake: u128,
-    supported_proving_systems: &[ProvingSystemId],
-) -> Result<()> {
-    validate_proving_system_structure(request, supported_proving_systems)?;
-    validate_market_address(request, market_address)?;
-    validate_amount_constraints(request, maximum_allowed_stake)?;
-    validate_time_constraints(
-        request,
-        latest_timestamp,
-        minimum_proving_time,
-        maximum_start_delay,
-    )?;
-    validate_signature(request)?;
-    validate_nonce(request)?;
-
-    Ok(())
-}
-
-/// Validates that the request structure matches the claimed proving system
-fn validate_proving_system_structure<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    supported_proving_systems: &[ProvingSystemId],
-) -> Result<()> {
-    // Check if the proving system is supported
-    if !supported_proving_systems.contains(&request.proving_system_id) {
-        return Err(PrimitivesError::ValidationError(
-            "proving system id not supported".to_string(),
-        ));
-    }
-
-    // Validate that the proving system information matches the system ID
-    if request.proving_system.proving_system_id() != request.proving_system_id {
-        return Err(PrimitivesError::ValidationError(
-            "provided proving system does not match system id".to_string(),
-        ));
-    }
-
-    // Decode and validate verifier details from the request
-    let verifier_details =
-        VerifierDetails::abi_decode(&request.onchain_proof_request.extraData, true).map_err(
-            |e| {
-                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-            },
-        )?;
-
-    // Get the configuration for this proving system
-    let config = I::proof_configuration(&request.proving_system);
-
-    // Validate that the verifier details match the constraints for this proving system
-    config.validate(&verifier_details).map_err(|e| {
-        PrimitivesError::ValidationError(format!(
-            "verifier details do not match system constraints: {}",
-            e
-        ))
-    })?;
-
-    // Validate the proving system specific parameters
-    request
-        .proving_system
-        .validate_inputs()
-        .map_err(|e| {
+        // Validate the proving system specific parameters
+        self.proving_system().validate_inputs().map_err(|e| {
             PrimitivesError::ValidationError(format!("invalid proving system parameters: {}", e))
-        })?;
+        })
+    }
 
-    Ok(())
-}
-
-pub fn validate_market_address<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    market_address: &Address,
-) -> Result<()> {
-    if &request.onchain_proof_request.market != market_address {
-        Err(PrimitivesError::ValidationError(
-            "market address invalid".to_string(),
-        ))
-    } else {
+    fn validate_market_address(&self, expected_market: &Address) -> Result<()> {
+        if self.proof_common().market() != expected_market {
+            return Err(PrimitivesError::ValidationError(
+                "invalid market address".into(),
+            ));
+        }
         Ok(())
     }
-}
 
-pub fn validate_amount_constraints<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    maximum_allowed_stake: u128,
-) -> Result<()> {
-    if request.onchain_proof_request.maxRewardAmount < request.onchain_proof_request.minRewardAmount
-    {
-        Err(PrimitivesError::ValidationError(
-            "token amounts invalid".to_string(),
-        ))
-    } else if request.onchain_proof_request.minimumStake > maximum_allowed_stake {
-        Err(PrimitivesError::ValidationError(
-            "eth stake amount invalid".to_string(),
-        ))
-    } else {
+    fn validate_time_constraints(
+        &self,
+        latest_timestamp: u64,
+        min_proving_time: u32,
+        max_start_delay: u32,
+    ) -> Result<()> {
+        let proof = self.proof_common();
+        let start = proof.start_auction_timestamp();
+        let end = proof.end_auction_timestamp();
+
+        if latest_timestamp < start.saturating_sub(max_start_delay as u64)
+            || latest_timestamp >= end
+        {
+            return Err(PrimitivesError::ValidationError("invalid timestamp".into()));
+        }
+
+        if proof.proving_time() < min_proving_time {
+            return Err(PrimitivesError::ValidationError(
+                "proving time too low".into(),
+            ));
+        }
+
         Ok(())
     }
-}
 
-pub fn validate_time_constraints<P: ProvingSystem>(
-    request: &ComputeRequest<P>,
-    latest_timestamp: u64,
-    minimum_proving_time: u32,
-    maximum_start_delay: u32,
-) -> Result<()> {
-    let start = request.onchain_proof_request.startAuctionTimestamp;
-    let end = request.onchain_proof_request.endAuctionTimestamp;
-    if latest_timestamp < start - maximum_start_delay as u64 || latest_timestamp >= end {
-        Err(PrimitivesError::ValidationError(
-            "timestamp invalid: out of bounds".to_string(),
-        ))
-    } else if request.onchain_proof_request.provingTime < minimum_proving_time {
-        Err(PrimitivesError::ValidationError(
-            "proving time invalid: below minimum".to_string(),
-        ))
-    } else {
+    fn validate_nonce(&self) -> Result<()> {
+        // TODO: Implement nonce validation logic
         Ok(())
     }
-}
 
-pub fn validate_nonce<P: ProvingSystem>(_request: &ComputeRequest<P>) -> Result<()> {
-    // TODO
-    Ok(())
-}
+    // Type-specific validation that must be implemented
+    fn validate_specific(&self, config: &Self::Config) -> Result<()>;
 
-pub fn validate_signature<P: ProvingSystem>(request: &ComputeRequest<P>) -> Result<()> {
-    // compute witness
-    let witness = compute_request_witness(&request.onchain_proof_request);
-    // compute permit digest
-    let computed_digest = compute_permit2_digest(&request.onchain_proof_request, witness);
-    // ec recover signing public key
-    let computed_verifying_key = request
-        .signature
-        .recover_from_prehash(&computed_digest)
-        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
-    let computed_signer = Address::from_public_key(&computed_verifying_key);
+    /// High-level validation that performs all checks
+    fn validate(
+        &self,
+        latest_timestamp: u64,
+        market_address: &Address,
+        config: &Self::Config,
+    ) -> Result<()> {
+        // Use individual validators
+        self.validate_proving_system(&config.common().supported_proving_systems)?;
+        self.validate_market_address(market_address)?;
+        self.validate_time_constraints(
+            latest_timestamp,
+            config.common().minimum_proving_time,
+            config.common().maximum_start_delay,
+        )?;
+        self.validate_nonce()?;
 
-    // check signature validity
-    if computed_signer != request.onchain_proof_request.signer {
-        Err(PrimitivesError::ValidationError(
-            "signature invalid: computed signer != request.signer".to_string(),
-        ))
-    } else {
-        Ok(())
+        // Run type-specific validation
+        self.validate_specific(config)
     }
-}*/
+}

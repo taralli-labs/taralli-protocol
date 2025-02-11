@@ -17,7 +17,7 @@ use self::resolver::RequestResolver;
 use self::worker::{ComputeWorker, WorkResult, WorkerManager};
 
 use builder::ProviderClientBuilder;
-use config::{AnalyzerConfig, ApiConfig, BidderConfig, ResolverConfig, ValidationConfig};
+use config::{AnalyzerConfig, ApiConfig, BidderConfig, ResolverConfig};
 use futures_util::StreamExt;
 use std::collections::HashMap;
 use taralli_primitives::alloy::consensus::BlockHeader;
@@ -30,9 +30,10 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
 use taralli_primitives::utils::compute_request_id;
-use taralli_primitives::request::ComputeRequest;
+use taralli_primitives::validation::request::RequestValidationConfig;
 use url::Url;
 
 pub struct ProviderClient<T, P, N>
@@ -59,12 +60,16 @@ where
         rpc_provider: P,
         market_address: Address,
         server_url: Url,
+        validation_config: RequestValidationConfig,
         workers: HashMap<ProvingSystemId, Box<dyn ComputeWorker>>,
     ) -> Self {
-        let supported_systems: Vec<_> = workers.keys().cloned().collect();
-
         // Create base config
-        let config = ProviderConfig::new(rpc_provider.clone(), market_address, server_url.clone());
+        let config = ProviderConfig::new(
+            rpc_provider.clone(),
+            market_address,
+            server_url.clone(),
+            validation_config.clone(),
+        );
 
         // Create component configs and instances
         let api = ProviderApi::new(ApiConfig {
@@ -77,8 +82,7 @@ where
             rpc_provider.clone(),
             AnalyzerConfig {
                 market_address,
-                supported_proving_systems: supported_systems.clone(),
-                validation: ValidationConfig::default(),
+                validation_config,
             },
         );
 
@@ -124,10 +128,7 @@ where
         while let Some(result) = stream.next().await {
             match result {
                 Ok(request) => {
-                    let request_id = compute_request_id(
-                        &request.proof_request,
-                        request.signature,
-                    );
+                    let request_id = compute_request_id(&request.proof_request, request.signature);
                     tracing::info!(
                         "Incoming request - proving system id: {:?}, proof request: {:?}, request ID: {:?}",
                         request.proving_system_id,

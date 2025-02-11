@@ -11,8 +11,8 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
-use taralli_primitives::request::ComputeRequest;
 
 // TODO: add in default builder patterns
 pub struct AuctionParameters<P: Into<U256>> {

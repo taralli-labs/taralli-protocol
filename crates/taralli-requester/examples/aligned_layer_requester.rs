@@ -14,8 +14,8 @@ use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::systems::gnark::{GnarkConfig, GnarkMode, GnarkProofParams};
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     // decode proof input data
     let r1cs = std::fs::read(r1cs_data_path)?;
     let public_inputs: Value = serde_json::from_reader(public_inputs_reader)?;
-    let input = serde_json::from_reader(inputs_reader)?;
+    let inputs = serde_json::from_reader(inputs_reader)?;
 
     // on chain proof request data (aligned layer only for gnark proofs)
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
@@ -105,10 +105,12 @@ async fn main() -> Result<()> {
 
     // craft proving system information json here
     let proof_info = serde_json::to_value(GnarkProofParams {
-        config: GnarkConfig::Groth16Bn254,
+        config: GnarkConfig {
+            mode: GnarkMode::Groth16Bn254,
+        },
         r1cs,
         public_inputs: public_inputs.clone(),
-        input,
+        inputs,
     })?;
 
     // load verification commitments

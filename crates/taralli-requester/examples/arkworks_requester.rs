@@ -14,7 +14,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
     let r1cs = std::fs::read(r1cs_data_path)?;
     let public_inputs: Value = serde_json::from_reader(public_inputs_reader)?;
     let wasm: Vec<u8> = std::fs::read(wasm_path)?;
-    let input = serde_json::from_reader(inputs_reader)?;
+    let inputs = serde_json::from_reader(inputs_reader)?;
 
     // on chain proof request data
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
     let builder = builder_default.clone();
 
     // craft proving system information json here
-    let proof_info = serde_json::to_value(ArkworksProofParams { r1cs, wasm, input })?;
+    let proof_info = serde_json::to_value(ArkworksProofParams { r1cs, wasm, inputs })?;
 
     // load verification commitments
     // abi encode public input number

@@ -6,7 +6,8 @@ use dotenv::dotenv;
 use risc0_zkvm::ProverOpts;
 use std::env;
 use std::str::FromStr;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_provider::config::ProviderConfig;
 use taralli_provider::workers::risc0::local::Risc0LocalProver;
 use taralli_provider::workers::risc0::Risc0Worker;
@@ -42,7 +43,12 @@ async fn main() -> Result<()> {
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
 
     // build provider client config
-    let config = ProviderConfig::new(rpc_provider, market_address, server_url);
+    let config = ProviderConfig::new(
+        rpc_provider,
+        market_address,
+        server_url,
+        RequestValidationConfig::default(),
+    );
 
     // setup prover
     let risc0_prover = Risc0LocalProver::new(ProverOpts::groth16());

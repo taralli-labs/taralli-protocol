@@ -66,12 +66,18 @@ pub trait ProvingSystem: Send + Sync + Clone + Serialize + 'static {
     fn validate_inputs(&self) -> Result<()>;
 }
 
+// Helper macro to count the number of variants - define this first
+macro_rules! count {
+    () => (0usize);
+    ($head:tt $(,$tail:tt)*) => (1usize + count!($($tail),*));
+}
+
 // Macro for generating system IDs and basic infrastructure
 macro_rules! proving_systems {
     (
         $(
             $(#[$attr:meta])*
-            ($variant:ident, $params:ty, $str:literal)
+            ($variant:ident, $str:literal, $params:ty)
         ),* $(,)?
     ) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -93,6 +99,33 @@ macro_rules! proving_systems {
                     pub const NAME: &str = $str;
                 }
             )*
+        }
+
+        impl ProvingSystemId {
+            pub fn as_str(&self) -> &'static str {
+                match self {
+                    $(Self::$variant => $str),*
+                }
+            }
+            pub const fn all() -> [ProvingSystemId; {count!($($variant),*)}] {
+                use ProvingSystemId::*;
+                [
+                    $($variant),*
+                ]
+            }
+        }
+
+        pub const SYSTEMS: [ProvingSystemId; {count!($($variant),*)}] = ProvingSystemId::all();
+
+        impl TryFrom<&str> for ProvingSystemId {
+            type Error = String;
+
+            fn try_from(s: &str) -> core::result::Result<Self, Self::Error> {
+                match s.to_lowercase().as_str() {
+                    $($str => Ok(Self::$variant),)*
+                    _ => Err(format!("Invalid proving system: {}", s))
+                }
+            }
         }
 
         // Main params enum that contains all system configurations
@@ -150,202 +183,6 @@ macro_rules! proving_systems {
                 }
             }
         }
-    }
-}
-
-proving_systems! {
-    (AlignedLayer, AlignedLayerProofParams, "aligned-layer"),
-    (Arkworks, ArkworksProofParams, "arkworks"),
-    (Gnark, GnarkProofParams, "gnark"),
-    (Risc0, Risc0ProofParams, "risc0"),
-    (Sp1, Sp1ProofParams, "sp1")
-}
-
-/*use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
-use crate::error::Result;
-use crate::systems::{
-    aligned_layer::AlignedLayerProofParams, arkworks::ArkworksProofParams, gnark::GnarkProofParams,
-    risc0::Risc0ProofParams, sp1::Sp1ProofParams,
-};
-use alloy::primitives::{Address, FixedBytes, U256};
-use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-
-pub mod aligned_layer;
-pub mod arkworks;
-pub mod gnark;
-pub mod risc0;
-pub mod sp1;
-
-#[derive(Debug, Default)]
-pub struct VerifierConstraints {
-    pub verifier: Option<Address>,
-    pub selector: Option<FixedBytes<4>>,
-    pub is_sha_commitment: Option<bool>,
-    pub inputs_offset: Option<U256>,
-    pub inputs_length: Option<U256>,
-    pub has_partial_commitment_result_check: Option<bool>,
-    pub submitted_partial_commitment_result_offset: Option<U256>,
-    pub submitted_partial_commitment_result_length: Option<U256>,
-    pub predetermined_partial_commitment: Option<FixedBytes<32>>,
-}
-
-// Core configuration trait
-pub trait ProofConfiguration: Debug + Send + Sync + 'static {
-    type VerifierDetails;
-    fn verifier_constraints(&self) -> VerifierConstraints;
-    fn validate(&self, verifier_details: &Self::VerifierDetails) -> Result<()>;
-}
-
-pub trait UnderlyingConfig: Debug + Clone {
-    type RequestConfig: ProofConfiguration<VerifierDetails = ProofRequestVerifierDetails>;
-    type OfferConfig: ProofConfiguration<VerifierDetails = ProofOfferVerifierDetails>;
-}
-
-// Main trait for proving system implementations
-pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
-    type Config: UnderlyingConfig;
-
-    fn request_configuration(&self) -> <Self::Config as UnderlyingConfig>::RequestConfig;
-    fn offer_configuration(&self) -> <Self::Config as UnderlyingConfig>::OfferConfig;
-    fn validate_inputs(&self) -> Result<()>;
-    fn proving_system_id(&self) -> ProvingSystemId;
-}
-
-macro_rules! proving_systems {
-    ($(($variant:ident, $params:ty, $str:literal)),* $(,)?) => {
-        #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-        pub enum ProvingSystemId {
-            $($variant),*
-        }
-
-        #[allow(non_upper_case_globals)]
-        #[allow(non_snake_case)]
-        pub mod system_id {
-            use super::ProvingSystemId;
-            $(
-                pub const $variant: ProvingSystemId = ProvingSystemId::$variant;
-                pub mod $variant {
-                    pub const NAME: &str = $str;
-                }
-            )*
-        }
-
-        impl ProvingSystemId {
-            pub fn as_str(&self) -> &'static str {
-                match self {
-                    $(Self::$variant => $str),*
-                }
-            }
-        }
-
-        impl TryFrom<&str> for ProvingSystemId {
-            type Error = String;
-
-            fn try_from(s: &str) -> core::result::Result<Self, Self::Error> {
-                match s.to_lowercase().as_str() {
-                    $($str => Ok(Self::$variant),)*
-                    _ => Err(format!("Invalid proving system: {}", s))
-                }
-            }
-        }
-
-        #[derive(Clone, Debug, Serialize, Deserialize)]
-        pub enum ProvingSystemParams {
-            $(
-                #[serde(rename = $str)]
-                $variant($params),
-            )*
-        }
-
-        impl ProvingSystemInformation for ProvingSystemParams {
-            type Config = ProverConfig;
-
-            fn request_configuration(&self) -> <Self::Config as UnderlyingConfig>::RequestConfig {
-                match self {
-                    $(Self::$variant(params) =>
-                        RequestConfig::$variant(params.request_configuration()),)*
-                }
-            }
-
-            fn offer_configuration(&self) -> <Self::Config as UnderlyingConfig>::OfferConfig {
-                match self {
-                    $(Self::$variant(params) =>
-                        OfferConfig::$variant(params.offer_configuration()),)*
-                }
-            }
-
-            fn validate_inputs(&self) -> Result<()> {
-                match self {
-                    $(Self::$variant(params) => params.validate_inputs()),*
-                }
-            }
-
-            fn proving_system_id(&self) -> ProvingSystemId {
-                match self {
-                    $(Self::$variant(_) => ProvingSystemId::$variant),*
-                }
-            }
-        }
-
-        #[derive(Clone, Debug)]
-        pub enum ProverConfig {
-            $(
-                $variant(<$params as ProvingSystemInformation>::Config),
-            )*
-        }
-
-        impl UnderlyingConfig for ProverConfig {
-            type RequestConfig = RequestConfig;
-            type OfferConfig = OfferConfig;
-        }
-
-        #[derive(Clone, Debug)]
-        pub enum RequestConfig {
-            $(
-                $variant(<<$params as ProvingSystemInformation>::Config as UnderlyingConfig>::RequestConfig),
-            )*
-        }
-
-        #[derive(Clone, Debug)]
-        pub enum OfferConfig {
-            $(
-                $variant(<<$params as ProvingSystemInformation>::Config as UnderlyingConfig>::OfferConfig),
-            )*
-        }
-
-        impl ProofConfiguration for RequestConfig {
-            type VerifierDetails = ProofRequestVerifierDetails;
-
-            fn verifier_constraints(&self) -> VerifierConstraints {
-                match self {
-                    $(Self::$variant(config) => config.verifier_constraints()),*
-                }
-            }
-
-            fn validate(&self, verifier_details: &Self::VerifierDetails) -> Result<()> {
-                match self {
-                    $(Self::$variant(config) => config.validate(verifier_details)),*
-                }
-            }
-        }
-
-        impl ProofConfiguration for OfferConfig {
-            type VerifierDetails = ProofOfferVerifierDetails;
-
-            fn verifier_constraints(&self) -> VerifierConstraints {
-                match self {
-                    $(Self::$variant(config) => config.verifier_constraints()),*
-                }
-            }
-
-            fn validate(&self, verifier_details: &Self::VerifierDetails) -> Result<()> {
-                match self {
-                    $(Self::$variant(config) => config.validate(verifier_details)),*
-                }
-            }
-        }
 
         impl TryFrom<(&ProvingSystemId, Vec<u8>)> for ProvingSystemParams {
             type Error = String;
@@ -364,9 +201,9 @@ macro_rules! proving_systems {
 }
 
 proving_systems! {
-    (AlignedLayer, AlignedLayerProofParams, "aligned-layer"),
-    (Arkworks, ArkworksProofParams, "arkworks"),
-    (Gnark, GnarkProofParams, "gnark"),
-    (Risc0, Risc0ProofParams, "risc0"),
-    (Sp1, Sp1ProofParams, "sp1")
-}*/
+    (AlignedLayer, "aligned-layer", AlignedLayerProofParams),
+    (Arkworks, "arkworks", ArkworksProofParams),
+    (Gnark, "gnark", GnarkProofParams),
+    (Risc0, "risc0", Risc0ProofParams),
+    (Sp1, "sp1", Sp1ProofParams)
+}

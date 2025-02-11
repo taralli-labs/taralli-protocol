@@ -4,6 +4,8 @@ use thiserror::Error;
 pub enum PrimitivesError {
     #[error("Contract interaction error: {0}")]
     ContractError(String),
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
     #[error("Invalid signature: {0}")]
     SignatureError(String),
     #[error("Validation error: {0}")]
