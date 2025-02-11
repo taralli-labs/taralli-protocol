@@ -13,7 +13,7 @@ use crate::state::request::RequestState;
 
 #[derive(Debug, Deserialize)]
 pub struct SubscribeQuery {
-    pub system_ids: Vec<String>,
+    pub system_ids: String,
 }
 
 pub async fn subscribe_handler<T, P>(
@@ -24,21 +24,13 @@ where
     T: Transport + Clone,
     P: Provider<T> + Clone,
 {
-    // If no system IDs provided, return error
-    if params.system_ids.is_empty() {
-        return Err(ServerError::ValidationError(
-            "No proving system IDs provided".into(),
-        ));
-    }
-
-    // Convert strings to ProvingSystemIds, collecting any invalid IDs
+    let ids = params.system_ids.split(',').collect::<Vec<&str>>();
     let mut invalid_ids = Vec::new();
     let mut valid_ids = Vec::new();
-
-    for id_str in &params.system_ids {
-        match ProvingSystemId::try_from(id_str.as_str()) {
+    for id_str in ids {
+        match ProvingSystemId::try_from(id_str) {
             Ok(id) => valid_ids.push(id),
-            Err(_) => invalid_ids.push(id_str.clone()),
+            Err(_) => invalid_ids.push(id_str),
         }
     }
 
