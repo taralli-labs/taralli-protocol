@@ -61,7 +61,7 @@ pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + 
         )));
     }
 
-    Ok(ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state))))
+    Ok(ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state), valid_ids)))
 }
 
 /// Handles an active WebSocket session, streaming messages from the subscription system.
@@ -76,14 +76,15 @@ pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + 
 async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
     app_state: Arc<RequestState<T, P>>,
-    // system_ids: Vec<ProvingSystemId>,
+    system_ids: Vec<ProvingSystemId>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
-    // let subscription = app_state.subscription_manager().add_subscription();
-    // tracing::info!(
-    //     "Subscription added, active subscriptions: {}",
-    //     app_state.subscription_manager().active_subscriptions()
-    // );
+    // let subscription = app_state.subscription_manager(). add_subscription();
+    tracing::info!(
+        "second"
+        // "Subscription added, active subscriptions: {}"
+        // app_state.subscription_manager().active_subscriptions()
+    );
 
     let receivers = app_state
         .subscription_manager()
@@ -91,7 +92,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
         .await;
 
     // Create a broadcast stream from the subscription receiver.
-    //let mut broadcast_stream = BroadcastStream::new(subscription);
+    // let mut broadcast_stream = BroadcastStream::new(subscription);
 
     // Convert receivers to SSE streams
     let streams = receivers.into_iter().map(|rx| {
