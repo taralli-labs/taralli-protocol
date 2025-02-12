@@ -123,6 +123,7 @@ where
         let mut stream = self
             .api
             .subscribe_to_markets()
+            .await
             .map_err(|e| ProviderError::ServerRequestError(e.to_string()))?;
         tracing::info!("subscribed to markets, waiting for incoming requests");
         while let Some(result) = stream.next().await {

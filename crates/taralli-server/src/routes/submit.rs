@@ -1,3 +1,4 @@
+use crate::brotli::BrotliFile;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
@@ -11,12 +12,25 @@ use crate::validation::validate_intent;
 
 pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(app_state): State<RequestState<T, P>>,
-    Json(request): Json<ComputeRequest<ProvingSystemParams>>,
+    BrotliFile {
+        compressed,
+        decompressed,
+    }: BrotliFile,
 ) -> Result<impl IntoResponse> {
+    let request: ComputeRequest<ProvingSystemParams> = serde_json::from_slice(&decompressed)
+        .map_err(|e| {
+            tracing::warn!("Failed to parse JSON: {:?}", e);
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid JSON after Brotli decompression" })),
+            )
+        })
+        .map_err(|e| ServerError::DeserializationError(format!("error: {:?}", e)))?;
+
     validate_intent(&request, &app_state).await?;
     match app_state
         .subscription_manager()
-        .broadcast(request.proving_system_id, request)
+        .broadcast(request.proving_system_id, compressed)
         .await
     {
         Ok(recv_count) => Ok((
@@ -32,8 +46,21 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
 
 pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(app_state): State<OfferState<T, P>>,
-    Json(offer): Json<ComputeOffer<ProvingSystemParams>>,
+    BrotliFile {
+        compressed: _,
+        decompressed,
+    }: BrotliFile,
 ) -> Result<impl IntoResponse> {
+    let offer: ComputeOffer<ProvingSystemParams> = serde_json::from_slice(&decompressed)
+        .map_err(|e| {
+            tracing::warn!("Failed to parse JSON: {:?}", e);
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid JSON after Brotli decompression" })),
+            )
+        })
+        .map_err(|e| ServerError::DeserializationError(format!("error: {:?}", e)))?;
+
     validate_intent(&offer, &app_state).await?;
 
     match app_state.intent_db().store_offer(&offer).await {

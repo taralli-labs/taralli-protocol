@@ -87,7 +87,7 @@ where
         // submit signed request to server
         let response = self
             .api
-            .submit_request(request.clone())
+            .submit_request(request)
             .await
             .map_err(|e| RequesterError::ServerRequestError(e.to_string()))?;
 

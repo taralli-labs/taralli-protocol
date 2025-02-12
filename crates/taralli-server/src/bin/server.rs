@@ -8,9 +8,7 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use serde_json::json;
 use std::time::Duration;
-use taralli_primitives::{
-    intents::ComputeRequest, systems::ProvingSystemParams, validation::ValidationMetaConfig,
-};
+use taralli_primitives::{systems::SYSTEMS, validation::ValidationMetaConfig};
 use taralli_server::{
     config::Config,
     postgres::Db,
@@ -49,9 +47,9 @@ async fn main() -> Result<()> {
 
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
 
-    // setup intent subscription manager
-    let subscription_manager: SubscriptionManager<ComputeRequest<ProvingSystemParams>> =
-        Default::default();
+    // setup subscription manager
+    let subscription_manager: SubscriptionManager = Default::default();
+    subscription_manager.init_channels(&SYSTEMS).await;
 
     // initialize intent database
     let intent_db = Db::new().await;

@@ -29,6 +29,8 @@ pub enum ProviderError {
     WorkerExecutionFailed(String),
     #[error("Primitives error: {0}")]
     PrimitivesError(#[from] PrimitivesError),
+    #[error("API key error: {0}")]
+    ApiKeyError(String),
 }
 
 pub type Result<T> = core::result::Result<T, ProviderError>;

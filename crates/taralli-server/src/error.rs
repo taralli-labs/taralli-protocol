@@ -25,6 +25,8 @@ pub enum ServerError {
     DatabaseError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    #[error("Deserialization error: {0}")]
+    DeserializationError(String),
     #[error("Primitives error: {0}")]
     PrimitivesError(#[from] PrimitivesError),
 }

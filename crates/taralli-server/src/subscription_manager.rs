@@ -1,15 +1,18 @@
 use std::{collections::HashMap, sync::Arc};
+use tokio::sync::broadcast::{channel, Receiver, Sender};
 
 use taralli_primitives::systems::ProvingSystemId;
-use tokio::sync::{broadcast, RwLock};
+use tokio::sync::RwLock;
 
 use crate::error::{Result, ServerError};
 
-pub struct SubscriptionManager<M>
+// Generic over a Message type M
+// Todo: Remove generic and use only Vec<u8> when removing propagation of Request<ProvingSystemParams> through SSE.
+pub struct SubscriptionManager<M = Vec<u8>>
 where
     M: Clone,
 {
-    pub channels: Arc<RwLock<HashMap<ProvingSystemId, broadcast::Sender<M>>>>,
+    pub channels: Arc<RwLock<HashMap<ProvingSystemId, Sender<M>>>>,
     pub capacity: usize,
 }
 
@@ -28,35 +31,29 @@ where
     pub async fn init_channels(&self, ids: &[ProvingSystemId]) {
         let mut map = self.channels.write().await;
         for &id in ids {
-            map.entry(id)
-                .or_insert_with(|| broadcast::channel(self.capacity).0);
+            map.entry(id).or_insert_with(|| channel(self.capacity).0);
         }
     }
 
     /// Retrieve (or create) the channel sender for a given ID.
-    pub async fn get_or_create_sender(&self, id: ProvingSystemId) -> broadcast::Sender<M> {
+    pub async fn get_or_create_sender(&self, id: ProvingSystemId) -> Sender<M> {
         let mut map = self.channels.write().await;
         map.entry(id)
-            .or_insert_with(|| broadcast::channel(self.capacity).0)
+            .or_insert_with(|| channel(self.capacity).0)
             .clone()
     }
 
     /// Subscribe to the channel for a given ID (read only).
-    pub async fn subscribe_to_id(&self, id: ProvingSystemId) -> broadcast::Receiver<M> {
+    pub async fn subscribe_to_id(&self, id: ProvingSystemId) -> Receiver<M> {
         let sender = self.get_or_create_sender(id).await;
         sender.subscribe()
     }
 
     /// Get multiple Receivers if you want multi-ID SSE.
-    pub async fn subscribe_to_ids(&self, ids: &[ProvingSystemId]) -> Vec<broadcast::Receiver<M>> {
+    pub async fn subscribe_to_ids(&self, ids: &[ProvingSystemId]) -> Vec<Receiver<M>> {
         let mut receivers = Vec::with_capacity(ids.len());
         for &id in ids {
-            //receivers.push(self.subscribe_to_id(id).await);
-            println!("Creating subscriber for system ID: {:?}", id); // Debug
-            let sender = self.get_or_create_sender(id).await;
-            println!("Sender has {} receivers", sender.receiver_count()); // Debug
-            receivers.push(sender.subscribe());
-            println!("New receiver count: {}", sender.receiver_count()); // Debug
+            receivers.push(self.subscribe_to_id(id).await);
         }
         receivers
     }
@@ -88,11 +85,17 @@ where
     }
 }
 
+// Should not have this default? Maybe env var
 impl<M> Default for SubscriptionManager<M>
 where
     M: Clone,
 {
     fn default() -> Self {
-        Self::new(1)
+        Self::new(
+            std::env::var("SERVER_SUBSCRIPTION_LAG")
+                .unwrap_or_else(|_| "1".to_string())
+                .parse::<usize>()
+                .unwrap_or(1),
+        )
     }
 }

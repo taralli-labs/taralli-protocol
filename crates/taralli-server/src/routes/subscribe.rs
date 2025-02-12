@@ -1,10 +1,18 @@
+use std::sync::Arc;
+
+use alloy::{providers::Provider, transports::Transport};
 use axum::{
-    extract::{Query, State},
-    response::sse::{Event, KeepAlive, Sse},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Query, State,
+    },
+    response::IntoResponse,
 };
-use futures::stream::{select_all, StreamExt};
+use futures::{
+    stream::{select_all, StreamExt},
+    SinkExt,
+};
 use serde::Deserialize;
-use taralli_primitives::alloy::{providers::Provider, transports::Transport};
 use taralli_primitives::systems::ProvingSystemId;
 use tokio_stream::wrappers::BroadcastStream;
 
@@ -16,14 +24,25 @@ pub struct SubscribeQuery {
     pub system_ids: String,
 }
 
-pub async fn subscribe_handler<T, P>(
-    State(app_state): State<RequestState<T, P>>,
+/// WebSocket subscription handler that upgrades the connection to a WebSocket session.
+///
+/// This function acts as an entry point for WebSocket clients that want to subscribe
+/// to proof-related updates. It upgrades the connection and delegates the handling to
+/// `websocket_subscribe`.
+///
+/// # Parameters
+/// - `ws`: The WebSocket upgrade request from the client.
+/// - `app_state`: Shared application state, containing the subscription manager.
+///
+/// # Returns
+/// An `IntoResponse` that upgrades the HTTP connection to a WebSocket session, which is needed since we expose the WebSocket endpoint as an HTTP route.
+pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + Clone + 'static>(
+    ws: WebSocketUpgrade,
     Query(params): Query<SubscribeQuery>,
-) -> Result<Sse<impl futures::Stream<Item = core::result::Result<Event, axum::Error>>>>
-where
-    T: Transport + Clone,
-    P: Provider<T> + Clone,
-{
+    State(app_state): State<RequestState<T, P>>,
+) -> Result<impl IntoResponse> {
+    tracing::info!("subscription started");
+    // parse submitted IDs
     let ids = params.system_ids.split(',').collect::<Vec<&str>>();
     let mut invalid_ids = Vec::new();
     let mut valid_ids = Vec::new();
@@ -42,26 +61,99 @@ where
         )));
     }
 
-    // Get broadcast receivers for each valid system ID
+    Ok(ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state), valid_ids)))
+}
+
+/// Handles an active WebSocket session, streaming messages from the subscription system.
+///
+/// This function listens to the broadcast stream from the `subscription_manager` and sends
+/// new messages to the connected WebSocket client. If an error occurs while sending,
+/// the connection is closed.
+///
+/// # Parameters
+/// - `socket`: The WebSocket connection.
+/// - `app_state`: Shared application state, containing the subscription manager.
+async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
+    socket: WebSocket,
+    app_state: Arc<RequestState<T, P>>,
+    system_ids: Vec<ProvingSystemId>,
+) {
+    // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
+    // let subscription = app_state.subscription_manager().add_subscription();
+    // tracing::info!(
+    //     "Subscription added, active subscriptions: {}",
+    //     app_state.subscription_manager().active_subscriptions()
+    // );
+
     let receivers = app_state
         .subscription_manager()
-        .subscribe_to_ids(&valid_ids)
+        .subscribe_to_ids(&system_ids)
         .await;
+
+    // Create a broadcast stream from the subscription receiver.
+    //let mut broadcast_stream = BroadcastStream::new(subscription);
 
     // Convert receivers to SSE streams
     let streams = receivers.into_iter().map(|rx| {
-        BroadcastStream::new(rx).map(|result| {
-            result
-                .map_err(|e| axum::Error::new(e.to_string()))
-                .and_then(|request| {
-                    Event::default()
-                        .json_data(request)
-                        .map_err(|e| axum::Error::new(e.to_string()))
-                })
-        })
+        BroadcastStream::new(rx).map(|result| result.map_err(|e| axum::Error::new(e.to_string())))
     });
 
-    // Merge all streams and create SSE
-    Ok(Sse::new(select_all(streams))
-        .keep_alive(KeepAlive::new().interval(std::time::Duration::from_secs(15))))
+    let mut meta_stream = select_all(streams);
+
+    // Split the WebSocket into sender/receiver so we can handle them separately
+    let (mut ws_sender, mut ws_receiver) = socket.split();
+
+    // Use a `tokio::select!` loop to handle both reading and writing since we're in an async context.
+    loop {
+        tokio::select! {
+            // Outbound: messages from broadcast_stream => client
+            maybe_broadcast = meta_stream.next() => {
+                match maybe_broadcast {
+                    Some(Ok(bytes)) => {
+                        // Try sending a binary message to the client
+                        if let Err(e) = ws_sender.send(Message::Binary(bytes)).await {
+                            tracing::error!("Failed to send WebSocket message: {:?}", e);
+                            break;
+                        }
+                    }
+                    Some(Err(e)) => {
+                        tracing::error!("Broadcast stream error: {:?}", e);
+                        break;
+                    }
+                    None => {
+                        // The broadcast_stream ended (channel closed, etc.)
+                        break;
+                    }
+                }
+            },
+
+            // Inbound: messages from client => (potentially) the server
+            // There's not a lot we want to do with incoming messages in this case, despite the usage of websockets
+            // this is (mostly) a one-way communication channel.
+            // We need to handle the disconnect bit otherwise we'll have dangling connections.
+            maybe_incoming = ws_receiver.next() => {
+                match maybe_incoming {
+                    Some(Ok(Message::Close(_))) => {
+                        tracing::info!("Client sent Close");
+                        break;
+                    }
+                    Some(Ok(Message::Ping(_)) | Ok(Message::Pong(_))) => {
+                        // Received a ping or pong, no need to do anything
+                    }
+                    Some(Err(e)) => {
+                        tracing::error!("Read error from client: {:?}", e);
+                        break;
+                    }
+                    // We're not interested in other message types
+                    Some(_) => {
+                        tracing::info!("Received unexpected message from client");
+                    }
+                    None => {
+                        // Client disconnected cleanly
+                        break;
+                    }
+                }
+            }
+        }
+    }
 }
