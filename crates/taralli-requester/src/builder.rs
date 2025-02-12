@@ -2,6 +2,7 @@ use crate::config::RewardTokenConfig;
 use crate::error::{RequesterError, Result};
 use crate::nonce_manager::Permit2NonceManager;
 use serde_json::Value;
+use taralli_primitives::abi::universal_bombetta::UniversalBombetta::ProofRequest;
 use taralli_primitives::alloy::{
     consensus::BlockHeader,
     eips::BlockId,
@@ -10,8 +11,8 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
+use taralli_primitives::intents::ComputeRequest;
 use taralli_primitives::systems::{ProvingSystemId, ProvingSystemParams};
-use taralli_primitives::{OnChainProofRequest, Request};
 
 // TODO: add in default builder patterns
 pub struct AuctionParameters<P: Into<U256>> {
@@ -41,12 +42,12 @@ pub struct RequestBuilder<T, P, N> {
     pub start_auction_timestamp: u64,
     pub end_auction_timestamp: u64,
     pub proving_time: u32,
-    pub public_inputs_commitment: B256,
+    pub inputs_commitment: B256,
     pub extra_data: Bytes,
     // off-chain params
     pub proving_system_id: ProvingSystemId,
     pub proving_system_information: serde_json::Value,
-    pub public_inputs: Vec<u8>,
+    pub inputs: Vec<u8>,
 }
 
 impl<T, P, N> RequestBuilder<T, P, N>
@@ -78,11 +79,11 @@ where
             start_auction_timestamp: 0u64,
             end_auction_timestamp: 0u64,
             proving_time: 0u32,
-            public_inputs_commitment: B256::ZERO,
+            inputs_commitment: B256::ZERO,
             extra_data: Bytes::from(""),
             proving_system_id,
             proving_system_information: Value::Null,
-            public_inputs: vec![],
+            inputs: vec![],
         }
     }
 
@@ -139,10 +140,10 @@ where
     /// return the ProofRequest builder with the added verification commitments
     pub fn set_verification_commitment_params(
         mut self,
-        public_inputs_commitment: B256,
+        inputs_commitment: B256,
         extra_data: Bytes,
     ) -> Self {
-        self.public_inputs_commitment = public_inputs_commitment;
+        self.inputs_commitment = inputs_commitment;
         self.extra_data = extra_data;
         self
     }
@@ -161,26 +162,26 @@ where
     ];
 
     /// return the ProofRequest derived from the current state of RequestBuilder
-    pub fn build(self) -> Request<ProvingSystemParams> {
-        Request {
+    pub fn build(self) -> ComputeRequest<ProvingSystemParams> {
+        ComputeRequest {
             proving_system_id: self.proving_system_id,
-            proving_system_information: ProvingSystemParams::try_from((
+            proving_system: ProvingSystemParams::try_from((
                 &self.proving_system_id,
                 self.proving_system_information.to_string().into_bytes(),
             ))
             .unwrap(),
-            onchain_proof_request: OnChainProofRequest {
+            proof_request: ProofRequest {
                 signer: self.signer_address,
                 market: self.market_address,
                 nonce: self.nonce,
-                token: self.reward_token_address,
+                rewardToken: self.reward_token_address,
                 maxRewardAmount: self.max_reward_amount,
                 minRewardAmount: self.min_reward_amount,
                 minimumStake: self.minimum_stake,
                 startAuctionTimestamp: self.start_auction_timestamp,
                 endAuctionTimestamp: self.end_auction_timestamp,
                 provingTime: self.proving_time,
-                publicInputsCommitment: self.public_inputs_commitment,
+                inputsCommitment: self.inputs_commitment,
                 extraData: self.extra_data,
             },
             signature: Self::create_dummy_signature(),
@@ -271,8 +272,8 @@ where
         self
     }
 
-    pub fn public_inputs(mut self, public_inputs: Vec<u8>) -> Self {
-        self.public_inputs = public_inputs;
+    pub fn public_inputs(mut self, inputs: Vec<u8>) -> Self {
+        self.inputs = inputs;
         self
     }
 }

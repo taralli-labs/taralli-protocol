@@ -1,0 +1,566 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'taralli_primitives'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=taralli-primitives"
+                ],
+                "filter": {
+                    "name": "taralli_primitives",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'taralli_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "taralli_provider",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'aligned_layer_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=aligned_layer_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "aligned_layer_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'aligned_layer_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=aligned_layer_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "aligned_layer_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'arkworks_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=arkworks_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "arkworks_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'arkworks_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=arkworks_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "arkworks_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'multi_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=multi_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "multi_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'multi_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=multi_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "multi_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'risc0_bonsai_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=risc0_bonsai_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "risc0_bonsai_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'risc0_bonsai_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=risc0_bonsai_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "risc0_bonsai_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'risc0_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=risc0_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "risc0_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'risc0_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=risc0_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "risc0_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'sp1_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=sp1_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "sp1_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'sp1_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=sp1_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "sp1_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'sp1_succint_provider'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=sp1_succint_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "sp1_succint_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'sp1_succint_provider'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=sp1_succint_provider",
+                    "--package=taralli-provider"
+                ],
+                "filter": {
+                    "name": "sp1_succint_provider",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'taralli_requester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "taralli_requester",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'aligned_layer_requester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=aligned_layer_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "aligned_layer_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'aligned_layer_requester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=aligned_layer_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "aligned_layer_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'arkworks_requester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=arkworks_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "arkworks_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'arkworks_requester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=arkworks_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "arkworks_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'risc0_requester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=risc0_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "risc0_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'risc0_requester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=risc0_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "risc0_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'sp1_requester'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=sp1_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "sp1_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'sp1_requester'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=sp1_requester",
+                    "--package=taralli-requester"
+                ],
+                "filter": {
+                    "name": "sp1_requester",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'taralli_server'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=taralli-server"
+                ],
+                "filter": {
+                    "name": "taralli_server",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'server'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=server",
+                    "--package=taralli-server"
+                ],
+                "filter": {
+                    "name": "server",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'server'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=server",
+                    "--package=taralli-server"
+                ],
+                "filter": {
+                    "name": "server",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'server_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=server_tests",
+                    "--package=taralli-server"
+                ],
+                "filter": {
+                    "name": "server_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'subscription_manager_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=subscription_manager_tests",
+                    "--package=taralli-server"
+                ],
+                "filter": {
+                    "name": "subscription_manager_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

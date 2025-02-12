@@ -4,7 +4,7 @@
 
 The taralli protocol is made up of 5 main components.
 
-1. Bombetta marketplace smart contract(s)
+1. Taralli marketplace smart contract(s)
 2. Taralli primitives
 3. Taralli server
 4. Taralli provider client
@@ -15,7 +15,9 @@ Currently many parts of the protocol are complete but in pre-alpha/alpha stage w
 ### --- Bombetta Marketplace smart contract(s) ---
 
 - [Bombetta specification](../contracts/docs/bombetta_spec.md)
-- [universalBombetta specification](../contracts/docs/universal_bombetta_spec.md)
+- [UniversalBombetta specification](../contracts/docs/universal_bombetta_spec.md)
+- [Porchetta specification](../contracts/docs/porchetta_spec.md)
+- [UniversalPorchetta specification](../contracts/docs/universal_porchetta_spec.md)
 
 ### --- Taralli Primitives ---
 

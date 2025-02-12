@@ -23,3 +23,5 @@ sol! {
         bytes32 predeterminedPartialCommitment;
     }
 }
+
+pub type ProofRequestVerifierDetails = VerifierDetails;
