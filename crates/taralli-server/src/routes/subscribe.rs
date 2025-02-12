@@ -38,28 +38,28 @@ pub struct SubscribeQuery {
 /// An `IntoResponse` that upgrades the HTTP connection to a WebSocket session, which is needed since we expose the WebSocket endpoint as an HTTP route.
 pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + Clone + 'static>(
     ws: WebSocketUpgrade,
-    // Query(params): Query<SubscribeQuery>,
+    Query(params): Query<SubscribeQuery>,
     State(app_state): State<RequestState<T, P>>,
 ) -> Result<impl IntoResponse> {
     tracing::info!("subscription started");
     // parse submitted IDs
-    // let ids = params.system_ids.split(',').collect::<Vec<&str>>();
-    // let mut invalid_ids = Vec::new();
-    // let mut valid_ids = Vec::new();
-    // for id_str in ids {
-    //     match ProvingSystemId::try_from(id_str) {
-    //         Ok(id) => valid_ids.push(id),
-    //         Err(_) => invalid_ids.push(id_str),
-    //     }
-    // }
+    let ids = params.system_ids.split(',').collect::<Vec<&str>>();
+    let mut invalid_ids = Vec::new();
+    let mut valid_ids = Vec::new();
+    for id_str in ids {
+        match ProvingSystemId::try_from(id_str) {
+            Ok(id) => valid_ids.push(id),
+            Err(_) => invalid_ids.push(id_str),
+        }
+    }
 
-    // // If any invalid IDs were found, return error with details
-    // if !invalid_ids.is_empty() {
-    //     return Err(ServerError::SystemIdError(format!(
-    //         "Invalid proving system IDs: {}",
-    //         invalid_ids.join(", ")
-    //     )));
-    // }
+    // If any invalid IDs were found, return error with details
+    if !invalid_ids.is_empty() {
+        return Err(ServerError::SystemIdError(format!(
+            "Invalid proving system IDs: {}",
+            invalid_ids.join(", ")
+        )));
+    }
 
     Ok(ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state))))
 }
