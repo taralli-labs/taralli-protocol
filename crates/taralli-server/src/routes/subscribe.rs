@@ -41,7 +41,7 @@ pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + 
     Query(params): Query<SubscribeQuery>,
     State(app_state): State<RequestState<T, P>>,
 ) -> Result<impl IntoResponse> {
-    tracing::info!("subscription started");
+    tracing::info!("subscribe called");
     // parse submitted IDs
     let ids = params.system_ids.split(',').collect::<Vec<&str>>();
     let mut invalid_ids = Vec::new();
@@ -79,19 +79,16 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     system_ids: Vec<ProvingSystemId>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
-    // let subscription = app_state.subscription_manager().add_subscription();
-    // tracing::info!(
-    //     "Subscription added, active subscriptions: {}",
-    //     app_state.subscription_manager().active_subscriptions()
-    // );
+    // let subscription = app_state.subscription_manager(). add_subscription();
+    tracing::info!("Valid IDs submitted, creating ws stream");
 
     let receivers = app_state
         .subscription_manager()
-        .subscribe_to_ids(&system_ids)
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
         .await;
 
     // Create a broadcast stream from the subscription receiver.
-    //let mut broadcast_stream = BroadcastStream::new(subscription);
+    // let mut broadcast_stream = BroadcastStream::new(subscription);
 
     // Convert receivers to SSE streams
     let streams = receivers.into_iter().map(|rx| {
@@ -102,6 +99,8 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
 
     // Split the WebSocket into sender/receiver so we can handle them separately
     let (mut ws_sender, mut ws_receiver) = socket.split();
+
+    tracing::info!("stream created, initiating websocket loop");
 
     // Use a `tokio::select!` loop to handle both reading and writing since we're in an async context.
     loop {
@@ -130,7 +129,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
             // Inbound: messages from client => (potentially) the server
             // There's not a lot we want to do with incoming messages in this case, despite the usage of websockets
             // this is (mostly) a one-way communication channel.
-            // We need to handle the disconnect bit otherwise we'll have dangling connections.
+            // We need to handle the disconnect, otherwise we'll have dangling connections.
             maybe_incoming = ws_receiver.next() => {
                 match maybe_incoming {
                     Some(Ok(Message::Close(_))) => {

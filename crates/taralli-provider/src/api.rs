@@ -1,5 +1,6 @@
 use async_compression::tokio::bufread::BrotliDecoder;
 use futures::{Stream, StreamExt};
+use taralli_primitives::systems::ProvingSystemId;
 use tokio::net::TcpStream;
 
 use std::pin::Pin;
@@ -135,15 +136,25 @@ impl ProviderApi {
             ProviderError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
         })?;
 
-        let ws_url = url
-            .join("subscribe")
+
+        let system_ids =  [ProvingSystemId::Arkworks];
+        let query = system_ids
+        .iter()
+        .map(|id| id.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    
+        let uri = format!("/subscribe?system_ids={}", query);
+
+            let ws_url = url
+            .join(&uri)
             .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?
             .to_string();
 
-        tracing::info!("Connecting to WebSocket: {ws_url}");
+        // tracing::info!("Connecting to WebSocket: {ws_url}");
 
         let request = tungstenite::http::Request::builder()
-            .uri(ws_url)
+            .uri(&ws_url)
             .header(
                 "Host",
                 url.host_str().ok_or_else(|| {
@@ -160,6 +171,7 @@ impl ProviderApi {
                 ProviderError::ServerSubscriptionError(format!("Request build error: {e}"))
             })?;
 
+        tracing::info!("Connecting to WebSocket: {ws_url}");
         let (ws_stream, _resp) = connect_async(request).await.map_err(|e| {
             ProviderError::ServerSubscriptionError(format!("WebSocket connect error: {e}"))
         })?;

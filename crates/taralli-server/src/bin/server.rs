@@ -39,21 +39,26 @@ async fn main() -> Result<()> {
         .init();
 
     // Setup validation config
+    tracing::info!("Loading validation config");
     let validation_config = ValidationMetaConfig {
         common: config.common_validation_config.clone(),
         request: config.request_validation_config.clone(),
         offer: config.offer_validation_config.clone(),
     };
 
+    tracing::info!("Setting up RPC provider");
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
 
     // setup subscription manager
+    tracing::info!("Setting up subscription manager");
     let subscription_manager: SubscriptionManager = Default::default();
     subscription_manager.init_channels(&SYSTEMS).await;
 
     // initialize intent database
+    tracing::info!("Setting up intent database");
     let intent_db = Db::new().await;
 
+    tracing::info!("Setting up state");
     let base_state = BaseState::new(
         rpc_provider.clone(),
         config.market_address,
@@ -61,14 +66,16 @@ async fn main() -> Result<()> {
         validation_config.clone(),
     );
 
+    tracing::info!("Setting up routers");
     let request_state = RequestState::new(base_state.clone(), subscription_manager);
-
+    tracing::info!("Setting up offer state");
     let offer_state = OfferState::new(base_state, intent_db);
 
+    tracing::info!("Setting up routes");
     // Create separate routers for each intent type
     let request_routes = Router::new()
         .route("/submit/request", post(submit_request_handler))
-        .route("/subscribe/", get(subscribe_handler))
+        .route("/subscribe", get(subscribe_handler))
         .with_state(request_state);
 
     let offer_routes = Router::new()
@@ -78,13 +85,15 @@ async fn main() -> Result<()> {
             get(get_active_offers_by_id_handler),
         )
         .with_state(offer_state);
-
+    
+    tracing::info!("Merging routers");
     // Merge routers
     let app = request_routes
         .merge(offer_routes)
         .layer(TraceLayer::new_for_http())
         .fallback(get(fallback));
 
+    tracing::info!("Starting server");
     let server_url = format!("0.0.0.0:{}", config.server_port);
     let listener = TcpListener::bind(server_url).await.context(format!(
         "Failed to bind server to port {}",
