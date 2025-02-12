@@ -4,7 +4,7 @@
 
 The taralli protocol is made up of 5 main components.
 
-1. Bombetta marketplace smart contract(s)
+1. Taralli marketplace smart contract(s)
 2. Taralli primitives
 3. Taralli server
 4. Taralli provider client
@@ -15,7 +15,9 @@ Currently many parts of the protocol are complete but in pre-alpha/alpha stage w
 ### --- Bombetta Marketplace smart contract(s) ---
 
 - [Bombetta specification](../contracts/docs/bombetta_spec.md)
-- [universalBombetta specification](../contracts/docs/universal_bombetta_spec.md)
+- [UniversalBombetta specification](../contracts/docs/universal_bombetta_spec.md)
+- [Porchetta specification](../contracts/docs/porchetta_spec.md)
+- [UniversalPorchetta specification](../contracts/docs/universal_porchetta_spec.md)
 
 ### --- Taralli Primitives ---
 
@@ -158,13 +160,13 @@ A viable request has the following properties:
     - `endAuctionTimestamp` has not passed the current timestamp and there is still time to submit a bid for the request.
     - `proving time` is a long enough duration given computational complexity of the given compute workload & proof.
     - `minimumStake` doesnt need any direct assertions made on it as of now (up to the clients to decide if this is ok).
-    - `publicInputsCommitment` matches the hash of the public inputs in `proving_system_information` if there are public inputs
+    - `inputsCommitment` matches the hash of the inputs in `proving_system_information` if there are inputs for the request
     - `extraData` needs to make sense given the nature of the request. Referencing the [UniversalBombetta smart contract spec](../contracts/docs/universal_bombetta_spec.md) this field is generic but currently being used to describe the verifier constraints of a given proof provided for the request.
         - the extra_data field can be decoded into the solidity type, `UniversalBombetta.VerifierDetails`
         - the decoded verifier details can be checked against the system's corresponding verifier constraints type
         - beyond the verifier constraints, the dynamic inputs to the system's prover for a specific request can checked.
             - for example a groth16bn128 based request should link to a corresponding groth16 verifier contract address for the correct circuit.
-        - the same goes for inputs/public inputs and other dynamic fields that will be checked on a request by request basis.
+        - the same goes for any inputs and other dynamic fields that will be checked on a request by request basis.
     - NOTE: extraData validation logic is WIP and needs improvement.
 - the provided `signature` is valid based on the provided `signer` address & `OnChainProofRequest` data
 
@@ -243,25 +245,32 @@ request builder requirements:
 - ethereum rpc provider, to fetch state about the network (`current timestamp` of latest block and `account nonce`, perhaps other stuff?)
     - used to compute a reasonable, `startAuctionTimestamp` for the request
     - same for the `endAuctionTimestamp` when the auction is over and no more bids are allowed
-- the public inputs commitment to the proof they want computed `publicInputsCommitment`
+- the inputs commitment to the proof they want computed `publicInputsCommitment`
 - extra data needed for committing to the verification data of the request in the case of the universal bombetta market, `extraData`
     - below is the structure encoded into the extra data field
 
 ```solidity
 /// UniversalBombetta's decoded extraData type
 struct VerifierDetails {
-    address verifier; // address of the verifier contract required by the requester
-    bytes4 selector; // fn selector of the verifying function required by the requester
-    bool isShaCommitment; // bool to chose between keccak256 or sha256 for commitments, true = sha256, false = keccak256
-    uint256 publicInputsOffset; // offset of public inputs field within the proof submission data (opaqueSubmission)
-    uint256 publicInputsLength; // length of public inputs field within the proof submission data (opaqueSubmission)
-    bool hasPartialCommitmentResultCheck; // bool representing if a request requires a partial commitment result check in order to be resolved
+    // address of the verifier contract required by the requester
+    address verifier;
+    // fn selector of the verifying function required by the requester
+    bytes4 selector;
+    // bool to chose between keccak256 or sha256 for commitments, true = sha256, false = keccak256
+    bool isShaCommitment;
+    // offset of inputs field within the proof submission data (opaqueSubmission)
+    uint256 inputsOffset;
+    // length of inputs field within the proof submission data (opaqueSubmission)
+    uint256 inputsLength;
+    // bool representing if a proof request requires a partial commitment result check in order to be resolved
+    bool hasPartialCommitmentResultCheck;
     // offset & length of the partial commitment result field within the proof submission data (opaqueSubmission)
-    // that will be used to compare with the hash produced by -> keccak256(predeterminedPartialCommitment + submittedPartialCommitment)
+    // that will be used to compare with the hash produced by ...
+    // keccak256(predeterminedPartialCommitment + submittedPartialCommitment)
     uint256 submittedPartialCommitmentResultOffset;
     uint256 submittedPartialCommitmentResultLength;
-    // predetermined partial commitment to the submitted final commitment result of this request's proof submission
-    // data. The requester commits to this hash within their signature which is used to check equivalency when
+    // predetermined partial commitment to the submitted final commitment result of the proof submission data.
+    // The proof requester commits to this hash within their signature which is used to check equivalency when
     // recomputing the partial commitment result that is contained inside the proof submission data (opaqueSubmission)
     bytes32 predeterminedPartialCommitment;
 }
@@ -273,15 +282,15 @@ In order for the requester to know what they need to submit in this field they n
 
 Examples... 
 
-A user wants to request a groth16bn128 proof based on circuit A, with public inputs B, so they need some verifier
+A user wants to request a groth16bn128 proof based on circuit A, with private and/or public inputs B, so they need some verifier
 contract deployed on ethereum deployed/setup for circuit A, this verifer contract will have a certain contract address,
-function signature, public inputs commitment, submitted public inputs offset/length and potentially other commitments that 
+function signature, inputs commitment, submitted inputs offset/length and potentially other commitments that
 need to be known by the requester in order for them to make the request that commits to those specific verifier 
 details in the extraData field of the OnChainProofRequest to make the request to the exact proof they need.
 
 A user wants to request a zkVM proof (e.g. risc0 zkVM) based on zkVM program A and zkVM inputs B, so they need a zkVM verifier
 contract deployed on Ethereum at a given address that can be committed to by the requester along with the commitments 
-to the function selector, public inputs commitment if needed, submitted public inputs offset/length, potentially other
+to the function selector, inputs commitment (if needed), submitted inputs offset/length, potentially other
 commitments that need to be known by the requester in order for them to make the request that commits to those specific verifier 
 details in the extraData field of the OnChainProofRequest to make the request to the exact proof they need.
 

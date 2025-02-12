@@ -1,10 +1,11 @@
 use async_compression::tokio::bufread::BrotliDecoder;
 use futures::{Stream, StreamExt};
+use taralli_primitives::systems::ProvingSystemId;
 use tokio::net::TcpStream;
 
 use std::pin::Pin;
 use taralli_primitives::common::types::Environment;
-use taralli_primitives::{systems::ProvingSystemParams, Request};
+use taralli_primitives::{intents::ComputeRequest, systems::ProvingSystemParams};
 use tokio::io::AsyncReadExt;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 use tungstenite::handshake::client::generate_key;
@@ -22,7 +23,8 @@ pub struct ProviderApi {
 }
 
 // type alias for SSE stream returned by the protocol server
-pub type RequestStream = Pin<Box<dyn Stream<Item = Result<Request<ProvingSystemParams>>> + Send>>;
+pub type RequestStream =
+    Pin<Box<dyn Stream<Item = Result<ComputeRequest<ProvingSystemParams>>> + Send>>;
 
 impl ProviderApi {
     pub fn new(config: ApiConfig) -> Self {
@@ -87,7 +89,7 @@ impl ProviderApi {
                         };
 
                     // Then deserialize the JSON from decompressed bytes
-                    match serde_json::from_slice::<Request<ProvingSystemParams>>(
+                    match serde_json::from_slice::<ComputeRequest<ProvingSystemParams>>(
                         &decompressed_bytes,
                     ) {
                         Ok(parsed) => Some(Ok(parsed)),
@@ -134,15 +136,25 @@ impl ProviderApi {
             ProviderError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
         })?;
 
-        let ws_url = url
-            .join("subscribe")
+
+        let system_ids =  [ProvingSystemId::Arkworks];
+        let query = system_ids
+        .iter()
+        .map(|id| id.as_str().to_string())
+        .collect::<Vec<_>>()
+        .join(",");
+    
+        let uri = format!("/subscribe?system_ids={}", query);
+
+            let ws_url = url
+            .join(&uri)
             .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?
             .to_string();
 
-        tracing::info!("Connecting to WebSocket: {ws_url}");
+        // tracing::info!("Connecting to WebSocket: {ws_url}");
 
         let request = tungstenite::http::Request::builder()
-            .uri(ws_url)
+            .uri(&ws_url)
             .header(
                 "Host",
                 url.host_str().ok_or_else(|| {
@@ -159,6 +171,7 @@ impl ProviderApi {
                 ProviderError::ServerSubscriptionError(format!("Request build error: {e}"))
             })?;
 
+        tracing::info!("Connecting to WebSocket: {ws_url}");
         let (ws_stream, _resp) = connect_async(request).await.map_err(|e| {
             ProviderError::ServerSubscriptionError(format!("WebSocket connect error: {e}"))
         })?;

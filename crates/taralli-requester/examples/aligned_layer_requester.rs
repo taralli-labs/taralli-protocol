@@ -14,8 +14,8 @@ use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::gnark::{GnarkConfig, GnarkProofParams};
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::systems::gnark::{GnarkConfig, GnarkMode, GnarkProofParams};
 use taralli_primitives::systems::ProvingSystemId;
 use taralli_requester::config::RequesterConfig;
 use taralli_requester::RequesterClient;
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     // decode proof input data
     let r1cs = std::fs::read(r1cs_data_path)?;
     let public_inputs: Value = serde_json::from_reader(public_inputs_reader)?;
-    let input = serde_json::from_reader(inputs_reader)?;
+    let inputs = serde_json::from_reader(inputs_reader)?;
 
     // on chain proof request data (aligned layer only for gnark proofs)
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
@@ -62,8 +62,8 @@ async fn main() -> Result<()> {
     let auction_length = 60u32; // 1 min
     let verifier_address = address!("58F280BeBE9B34c9939C3C39e0890C81f163B623");
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("5fe24f23");
-    let public_inputs_offset = U256::from(256);
-    let public_inputs_length = U256::from(64);
+    let inputs_offset = U256::from(256);
+    let inputs_length = U256::from(64);
     let is_sha_commitment = false;
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
@@ -105,10 +105,12 @@ async fn main() -> Result<()> {
 
     // craft proving system information json here
     let proof_info = serde_json::to_value(GnarkProofParams {
-        config: GnarkConfig::Groth16Bn254,
+        config: GnarkConfig {
+            mode: GnarkMode::Groth16Bn254,
+        },
         r1cs,
         public_inputs: public_inputs.clone(),
-        input,
+        inputs,
     })?;
 
     // load verification commitments
@@ -130,8 +132,8 @@ async fn main() -> Result<()> {
         verifier: verifier_address,
         selector: verify_function_selector,
         isShaCommitment: is_sha_commitment,
-        publicInputsOffset: public_inputs_offset,
-        publicInputsLength: public_inputs_length,
+        inputsOffset: inputs_offset,
+        inputsLength: inputs_length,
         hasPartialCommitmentResultCheck: has_partial_commitment_result_check,
         submittedPartialCommitmentResultOffset: submitted_partial_commitment_result_offset,
         submittedPartialCommitmentResultLength: submitted_partial_commitment_result_length,

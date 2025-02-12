@@ -4,7 +4,8 @@ use reqwest::{
 };
 use std::io::Write;
 use taralli_primitives::common::types::Environment;
-use taralli_primitives::{systems::ProvingSystemParams, Request};
+use taralli_primitives::intents::ComputeRequest;
+use taralli_primitives::systems::ProvingSystemParams;
 use url::Url;
 
 use crate::error::{RequesterError, Result};
@@ -48,7 +49,7 @@ impl RequesterApi {
     /// via the environment variables.
     /// Furthermore, we chose to instantiate a new compressor for each request
     /// if the need to submit multiple requests concurrently arises.
-    fn compress_request(&self, request: Request<ProvingSystemParams>) -> Result<Vec<u8>> {
+    fn compress_request(&self, request: ComputeRequest<ProvingSystemParams>) -> Result<Vec<u8>> {
         // We opt for some default values that may be reasonable for the general use case.
         let mut brotli_encoder = brotli::CompressorWriter::new(
             Vec::new(),
@@ -78,7 +79,7 @@ impl RequesterApi {
 
     pub async fn submit_request(
         &self,
-        request: Request<ProvingSystemParams>,
+        request: ComputeRequest<ProvingSystemParams>,
     ) -> Result<reqwest::Response> {
         let url = self
             .server_url

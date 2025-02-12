@@ -2,6 +2,9 @@ use alloy::primitives::Address;
 use serde::Deserialize;
 use std::fs;
 use std::str::FromStr;
+use taralli_primitives::validation::offer::OfferSpecificConfig;
+use taralli_primitives::validation::request::RequestSpecificConfig;
+use taralli_primitives::validation::{CommonValidationConfig, ValidationMetaConfig};
 use thiserror::Error;
 use tracing::Level;
 use url::Url;
@@ -9,15 +12,13 @@ use url::Url;
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub server_port: u16,
-    pub admin_port: Option<u16>,
     pub rpc_url: String,
     pub log_level: String,
     pub validation_timeout_seconds: u32,
-    pub minimum_allowed_proving_time: u32,
-    pub maximum_allowed_start_delay: u32,
-    pub maximum_allowed_stake: u128,
     pub market_address: Address,
-    pub proving_system_ids: Vec<String>,
+    pub common_validation_config: CommonValidationConfig,
+    pub request_validation_config: RequestSpecificConfig,
+    pub offer_validation_config: OfferSpecificConfig,
 }
 
 #[derive(Error, Debug)]
@@ -48,5 +49,13 @@ impl Config {
     pub fn log_level(&self) -> Result<Level, ConfigError> {
         Level::from_str(&self.log_level)
             .map_err(|_| ConfigError::LogLevelParseError(self.log_level.clone()))
+    }
+
+    pub fn validation_meta_config(&self) -> ValidationMetaConfig {
+        ValidationMetaConfig {
+            common: self.common_validation_config.clone(),
+            request: self.request_validation_config.clone(),
+            offer: self.offer_validation_config.clone(),
+        }
     }
 }

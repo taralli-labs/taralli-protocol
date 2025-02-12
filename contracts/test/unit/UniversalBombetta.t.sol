@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import "../BaseTest.sol";
 import "src/libraries/BombettaTypes.sol";
-import "src/libraries/BombettaErrors.sol";
 import "permit2/interfaces/ISignatureTransfer.sol";
 
 contract UniversalBombettaTest is BaseTest {
@@ -13,13 +12,13 @@ contract UniversalBombettaTest is BaseTest {
 
     function testUniversalBombettaProofRequest() public {
         /// Set up the proof request data
-        // Metadata.extraData
+        // extraData
         UniversalBombetta.VerifierDetails memory verifierDetails = UniversalBombetta.VerifierDetails({
             verifier: address(verifierG16),
             selector: verifierG16.verifyProof.selector,
             isShaCommitment: false,
-            publicInputsOffset: 256,
-            publicInputsLength: 32,
+            inputsOffset: 256,
+            inputsLength: 32,
             hasPartialCommitmentResultCheck: false,
             submittedPartialCommitmentResultOffset: 0,
             submittedPartialCommitmentResultLength: 0,
@@ -31,14 +30,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             market: address(universalBombetta),
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             minimumStake: 1 ether,
             startAuctionTimestamp: uint64(block.timestamp),
             endAuctionTimestamp: uint64(block.timestamp + 1000),
             provingTime: 1 days,
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: abi.encode(verifierDetails)
         });
 
@@ -50,7 +49,7 @@ contract UniversalBombettaTest is BaseTest {
 
         // Submit the bid as the prover (Bob)
         vm.startPrank(bob);
-        (uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
+        (, uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
         vm.stopPrank();
 
         // Assert the transfer of the eth stake and the erc20 token reward worked and are now in the bombetta
@@ -86,14 +85,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             provingTime: 1 days,
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 0,
             minRewardAmount: 0,
             market: address(universalBombetta),
             startAuctionTimestamp: uint64(block.timestamp + 1),
             minimumStake: 2,
             endAuctionTimestamp: uint64(block.timestamp + 1),
-            publicInputsCommitment: keccak256(abi.encode(1)),
+            inputsCommitment: keccak256(abi.encode(1)),
             extraData: bytes("")
         });
 
@@ -123,14 +122,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             provingTime: 1 days,
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             market: address(universalBombetta),
             startAuctionTimestamp: uint64(block.timestamp),
             minimumStake: 1 ether,
             endAuctionTimestamp: uint64(block.timestamp + 1000),
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: bytes("")
         });
 
@@ -155,8 +154,8 @@ contract UniversalBombettaTest is BaseTest {
             verifier: address(verifierG16),
             selector: verifierG16.verifyProof.selector,
             isShaCommitment: false,
-            publicInputsOffset: 256,
-            publicInputsLength: 32,
+            inputsOffset: 256,
+            inputsLength: 32,
             hasPartialCommitmentResultCheck: false,
             submittedPartialCommitmentResultOffset: 0,
             submittedPartialCommitmentResultLength: 0,
@@ -168,14 +167,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             market: address(universalBombetta),
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             minimumStake: 1 ether,
             startAuctionTimestamp: uint64(block.timestamp),
             endAuctionTimestamp: uint64(block.timestamp + 1000),
             provingTime: 1 days,
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: abi.encode(verifierDetails)
         });
 
@@ -185,7 +184,7 @@ contract UniversalBombettaTest is BaseTest {
 
         // Submit the bid as the prover (Bob)
         vm.startPrank(bob);
-        (uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
+        (, uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
         vm.stopPrank();
 
         // Assert the transfer of the eth stake and the erc20 token reward worked and are now in the bombetta
@@ -221,14 +220,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             provingTime: 1 days,
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             market: address(universalBombetta),
             startAuctionTimestamp: uint64(block.timestamp),
             minimumStake: 1 ether,
             endAuctionTimestamp: uint64(block.timestamp + 1000),
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: bytes("")
         });
 
@@ -279,14 +278,14 @@ contract UniversalBombettaTest is BaseTest {
             signer: alice,
             provingTime: 1 days,
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             market: address(universalBombetta),
             startAuctionTimestamp: uint64(block.timestamp),
             minimumStake: 1 ether,
             endAuctionTimestamp: uint64(block.timestamp + 1000),
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: bytes("")
         });
 
@@ -330,18 +329,18 @@ contract UniversalBombettaTest is BaseTest {
     function testComputeRequestId() public {
         // make request
         ProofRequest memory request = ProofRequest({
-            signer: address(3),
-            market: address(3),
+            signer: alice,
+            provingTime: 1 days,
             nonce: 0,
-            token: address(3),
-            maxRewardAmount: 0,
+            rewardToken: address(testToken),
+            maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
-            minimumStake: 0,
-            startAuctionTimestamp: 0,
-            endAuctionTimestamp: 0,
-            provingTime: 0,
-            publicInputsCommitment: bytes32(0),
-            extraData: ""
+            market: address(universalBombetta),
+            startAuctionTimestamp: uint64(block.timestamp),
+            minimumStake: 1 ether,
+            endAuctionTimestamp: uint64(block.timestamp + 1000),
+            inputsCommitment: keccak256(abi.encode(33)),
+            extraData: bytes("")
         });
 
         //bytes memory sig = "";
@@ -363,18 +362,18 @@ contract UniversalBombettaTest is BaseTest {
     function testComputeRequestWitness() public {
         // make request
         ProofRequest memory request = ProofRequest({
-            signer: address(3),
-            market: address(3),
+            signer: alice,
+            provingTime: 1 days,
             nonce: 0,
-            token: address(3),
-            maxRewardAmount: 0,
+            rewardToken: address(testToken),
+            maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
-            minimumStake: 0,
-            startAuctionTimestamp: 0,
-            endAuctionTimestamp: 0,
-            provingTime: 0,
-            publicInputsCommitment: bytes32(0),
-            extraData: ""
+            market: address(universalBombetta),
+            startAuctionTimestamp: uint64(block.timestamp),
+            minimumStake: 1 ether,
+            endAuctionTimestamp: uint64(block.timestamp + 1000),
+            inputsCommitment: keccak256(abi.encode(33)),
+            extraData: bytes("")
         });
 
         bytes32 witness = universalBombetta.computeWitnessHash(request);
@@ -384,18 +383,18 @@ contract UniversalBombettaTest is BaseTest {
     function testComputePermitDigest() public {
         // make request
         ProofRequest memory request = ProofRequest({
-            signer: address(3),
-            market: address(3),
+            signer: alice,
+            provingTime: 1 days,
             nonce: 0,
-            token: address(3),
-            maxRewardAmount: 0,
+            rewardToken: address(testToken),
+            maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
-            minimumStake: 0,
-            startAuctionTimestamp: 0,
-            endAuctionTimestamp: 0,
-            provingTime: 0,
-            publicInputsCommitment: bytes32(0),
-            extraData: ""
+            market: address(universalBombetta),
+            startAuctionTimestamp: uint64(block.timestamp),
+            minimumStake: 1 ether,
+            endAuctionTimestamp: uint64(block.timestamp + 1000),
+            inputsCommitment: keccak256(abi.encode(33)),
+            extraData: bytes("")
         });
 
         // mock witness
@@ -404,7 +403,7 @@ contract UniversalBombettaTest is BaseTest {
 
         // build permit
         ISignatureTransfer.TokenPermissions memory tokenPermissions =
-            ISignatureTransfer.TokenPermissions({token: request.token, amount: request.maxRewardAmount});
+            ISignatureTransfer.TokenPermissions({token: request.rewardToken, amount: request.maxRewardAmount});
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
             permitted: tokenPermissions,
             nonce: request.nonce,

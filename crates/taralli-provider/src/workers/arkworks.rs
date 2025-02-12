@@ -19,7 +19,7 @@ use taralli_primitives::{
     },
     systems::ProvingSystemParams,
 };
-use taralli_primitives::{systems::arkworks::ArkworksProofParams, Request};
+use taralli_primitives::{intents::ComputeRequest, systems::arkworks::ArkworksProofParams};
 use tempfile::NamedTempFile;
 use wasmer::Store;
 
@@ -143,7 +143,7 @@ impl ArkworksWorker {
             .map_err(|e| ProviderError::WorkerExecutionFailed(e.to_string()))?;
 
         // Convert JSON inputs to the format expected by WitnessCalculator
-        let inputs: HashMap<String, Vec<BigInt>> = if let Value::Object(map) = &params.input {
+        let inputs: HashMap<String, Vec<BigInt>> = if let Value::Object(map) = &params.inputs {
             map.iter()
                 .map(|(key, value)| {
                     let values = match value {
@@ -209,10 +209,10 @@ impl ArkworksWorker {
 
 #[async_trait]
 impl ComputeWorker for ArkworksWorker {
-    async fn execute(&self, request: &Request<ProvingSystemParams>) -> Result<WorkResult> {
+    async fn execute(&self, request: &ComputeRequest<ProvingSystemParams>) -> Result<WorkResult> {
         tracing::info!("arkworks worker: execution started");
 
-        let params = match &request.proving_system_information {
+        let params = match &request.proving_system {
             ProvingSystemParams::Arkworks(params) => params.clone(),
             _ => {
                 return Err(ProviderError::WorkerExecutionFailed(

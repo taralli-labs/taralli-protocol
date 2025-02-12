@@ -1,9 +1,10 @@
 use std::marker::PhantomData;
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::validation::validate_request;
+use taralli_primitives::validation::Validate;
 use taralli_primitives::{
     alloy::{network::Network, providers::Provider, transports::Transport},
-    Request,
+    intents::ComputeRequest,
 };
 
 use crate::{config::AnalyzerConfig, error::Result};
@@ -34,18 +35,14 @@ where
 
     pub fn analyze(
         &self,
-        request: &Request<ProvingSystemParams>,
+        request: &ComputeRequest<ProvingSystemParams>,
         latest_timestamp: u64,
     ) -> Result<()> {
         // general correctness checks
-        validate_request(
-            request,
+        request.validate(
             latest_timestamp,
-            &self.config.market_address,
-            self.config.validation.minimum_allowed_proving_time,
-            self.config.validation.maximum_start_delay,
-            self.config.validation.maximum_allowed_stake,
-            &self.config.supported_proving_systems,
+            &UNIVERSAL_BOMBETTA_ADDRESS,
+            &self.config.validation_config,
         )?;
 
         //// TODO: economic checks

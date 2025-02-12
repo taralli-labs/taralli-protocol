@@ -5,29 +5,13 @@ use taralli_primitives::alloy::{
     transports::Transport,
 };
 use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::validation::request::RequestValidationConfig;
 use url::Url;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RewardTokenConfig {
     pub address: Address,
     pub decimal: u8,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ValidationConfig {
-    pub minimum_allowed_proving_time: u32,
-    pub maximum_start_delay: u32,
-    pub maximum_allowed_stake: u128,
-}
-
-impl Default for ValidationConfig {
-    fn default() -> Self {
-        Self {
-            minimum_allowed_proving_time: 30,              // 30 secs
-            maximum_start_delay: 300,                      // 5 min
-            maximum_allowed_stake: 1000000000000000000000, // 1000 ether
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,7 +26,7 @@ where
     pub signer: S,
     pub market_address: Address,
     pub reward_token_config: RewardTokenConfig,
-    pub validation: ValidationConfig,
+    pub validation_config: RequestValidationConfig,
     pub proving_system_id: ProvingSystemId,
     pub taralli_server_url: Url,
     phantom_data: PhantomData<(T, N)>,
@@ -74,14 +58,14 @@ where
             taralli_server_url,
             market_address,
             reward_token_config,
-            validation: ValidationConfig::default(),
+            validation_config: RequestValidationConfig::default(),
             proving_system_id,
             phantom_data: PhantomData,
         }
     }
 
-    pub fn with_validation(mut self, validation: ValidationConfig) -> Self {
-        self.validation = validation;
+    pub fn with_validation_config(mut self, validation_config: RequestValidationConfig) -> Self {
+        self.validation_config = validation_config;
         self
     }
 }

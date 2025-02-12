@@ -89,8 +89,8 @@ contract BombettaActor is Test {
             verifier: address(verifierG16),
             selector: verifierG16.verifyProof.selector,
             isShaCommitment: false,
-            publicInputsOffset: 256,
-            publicInputsLength: 32,
+            inputsOffset: 256,
+            inputsLength: 32,
             hasPartialCommitmentResultCheck: false,
             submittedPartialCommitmentResultOffset: 0,
             submittedPartialCommitmentResultLength: 0,
@@ -99,16 +99,16 @@ contract BombettaActor is Test {
 
         ProofRequest memory request = ProofRequest({
             signer: alice,
-            provingTime: provingTime,
+            market: address(universalBombetta),
             nonce: currentNonce,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: tokenAmount,
             minRewardAmount: minReward,
-            market: address(universalBombetta),
-            startAuctionTimestamp: startAuctionTimestamp,
             minimumStake: minimumStake,
+            startAuctionTimestamp: startAuctionTimestamp,
             endAuctionTimestamp: endAuctionTimestamp,
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            provingTime: provingTime,
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: abi.encode(verifierDetails)
         });
 
@@ -408,8 +408,8 @@ contract BombettaActor is Test {
             verifier: address(verifierG16),
             selector: verifierG16.verifyProof.selector,
             isShaCommitment: false,
-            publicInputsOffset: 256,
-            publicInputsLength: 32,
+            inputsOffset: 256,
+            inputsLength: 32,
             hasPartialCommitmentResultCheck: false,
             submittedPartialCommitmentResultOffset: 0,
             submittedPartialCommitmentResultLength: 0,
@@ -421,14 +421,14 @@ contract BombettaActor is Test {
             signer: alice,
             market: address(universalBombetta),
             nonce: 1,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             minimumStake: 1 ether,
             startAuctionTimestamp: uint64(block.timestamp),
             endAuctionTimestamp: uint64(block.timestamp + 1000),
             provingTime: 1 days,
-            publicInputsCommitment: keccak256(abi.encode(33)),
+            inputsCommitment: keccak256(abi.encode(33)),
             extraData: abi.encode(verifierDetails)
         });
 

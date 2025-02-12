@@ -4,14 +4,25 @@ use alloy::{providers::Provider, transports::Transport};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        Query, State,
     },
     response::IntoResponse,
 };
-use futures::{stream::StreamExt, SinkExt};
+use futures::{
+    stream::{select_all, StreamExt},
+    SinkExt,
+};
+use serde::Deserialize;
+use taralli_primitives::systems::ProvingSystemId;
 use tokio_stream::wrappers::BroadcastStream;
 
-use crate::app_state::AppState;
+use crate::error::{Result, ServerError};
+use crate::state::request::RequestState;
+
+#[derive(Debug, Deserialize)]
+pub struct SubscribeQuery {
+    pub system_ids: String,
+}
 
 /// WebSocket subscription handler that upgrades the connection to a WebSocket session.
 ///
@@ -25,14 +36,32 @@ use crate::app_state::AppState;
 ///
 /// # Returns
 /// An `IntoResponse` that upgrades the HTTP connection to a WebSocket session, which is needed since we expose the WebSocket endpoint as an HTTP route.
-pub async fn websocket_subscribe_handler<
-    T: Transport + Clone + 'static,
-    P: Provider<T> + Clone + 'static,
->(
+pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + Clone + 'static>(
     ws: WebSocketUpgrade,
-    State(app_state): State<AppState<T, P>>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state)))
+    Query(params): Query<SubscribeQuery>,
+    State(app_state): State<RequestState<T, P>>,
+) -> Result<impl IntoResponse> {
+    tracing::info!("subscribe called");
+    // parse submitted IDs
+    let ids = params.system_ids.split(',').collect::<Vec<&str>>();
+    let mut invalid_ids = Vec::new();
+    let mut valid_ids = Vec::new();
+    for id_str in ids {
+        match ProvingSystemId::try_from(id_str) {
+            Ok(id) => valid_ids.push(id),
+            Err(_) => invalid_ids.push(id_str),
+        }
+    }
+
+    // If any invalid IDs were found, return error with details
+    if !invalid_ids.is_empty() {
+        return Err(ServerError::SystemIdError(format!(
+            "Invalid proving system IDs: {}",
+            invalid_ids.join(", ")
+        )));
+    }
+
+    Ok(ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state), valid_ids)))
 }
 
 /// Handles an active WebSocket session, streaming messages from the subscription system.
@@ -46,26 +75,38 @@ pub async fn websocket_subscribe_handler<
 /// - `app_state`: Shared application state, containing the subscription manager.
 async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
-    app_state: Arc<AppState<T, P>>,
+    app_state: Arc<RequestState<T, P>>,
+    system_ids: Vec<ProvingSystemId>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
-    let subscription = app_state.subscription_manager().add_subscription();
-    tracing::info!(
-        "Subscription added, active subscriptions: {}",
-        app_state.subscription_manager().active_subscriptions()
-    );
+    // let subscription = app_state.subscription_manager(). add_subscription();
+    tracing::info!("Valid IDs submitted, creating ws stream");
+
+    let receivers = app_state
+        .subscription_manager()
+        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .await;
 
     // Create a broadcast stream from the subscription receiver.
-    let mut broadcast_stream = BroadcastStream::new(subscription);
+    // let mut broadcast_stream = BroadcastStream::new(subscription);
+
+    // Convert receivers to SSE streams
+    let streams = receivers.into_iter().map(|rx| {
+        BroadcastStream::new(rx).map(|result| result.map_err(|e| axum::Error::new(e.to_string())))
+    });
+
+    let mut meta_stream = select_all(streams);
 
     // Split the WebSocket into sender/receiver so we can handle them separately
     let (mut ws_sender, mut ws_receiver) = socket.split();
+
+    tracing::info!("stream created, initiating websocket loop");
 
     // Use a `tokio::select!` loop to handle both reading and writing since we're in an async context.
     loop {
         tokio::select! {
             // Outbound: messages from broadcast_stream => client
-            maybe_broadcast = broadcast_stream.next() => {
+            maybe_broadcast = meta_stream.next() => {
                 match maybe_broadcast {
                     Some(Ok(bytes)) => {
                         // Try sending a binary message to the client
@@ -88,7 +129,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
             // Inbound: messages from client => (potentially) the server
             // There's not a lot we want to do with incoming messages in this case, despite the usage of websockets
             // this is (mostly) a one-way communication channel.
-            // We need to handle the disconnect bit otherwise we'll have dangling connections.
+            // We need to handle the disconnect, otherwise we'll have dangling connections.
             maybe_incoming = ws_receiver.next() => {
                 match maybe_incoming {
                     Some(Ok(Message::Close(_))) => {

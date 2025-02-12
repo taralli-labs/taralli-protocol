@@ -1,13 +1,14 @@
 use crate::config::BidderConfig;
 use crate::error::{ProviderError, Result};
 use std::marker::PhantomData;
-use taralli_primitives::abi::universal_bombetta::UniversalBombetta::UniversalBombettaInstance;
+use taralli_primitives::abi::universal_bombetta::UniversalBombetta::{
+    ProofRequest, UniversalBombettaInstance,
+};
 use taralli_primitives::alloy::network::Network;
 use taralli_primitives::alloy::primitives::{Address, Bytes, PrimitiveSignature, U256};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;
 use taralli_primitives::utils::compute_request_id;
-use taralli_primitives::OnChainProofRequest;
 use tokio::time::{sleep, Duration};
 
 #[derive(Clone)]
@@ -33,7 +34,7 @@ where
 
     pub async fn submit_bid(
         &self,
-        onchain_proof_request: OnChainProofRequest,
+        proof_request: ProofRequest,
         signature: PrimitiveSignature,
         target_amount: U256,
         current_block_ts: u64,
@@ -42,14 +43,14 @@ where
             UniversalBombettaInstance::new(self.config.market_address, self.rpc_provider.clone());
 
         // check auction has started
-        if current_block_ts < onchain_proof_request.startAuctionTimestamp {
+        if current_block_ts < proof_request.startAuctionTimestamp {
             return Err(ProviderError::TransactionSetupError(
                 "Auction has not started based on current block ts".into(),
             ));
         }
 
         // check that the deadline is not passed
-        if current_block_ts > onchain_proof_request.endAuctionTimestamp {
+        if current_block_ts > proof_request.endAuctionTimestamp {
             return Err(ProviderError::TransactionSetupError(
                 "Auction has expired".into(),
             ));
@@ -61,20 +62,20 @@ where
         // reward tokens)
         let current_estimated_amount = Self::calculate_current_reward(
             current_block_ts,
-            onchain_proof_request.startAuctionTimestamp,
-            onchain_proof_request.endAuctionTimestamp,
-            onchain_proof_request.minRewardAmount,
-            onchain_proof_request.maxRewardAmount,
+            proof_request.startAuctionTimestamp,
+            proof_request.endAuctionTimestamp,
+            proof_request.minRewardAmount,
+            proof_request.maxRewardAmount,
         );
 
         if current_estimated_amount < target_amount {
             // wait ideal number of seconds to get +/- the target_amount, then send bid
             let target_timestamp = Self::calculate_target_timestamp(
                 target_amount,
-                onchain_proof_request.startAuctionTimestamp,
-                onchain_proof_request.endAuctionTimestamp,
-                onchain_proof_request.minRewardAmount,
-                onchain_proof_request.maxRewardAmount,
+                proof_request.startAuctionTimestamp,
+                proof_request.endAuctionTimestamp,
+                proof_request.minRewardAmount,
+                proof_request.maxRewardAmount,
             )?;
             let wait_time = target_timestamp - current_block_ts;
             // Wait for `wait_time` seconds
@@ -84,10 +85,10 @@ where
         tracing::info!("bidder: calculate target ts for target amount");
 
         // check the proof request does not already have a bid
-        let request_id = compute_request_id(&onchain_proof_request, signature);
+        let request_id = compute_request_id(&proof_request, signature);
 
         let active_job_return = market_contract
-            .activeJobData(request_id)
+            .activeProofRequestData(request_id)
             .call()
             .await
             .map_err(|e| ProviderError::TransactionSetupError(e.to_string()))?;
@@ -105,11 +106,8 @@ where
         );
 
         let receipt = market_contract
-            .bid(
-                onchain_proof_request.clone(),
-                Bytes::from(signature.as_bytes()),
-            )
-            .value(U256::from(onchain_proof_request.minimumStake))
+            .bid(proof_request.clone(), Bytes::from(signature.as_bytes()))
+            .value(U256::from(proof_request.minimumStake))
             .send()
             .await
             .map_err(|e| ProviderError::TransactionError(e.to_string()))?
@@ -134,7 +132,6 @@ where
         // Calculate the increased amount
         let increase_amount = increase_factor * (max_reward - min_reward) / U256::from(1e18);
         // calculate current reward amount
-
         min_reward + increase_amount
     }
 

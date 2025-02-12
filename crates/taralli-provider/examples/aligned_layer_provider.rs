@@ -5,7 +5,8 @@ use color_eyre::Result;
 use dotenv::dotenv;
 use std::env;
 use std::str::FromStr;
-use taralli_primitives::market::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_provider::config::ProviderConfig;
 use taralli_provider::workers::aligned_layer::AlignedLayerWorker;
 use taralli_provider::ProviderClient;
@@ -45,7 +46,12 @@ async fn main() -> Result<()> {
     let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
 
     // build provider client config
-    let config = ProviderConfig::new(rpc_provider, market_address, server_url);
+    let config = ProviderConfig::new(
+        rpc_provider,
+        market_address,
+        server_url,
+        RequestValidationConfig::default(),
+    );
 
     // instantiate provider client
     let provider_client = ProviderClient::builder(config)

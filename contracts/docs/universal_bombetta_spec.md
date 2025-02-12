@@ -9,57 +9,46 @@ For generic bombetta details reference [bombetta_spec](./bombetta_spec.md).
 ## Types
 
 ```solidity
-/// @notice Represents active job data of a `ProofRequest` that has been bid upon for resolution.
-/// @custom:field requester address of the requester.
-/// @custom:field prover address of the prove that bid on the proof request.
-/// @custom:field resolutionDeadline timestamp by which the request must be resolved by the prover to avoid
-///               slashing.
-/// @custom:field token address of the erc20 token that will be given as a reward to the prover upon successful
-///               resolution.
-/// @custom:field requestReward amount of the reward token that will be given upon resolution 
-///               of the proof request.
-/// @custom:field proverStake amount of eth that is staked as collateral for the proof request.
-/// @custom:field publicInputsCommitment hash of public inputs the requester committed to in their 
-///               proof request.
-/// @custom:field verifierDetails data specific to verification.
-struct ActiveJob {
+struct ActiveProofRequest {
+    // address of the requester requesting the proof.
     address requester;
-    address prover;
+    // address of the proof provider obligated to fufill the request.
+    address provider;
+    // deadline timestamp the proof provider must resolve the request by.
     uint256 resolutionDeadline;
-    address token;
-    uint256 requestReward;
-    uint256 proverStake;
-    bytes32 publicInputsCommitment;
+    // reward token.
+    address rewardToken;
+    // request reward token amount.
+    uint256 rewardAmount;
+    // eth amount the proof provider has staked.
+    uint256 providerStake;
+    // hash of all knowledge the proof requester commits to. (e.g. public inputs of requested proof)
+    bytes32 inputsCommitment;
+    // data specific to verification.
     bytes verifierDetails;
 }
 
-
-/// @notice Represents details for verification of a given proof request.
-/// @custom:field verifier address of verifier contract.
-/// @custom:field selector function selector of verifying function in the verifier contract.
-/// @custom:field isShaCommitment boolean to chose between keccak256 or sha256 for checking commitments 
-///               true = sha256, false = keccak256
-/// @custom:field publicInputsOffset offset of public inputs field within the proof submission
-///               data.
-/// @custom:field publicInputsLength length of public inputs field.
-/// @custom:field hasPartialCommitmentResultCheck boolean to chose whether or not to perform a partial commitment
-///               result check.
-/// @custom:field submittedPartialCommitmentResultOffset offset of the partial commitment final result field within the 
-///               proof submission data (opaqueSubmission) that will be used to compare with the hash produced by ...
-///               keccak256(predeterminedPartialCommitment + submittedPartialCommitment)
-/// @custom:field submittedPartialCommitmentResultLength length of the partial commitment final result field.
-/// @custom:field predeterminedPartialCommitment commitment hash that makes up the requester's portion of the final 
-///               partial commitment result field which is hashed with the proof provider's portion to produce the hash
-///               that will be compared to the submitted partial commitment result during resolution.
 struct VerifierDetails {
+    // address of the verifier contract required by the requester
     address verifier;
+    // fn selector of the verifying function required by the requester
     bytes4 selector;
+    // bool to chose between keccak256 or sha256 for commitments, true = sha256, false = keccak256
     bool isShaCommitment;
-    uint256 publicInputsOffset;
-    uint256 publicInputsLength;
+    // offset of inputs field within the proof submission data (opaqueSubmission)
+    uint256 inputsOffset;
+    // length of inputs field within the proof submission data (opaqueSubmission)
+    uint256 inputsLength;
+    // bool representing if a proof request requires a partial commitment result check in order to be resolved
     bool hasPartialCommitmentResultCheck;
+    // offset & length of the partial commitment result field within the proof submission data (opaqueSubmission)
+    // that will be used to compare with the hash produced by ...
+    // keccak256(predeterminedPartialCommitment + submittedPartialCommitment)
     uint256 submittedPartialCommitmentResultOffset;
     uint256 submittedPartialCommitmentResultLength;
+    // predetermined partial commitment to the submitted final commitment result of the proof submission data.
+    // The proof requester commits to this hash within their signature which is used to check equivalency when
+    // recomputing the partial commitment result that is contained inside the proof submission data (opaqueSubmission)
     bytes32 predeterminedPartialCommitment;
 }
 ```
@@ -68,15 +57,13 @@ These data structures are specific to the universal bombetta and describe what d
 requests that commit to this bombetta market. The main thing of note is the verification logic, as there is no 
 specific function signature or verifier contract enshrined in the contract which means the requester must commit to all
 the specifics the provider must adhere to when submitting a proof in the resolution process. Namely, the verifier details, 
-which allow the market to verify the submitted public inputs/commitments (if needed) match the ones commited to by the requester 
+which allow the market to verify the submitted inputs/commitments (if needed) match the ones commited to by the requester 
 and then make the call to the verification contract's verifying function using the opaqueSubmission data to assert proof 
 validity before the eth and token transfer logic is determined (reward or slash).
 
 ## Constants & Storage
 
 ```solidity
-
-
 // Canonical Permit2 contract
 IPermit2 public immutable PERMIT2;
 // permit2 permitWitnessTransferFrom() type hashes
@@ -92,35 +79,13 @@ bytes public constant PROOF_REQUEST_WITNESS_TYPE =
     "ProofRequest(address signer,address market,uint256 nonce,address token,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 publicInputsCommitment,bytes extraData)";
 bytes32 public constant PROOF_REQUEST_WITNESS_TYPE_HASH = keccak256(PROOF_REQUEST_WITNESS_TYPE);
 
-// mapping to active job data
-// requestId -> ActiveJob
-mapping(bytes32 => ActiveJob) public activeJobData;
+/// @notice mapping to active proof request data
+// requestId -> ActiveProofRequest
+mapping(bytes32 => ActiveProofRequest) public activeProofRequestData;
 ```
 
-The universal bombetta market uses permit2 signatures that include a full witness that commits to the ProofRequest
-itself...these fields below
-
-```solidity
-struct ProofRequest {
-    // general
-    address signer;
-    address market;
-    uint256 nonce;
-    address token;
-    // reward
-    uint256 maxRewardAmount;
-    uint256 minRewardAmount;
-    // stake requirements
-    uint128 minimumStake;
-    // time constraints
-    uint64 startAuctionTimestamp;
-    uint64 endAuctionTimestamp;
-    uint32 provingTime;
-    // verification commitments
-    bytes32 publicInputsCommitment;
-    bytes extraData;
-}
-```
+The universal bombetta market uses permit2 signatures that include a full witness that commits to the Bombetta.ProofRequest
+itself...
 
 ## Permit Signature
 
@@ -137,14 +102,14 @@ function computeWitnessHash(ProofRequest memory proofRequestWitness) public pure
             proofRequestWitness.signer,
             proofRequestWitness.market,
             proofRequestWitness.nonce,
-            proofRequestWitness.token,
+            proofRequestWitness.rewardToken,
             proofRequestWitness.maxRewardAmount,
             proofRequestWitness.minRewardAmount,
             proofRequestWitness.minimumStake,
             proofRequestWitness.startAuctionTimestamp,
             proofRequestWitness.endAuctionTimestamp,
             proofRequestWitness.provingTime,
-            proofRequestWitness.publicInputsCommitment,
+            proofRequestWitness.inputsCommitment,
             keccak256(proofRequestWitness.extraData)
         )
     );
@@ -169,16 +134,6 @@ function computePermitDigest(ISignatureTransfer.PermitTransferFrom memory permit
 function _hashTypedData(bytes32 domainSeparator, bytes32 dataHash) internal pure returns (bytes32) {
     return keccak256(abi.encodePacked("\x19\x01", domainSeparator, dataHash));
 }
-
-/// @notice permit2 trasnfer from call
-PERMIT2.permitWitnessTransferFrom(
-    permit,
-    ISignatureTransfer.SignatureTransferDetails({to: address(this), requestedAmount: reward}),
-    request.signer,
-    witness,
-    FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB,
-    signature
-);
 ```
 
 The witness data is added into the witness field of the permitWitnessTransferFrom() call based on the Permit 2 
@@ -186,43 +141,70 @@ specification. This means the permit transfer signature which contains commitmen
 able to be used to make the token transfer to the contract for a potential reward if the input data of the msg.sender
 calling the bid function is valid relative to the witness hash expected for a given signer.
 
+## Request IDs
+
+Once a proof request has been bid upon a unique ID is generated for it and stored for use later during the resolution phase. The ID is
+generated using the following logic...
+
+```solidity
+/// @dev hashes the proof request and signature for use as the request ID in mapping `activeJobData`
+/// request ID = keccak256(request + signature)
+function computeRequestId(ProofRequest calldata request, bytes calldata signature) public pure returns (bytes32) {
+    return keccak256(
+        abi.encode(
+            request.market,
+            request.nonce,
+            request.rewardToken,
+            request.maxRewardAmount,
+            request.minRewardAmount,
+            request.minimumStake,
+            request.startAuctionTimestamp,
+            request.endAuctionTimestamp,
+            request.provingTime,
+            request.inputsCommitment,
+            keccak256(abi.encode(request.extraData)),
+            keccak256(abi.encode(signature))
+        )
+    );
+}
+```
+
 ## Bid Function
 
 High level logic
 
-1. check the submitted request is valid before verifying signature (e.g. timestamps are correct, request does not have an existing bid).
-2. ecrecover the signer of the submitted signature to validate the signature and then build the permitWitnessTransferFrom() call inputs including the witness hash.
-3. calculate the token reward afforded to the bidder based on the timestamp the bid was submitted at.
-4. transfer the erc20 token reward to the market contract using permit2 along with the eth stake sent in by the caller of bid()
-5. store active job data within the activeJobData mapping for future resolution of this request.
+1. check the submitted request is valid before permit2 call (e.g. timestamps are correct, request does not have an existing bid).
+2. calculate the token reward afforded to the bidder based on the timestamp the bid was submitted at.
+3. validate signature & transfer the erc20 token reward to the market contract using permit2, along with the eth stake sent in by the caller of bid()
+5. store active proof request data within the activeProofRequestData mapping for future resolution of this request.
 
 ## Resolve Function
 
 High level logic
 
-1. check the submitted request has an active job associated to it so it is confirmed to have been bid upon before being resolved.
-2. check timestamp of submission relative to active job deadline (if the timestamp is before the proof submission deadline, check the submitted proof, if not then slash the prover who bid on the request giving the tokens & eth to the requester).
-3. check the proof submitted, if valid then the provider who bid upon the request is rewarded the erc20 tokens and receives their eth stake back, if it is invalid they get slashed and the tokens & eth are sent to the requester.
+1. check the submitted request has an active request ID associated to it so it is confirmed to have been bid upon before being resolved.
+2. check the timestamp of proof submission relative to active proof request resolution deadline (if the timestamp is before the proof submission deadline, check the submitted proof, if not then slash the prover who bid on the request giving the tokens & eth to the requester).
+3. check the submitted proof, if valid then the provider who bid upon the request is rewarded the erc20 tokens and receives their eth stake back, if it is invalid they get slashed and the tokens & eth are sent to the requester.
 
 ## Checking Proof Submission
 
 Here is the implementation detail of how the universal bombetta contract checks the validity of submitted proofs in relation to a request.
 This function is designed to universally check across many combinations of onchain "verifier" APIs wether it be a Groth, Plonk, other zk system
-or simply a call to perform a simple merkle inclusion proof on an external contract. It is up to the requester making the signature what methodology
-they trust to suffciently verify that the computation request they made was in fact verified to be done correctly based on the outcome of the resolve 
+or simply a call to perform a merkle inclusion proof on an external contract. It is up to the requester making the signature what methodology
+they trust to suffciently verify that the proof request they made was in fact verified to be done correctly based on the outcome of the resolve 
 function. Hence the name Universal Bombetta
 
 ```solidity
 /// @dev check the correctness of the submitted proof during execution of resolve()
 function _checkProofSubmission(
-    bytes32 publicInputsCommitment,
+    bytes32 inputsCommitment,
     bytes memory verifierDetails,
     bytes calldata opaqueSubmission,
     bytes32 partialCommitment
 ) internal returns (bool) {
     VerifierDetails memory vd = abi.decode(verifierDetails, (VerifierDetails));
-    // check public inputs if needed
-    if (vd.publicInputsLength > 0) {
+    // check inputs if needed
+    if (vd.inputsLength > 0) {
         // check partial commitment + outside hash from resolver matches final result found in opaqueSubmission data if needed
         if (vd.hasPartialCommitmentResultCheck) {
             // extract the submitted final result field from opaqueSubmission data
@@ -252,23 +234,47 @@ function _checkProofSubmission(
                 }
             }
         }
-        // extract submitted public inputs field within opaqueSubmission data
-        if (vd.publicInputsOffset + vd.publicInputsLength > opaqueSubmission.length) {
-            revert InvalidPublicInputsCommitmentField();
+        // extract submitted inputs field within opaqueSubmission data
+        if (vd.inputsOffset + vd.inputsLength > opaqueSubmission.length) {
+            revert InvalidInputsCommitmentField();
         }
-        bytes memory submittedPublicInputs =
-            opaqueSubmission[vd.publicInputsOffset:vd.publicInputsOffset + vd.publicInputsLength];
+        bytes memory submittedInputs = opaqueSubmission[vd.inputsOffset:vd.inputsOffset + vd.inputsLength];
         // Check submitted vs expected public input(s) commitments
         if (vd.isShaCommitment) {
-            if (publicInputsCommitment != sha256(submittedPublicInputs)) {
+            if (inputsCommitment != sha256(submittedInputs)) {
                 return false;
             }
         } else {
-            if (publicInputsCommitment != keccak256(submittedPublicInputs)) {
+            if (inputsCommitment != keccak256(submittedInputs)) {
                 return false;
             }
         }
     }
     return _callVerifier(vd.verifier, vd.selector, opaqueSubmission);
+}
+```
+
+The last step of resolution is to call the verifying function using the opaqueSubmission data as the call's calldata like below.
+If th result from the call is a success then the submission is considered valid allowing the contract to reward the provider for
+resolving the request correctly.
+
+```solidity
+/// @dev Perform the static call to the verifier and return the result of the call
+function _callVerifier(address verifier, bytes4 selector, bytes calldata opaqueSubmission)
+    internal
+    returns (bool)
+{
+    bool success;
+    assembly {
+        let ptr := mload(0x40)
+        // Store the function selector
+        mstore(ptr, selector)
+        // Copy the opaqueSubmission data right after the function selector
+        calldatacopy(add(ptr, 4), opaqueSubmission.offset, opaqueSubmission.length)
+        let returndata_size := 32
+        let returndata := add(ptr, add(opaqueSubmission.length, 4))
+        success := call(gas(), verifier, 0, ptr, add(opaqueSubmission.length, 4), returndata, returndata_size)
+    }
+    return success;
 }
 ```

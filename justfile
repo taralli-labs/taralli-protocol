@@ -23,9 +23,36 @@ mock_deploy_contracts:
 deploy_contracts:
     cd contracts/ && forge script Deploy --broadcast
 
+# Start the local development database
+start-db:
+    cd crates/taralli-server && docker compose -f docker-compose.pg.yml up -d
+    # Wait for DB to be ready
+    sleep 2
+    @echo "Database URL: postgres://taralli@localhost:5432/taralli-db"
+
+# Run database migrations
+migrate-db:
+    export DATABASE_URL="postgres://taralli@localhost:5432/taralli-db" && \
+    sqlx migrate run --source ./sql/migrations
+
+# Prepare SQLx
+prepare-db: migrate-db
+    cargo sqlx prepare --workspace
+
+# Stop the local development database
+stop-db:
+    cd crates/taralli-server && docker compose -f docker-compose.pg.yml down
+
+# Clean everything and rebuild
+clean-db: stop-db
+    rm -f .sqlx/*
+
 # Server commands
 start_server:
     cargo run --bin server
+
+build-server: start-db migrate-db prepare-db
+    cargo build --bin server
 
 # Fixes the formatting of the workspace
 fmt-fix:

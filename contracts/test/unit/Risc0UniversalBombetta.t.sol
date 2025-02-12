@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 import "../BaseTest.sol";
 import "src/libraries/BombettaTypes.sol";
-import "src/libraries/BombettaErrors.sol";
 
 // risc0 ethereum
 import "risc0/groth16/RiscZeroGroth16Verifier.sol";
@@ -34,8 +33,8 @@ contract Risc0UniversalBombettaTest is BaseTest {
         // requester computes guest program inputs commitment
         uint256 proofInput = 1304;
         bytes32 proofInputHash = sha256(abi.encode(proofInput));
-        bytes32 publicInputsCommitment = sha256(abi.encode(imageId, proofInputHash));
-        emit log_named_bytes32("publicInputsCommitment", publicInputsCommitment);
+        bytes32 inputsCommitment = sha256(abi.encode(imageId, proofInputHash));
+        emit log_named_bytes32("inputsCommitment", inputsCommitment);
 
         /// Set up the proof request data
         // Metadata.extraData
@@ -43,8 +42,8 @@ contract Risc0UniversalBombettaTest is BaseTest {
             verifier: address(risc0Verifier),
             selector: risc0Verifier.verify.selector,
             isShaCommitment: true,
-            publicInputsOffset: 32,
-            publicInputsLength: 64,
+            inputsOffset: 32,
+            inputsLength: 64,
             hasPartialCommitmentResultCheck: false,
             submittedPartialCommitmentResultOffset: 0,
             submittedPartialCommitmentResultLength: 0,
@@ -56,14 +55,14 @@ contract Risc0UniversalBombettaTest is BaseTest {
             signer: alice,
             market: address(universalBombetta),
             nonce: 0,
-            token: address(testToken),
+            rewardToken: address(testToken),
             maxRewardAmount: 1000 ether, // 1000 tokens
             minRewardAmount: 0,
             minimumStake: 1 ether,
             startAuctionTimestamp: uint64(block.timestamp),
             endAuctionTimestamp: uint64(block.timestamp + 1000),
             provingTime: 1 days,
-            publicInputsCommitment: publicInputsCommitment,
+            inputsCommitment: inputsCommitment,
             extraData: abi.encode(verifierDetails)
         });
 
@@ -75,7 +74,7 @@ contract Risc0UniversalBombettaTest is BaseTest {
 
         // Submit the bid as the prover (Bob)
         vm.startPrank(bob);
-        (uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
+        (, uint256 rewardAmount,) = universalBombetta.bid{value: 1 ether}(request, sig);
         vm.stopPrank();
 
         // Assert the transfer of the eth stake and the erc20 token reward worked and are now in the bombetta
