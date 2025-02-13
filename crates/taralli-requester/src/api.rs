@@ -1,7 +1,8 @@
 use reqwest::{
     header::{HeaderMap, HeaderValue},
-    Client,
+    multipart, Client,
 };
+use serde_json::json;
 use std::io::Write;
 use taralli_primitives::common::types::Environment;
 use taralli_primitives::{systems::ProvingSystemParams, Request};
@@ -37,10 +38,9 @@ impl RequesterApi {
         }
     }
 
-    /// Compresses the request payload using Brotli compression
-    /// and returns the compressed payload as a byte vector
+    /// Compresses the circuit using Brotli and returns the it as a byte vector
     /// # Arguments
-    /// * `request` - The request to be compressed
+    /// * `circuit` - The circuit to be compressed
     /// # Returns
     /// * A byte vector containing the compressed payloa
     /// # Details
@@ -48,7 +48,7 @@ impl RequesterApi {
     /// via the environment variables.
     /// Furthermore, we chose to instantiate a new compressor for each request
     /// if the need to submit multiple requests concurrently arises.
-    fn compress_request(&self, request: Request<ProvingSystemParams>) -> Result<Vec<u8>> {
+    fn compress_circuit(&self, circuit: ProvingSystemParams) -> Result<Vec<u8>> {
         // We opt for some default values that may be reasonable for the general use case.
         let mut brotli_encoder = brotli::CompressorWriter::new(
             Vec::new(),
@@ -66,7 +66,7 @@ impl RequesterApi {
                 .unwrap_or(24),
         );
 
-        let payload = serde_json::to_string(&request)
+        let payload = serde_json::to_string(&circuit)
             .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
 
         brotli_encoder
@@ -74,6 +74,29 @@ impl RequesterApi {
             .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
 
         Ok(brotli_encoder.into_inner())
+    }
+
+    /// Returns Multipart request Form with two parts: `ProvingSystemParams` as a `application/octet-stream` and remaining
+    /// fields as `application/json`.
+    ///
+    fn build_multipart(&self, request: Request<ProvingSystemParams>) -> Result<multipart::Form> {
+        let metadata = json!({
+            "proving_system_id": request.proving_system_id,
+            "onchain_proof_request": request.onchain_proof_request,
+            "signature": request.signature,
+        });
+        let metadata_string = serde_json::to_string(&metadata)
+            .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
+        let metadata_part = multipart::Part::text(metadata_string);
+
+        let compressed = self.compress_circuit(request.proving_system_information)?;
+        let compressed_part = multipart::Part::bytes(compressed);
+
+        let form = multipart::Form::new()
+            .part("metadata", metadata_part)
+            .part("proving_system_information", compressed_part);
+
+        Ok(form)
     }
 
     pub async fn submit_request(
@@ -85,12 +108,12 @@ impl RequesterApi {
             .join("/submit")
             .map_err(|e| RequesterError::ServerUrlParsingError(e.to_string()))?;
 
-        let compressed_payload = self.compress_request(request)?;
+        let payload = self.build_multipart(request)?;
 
         let response = self
             .client
             .post(url)
-            .body(compressed_payload)
+            .multipart(payload)
             .send()
             .await
             .map_err(|e| RequesterError::ServerRequestError(e.to_string()))?;

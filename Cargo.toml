@@ -34,6 +34,7 @@ reqwest = { version = "0.12.2", default-features = false, features = [
     "json",
     "stream",
     "rustls-tls",
+    "multipart"
 ] }
 dotenv = "0.15.0"
 futures-util = "0.3.30"
