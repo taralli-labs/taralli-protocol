@@ -1,34 +1,38 @@
-use crate::brotli::BrotliFile;
+use crate::brotli::SubmittedRequest;
 use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
-use taralli_primitives::systems::ProvingSystemParams;
-use taralli_primitives::Request;
+use taralli_primitives::RequestCompressed;
 
 pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     app_state: State<AppState<T, P>>,
-    BrotliFile {
-        compressed,
-        decompressed,
-    }: BrotliFile,
+    SubmittedRequest {
+        partial_request,
+        proving_system_information_bytes,
+    }: SubmittedRequest,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
-    let request: Request<ProvingSystemParams> =
-        serde_json::from_slice(&decompressed).map_err(|e| {
-            tracing::warn!("Failed to parse JSON: {:?}", e);
-            (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "Invalid JSON after Brotli decompression" })),
-            )
-        })?;
-
     let timeout = app_state.validation_timeout_seconds();
 
     tracing::info!("Validating proof request");
-    match validate_proof_request(&request, &app_state, timeout).await {
+    match validate_proof_request(&partial_request, &app_state, timeout).await {
         Ok(()) => {
             tracing::debug!("Validation successful, attempting to broadcast");
-            match app_state.subscription_manager().broadcast(compressed) {
+            let request_compressed =
+                RequestCompressed::from((partial_request.clone(), proving_system_information_bytes));
+            let request_serialized = bincode::serialize(&request_compressed).map_err(|_e| {
+                tracing::info!("Couldn't serialize partial request: {:?}", partial_request);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "error": "Couldn't serialize request before broadcasting to Proof Providers"
+                    })),
+                )
+            })?;
+            match app_state
+                .subscription_manager()
+                .broadcast(request_serialized)
+            {
                 Ok(recv_count) => {
                     tracing::info!(
                         "Submitted request was broadcast to {} receivers",
