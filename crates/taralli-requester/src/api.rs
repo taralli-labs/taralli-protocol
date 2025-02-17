@@ -78,22 +78,21 @@ impl RequesterApi {
 
     /// Returns Multipart request Form with two parts: `ProvingSystemParams` as a `application/octet-stream` and remaining
     /// fields as `application/json`.
-    ///
     fn build_multipart(&self, request: Request<ProvingSystemParams>) -> Result<multipart::Form> {
-        let metadata = json!({
+        let partial_request = json!({
             "proving_system_id": request.proving_system_id,
             "onchain_proof_request": request.onchain_proof_request,
             "signature": request.signature,
         });
-        let metadata_string = serde_json::to_string(&metadata)
+        let partial_request_string = serde_json::to_string(&partial_request)
             .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
-        let metadata_part = multipart::Part::text(metadata_string);
+        let partial_request_part = multipart::Part::text(partial_request_string);
 
         let compressed = self.compress_circuit(request.proving_system_information)?;
         let compressed_part = multipart::Part::bytes(compressed);
 
         let form = multipart::Form::new()
-            .part("metadata", metadata_part)
+            .part("partial_request", partial_request_part)
             .part("proving_system_information", compressed_part);
 
         Ok(form)

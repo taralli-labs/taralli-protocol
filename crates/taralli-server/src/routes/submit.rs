@@ -1,4 +1,4 @@
-use crate::brotli::SubmittedRequest;
+use crate::extracted_request::ExtractedRequest;
 use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
@@ -7,19 +7,21 @@ use taralli_primitives::RequestCompressed;
 
 pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     app_state: State<AppState<T, P>>,
-    SubmittedRequest {
+    ExtractedRequest {
         partial_request,
         proving_system_information_bytes,
-    }: SubmittedRequest,
+    }: ExtractedRequest,
 ) -> Result<impl IntoResponse, impl IntoResponse> {
     let timeout = app_state.validation_timeout_seconds();
 
-    tracing::info!("Validating proof request");
+    tracing::info!("Validating proof request: {:?}", partial_request);
     match validate_proof_request(&partial_request, &app_state, timeout).await {
         Ok(()) => {
             tracing::debug!("Validation successful, attempting to broadcast");
-            let request_compressed =
-                RequestCompressed::from((partial_request.clone(), proving_system_information_bytes));
+            let request_compressed = RequestCompressed::from((
+                partial_request.clone(),
+                proving_system_information_bytes,
+            ));
             let request_serialized = bincode::serialize(&request_compressed).map_err(|_e| {
                 tracing::info!("Couldn't serialize partial request: {:?}", partial_request);
                 (

@@ -6,14 +6,15 @@ use axum::{
 };
 use taralli_primitives::PartialRequest;
 
-/// A custom extractor that retains both the compressed and decompressed versions.
-pub struct SubmittedRequest {
+/// A custom extracted type that contains both all Request data of `Request<I: ProvingSystemInformation>`.
+/// Although we use a vector of bytes to reprent the compressed proving system.
+pub struct ExtractedRequest {
     pub partial_request: PartialRequest,
     pub proving_system_information_bytes: Vec<u8>,
 }
 
 #[async_trait]
-impl<S> FromRequest<S> for SubmittedRequest
+impl<S> FromRequest<S> for ExtractedRequest
 where
     S: Send + Sync,
 {
@@ -32,7 +33,7 @@ where
             .map_err(|e| (e.status(), e.body_text()))?
         {
             match part.name() {
-                Some("metadata") => {
+                Some("partial_request") => {
                     let bytes = part
                         .bytes()
                         .await
@@ -53,16 +54,16 @@ where
                     })?;
                     proving_system_information_bytes = Some(bytes.to_vec());
                 }
-                Some(_s) => {
+                Some(s) => {
                     return Err((
                         StatusCode::BAD_REQUEST,
-                        "Field not recognized on submission".to_string(),
+                        format!("Field not recognized on submission {}", s),
                     ));
                 }
                 None => {
                     return Err((
                         StatusCode::BAD_REQUEST,
-                        "Missing name for some submitted field".to_string(),
+                        "Missing name for some multipart submitted field".to_string(),
                     ))
                 }
             }
@@ -70,7 +71,7 @@ where
 
         // The `ok_or()` clauses below should never trigger, any error should've been filtered above.
         // Nonetheless, I'm opting for this rather than std::mem::MaybeUninit for the sake of making sure we're not returning something empty.
-        Ok(SubmittedRequest {
+        Ok(ExtractedRequest {
             partial_request: partial_request.ok_or((
                 StatusCode::BAD_REQUEST,
                 "Missing partial request data".to_string(),

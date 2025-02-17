@@ -72,24 +72,32 @@ impl ProviderApi {
         let parsed_stream = read.filter_map(|message_result| async {
             match message_result {
                 // This is the only case we care about.
-                // We expect the server to send us Brotli-compressed binary messages.
                 Ok(Message::Binary(bytes)) => {
+                    // First we deserialize the data sent via the WebSocket.
                     let request_compressed: RequestCompressed = match bincode::deserialize(&bytes) {
                         Ok(rc) => rc,
                         Err(e) => {
                             tracing::info!("Couldn't deserialize data from WebSocket");
                             return Some(Err(ProviderError::RequestParsingError(format!(
-                                "Failed to deserialize WebSocket data: {:?}", e
+                                "Failed to deserialize WebSocket data: {:?}",
+                                e
                             ))));
                         }
                     };
 
-                    // First we need to decompress the bytes.
+                    // Then, we need to decompress the proving system information.
                     let proving_system_information: ProvingSystemParams =
-                        match ProviderApi::decompress_brotli(request_compressed.proving_system_information).await {
+                        match ProviderApi::decompress_brotli(
+                            request_compressed.proving_system_information,
+                        )
+                        .await
+                        {
                             Ok(decompressed) => decompressed,
                             Err(e) => {
-                                tracing::error!("Failed to decompress proving system information: {:?}", e);
+                                tracing::error!(
+                                    "Failed to decompress proving system information: {:?}",
+                                    e
+                                );
                                 return Some(Err(ProviderError::RequestParsingError(format!(
                                     "Failed to decompress roving system information data: {e}"
                                 ))));
@@ -100,7 +108,7 @@ impl ProviderApi {
                         proving_system_id: request_compressed.proving_system_id,
                         proving_system_information,
                         onchain_proof_request: request_compressed.onchain_proof_request,
-                        signature: request_compressed.signature
+                        signature: request_compressed.signature,
                     }))
                 }
                 Ok(Message::Frame(_)) => {
