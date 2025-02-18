@@ -1,5 +1,6 @@
 use async_compression::tokio::bufread::BrotliDecoder;
 use futures::{Stream, StreamExt};
+use taralli_primitives::RequestCompressed;
 use tokio::net::TcpStream;
 
 use std::pin::Pin;
@@ -45,11 +46,12 @@ impl ProviderApi {
     /// * A byte vector containing the decompressed data
     async fn decompress_brotli(
         compressed_bytes: Vec<u8>,
-    ) -> std::result::Result<Vec<u8>, std::io::Error> {
+    ) -> std::result::Result<ProvingSystemParams, std::io::Error> {
         let mut decoder = BrotliDecoder::new(tokio::io::BufReader::new(&compressed_bytes[..]));
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed).await?;
-        Ok(decompressed)
+        let params = serde_json::from_slice(&decompressed)?;
+        Ok(params)
     }
 
     /// Parse a WebSocket stream into a stream of requests
@@ -70,31 +72,44 @@ impl ProviderApi {
         let parsed_stream = read.filter_map(|message_result| async {
             match message_result {
                 // This is the only case we care about.
-                // We expect the server to send us Brotli-compressed binary messages.
-                Ok(Message::Binary(compressed_bytes)) => {
-                    tracing::info!("Received Brotli-compressed binary message");
+                Ok(Message::Binary(bytes)) => {
+                    // First we deserialize the data sent via the WebSocket.
+                    let request_compressed: RequestCompressed = match bincode::deserialize(&bytes) {
+                        Ok(rc) => rc,
+                        Err(e) => {
+                            tracing::info!("Couldn't deserialize data from WebSocket");
+                            return Some(Err(ProviderError::RequestParsingError(format!(
+                                "Failed to deserialize WebSocket data: {:?}",
+                                e
+                            ))));
+                        }
+                    };
 
-                    // First we need to decompress the bytes.
-                    let decompressed_bytes =
-                        match ProviderApi::decompress_brotli(compressed_bytes.to_vec()).await {
+                    // Then, we need to decompress the proving system information.
+                    let proving_system_information: ProvingSystemParams =
+                        match ProviderApi::decompress_brotli(
+                            request_compressed.proving_system_information,
+                        )
+                        .await
+                        {
                             Ok(decompressed) => decompressed,
                             Err(e) => {
-                                tracing::error!("Failed to decompress WebSocket data: {:?}", e);
+                                tracing::error!(
+                                    "Failed to decompress proving system information: {:?}",
+                                    e
+                                );
                                 return Some(Err(ProviderError::RequestParsingError(format!(
-                                    "Failed to decompress WebSocket data: {e}"
+                                    "Failed to decompress proving system information data: {e}"
                                 ))));
                             }
                         };
 
-                    // Then deserialize the JSON from decompressed bytes
-                    match serde_json::from_slice::<Request<ProvingSystemParams>>(
-                        &decompressed_bytes,
-                    ) {
-                        Ok(parsed) => Some(Ok(parsed)),
-                        Err(e) => Some(Err(ProviderError::RequestParsingError(format!(
-                            "JSON parse error after decompression: {e}"
-                        )))),
-                    }
+                    Some(Ok(Request::<ProvingSystemParams> {
+                        proving_system_id: request_compressed.proving_system_id,
+                        proving_system_information,
+                        onchain_proof_request: request_compressed.onchain_proof_request,
+                        signature: request_compressed.signature,
+                    }))
                 }
                 Ok(Message::Frame(_)) => {
                     tracing::info!("Received unexpected frame message.");

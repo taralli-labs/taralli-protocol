@@ -55,7 +55,6 @@ where
     }
 }
 
-// Should not have this default? Maybe env var
 impl<M> Default for SubscriptionManager<M>
 where
     M: Clone,

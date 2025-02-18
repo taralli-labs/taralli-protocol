@@ -1,9 +1,10 @@
+use crate::alloy::primitives::PrimitiveSignature;
 use crate::{
     abi::universal_bombetta::VerifierDetails,
     request::Request,
     systems::{ProofConfiguration, ProvingSystemId, ProvingSystemInformation},
     utils::{compute_permit2_digest, compute_request_witness},
-    PrimitivesError, Result,
+    OnChainProofRequest, PartialRequest, PrimitivesError, Result,
 };
 use alloy::{primitives::Address, sol_types::SolValue};
 
@@ -18,16 +19,37 @@ pub fn validate_request<I: ProvingSystemInformation>(
     supported_proving_systems: &[ProvingSystemId],
 ) -> Result<()> {
     validate_proving_system_structure(request, supported_proving_systems)?;
-    validate_market_address(request, market_address)?;
-    validate_amount_constraints(request, maximum_allowed_stake)?;
+    validate_market_address(&request.onchain_proof_request, market_address)?;
+    validate_amount_constraints(&request.onchain_proof_request, maximum_allowed_stake)?;
     validate_time_constraints(
-        request,
+        &request.onchain_proof_request,
         latest_timestamp,
         minimum_proving_time,
         maximum_start_delay,
     )?;
-    validate_signature(request)?;
+    validate_signature(&request.onchain_proof_request, &request.signature)?;
     validate_nonce(request)?;
+
+    Ok(())
+}
+
+pub fn validate_partial_request(
+    request: &PartialRequest,
+    latest_timestamp: u64,
+    market_address: &Address,
+    minimum_proving_time: u32,
+    maximum_start_delay: u32,
+    maximum_allowed_stake: u128,
+) -> Result<()> {
+    validate_market_address(&request.onchain_proof_request, market_address)?;
+    validate_amount_constraints(&request.onchain_proof_request, maximum_allowed_stake)?;
+    validate_time_constraints(
+        &request.onchain_proof_request,
+        latest_timestamp,
+        minimum_proving_time,
+        maximum_start_delay,
+    )?;
+    validate_signature(&request.onchain_proof_request, &request.signature)?;
 
     Ok(())
 }
@@ -81,11 +103,11 @@ fn validate_proving_system_structure<I: ProvingSystemInformation>(
     Ok(())
 }
 
-pub fn validate_market_address<I: ProvingSystemInformation>(
-    request: &Request<I>,
+pub fn validate_market_address(
+    onchain_proof_request: &OnChainProofRequest,
     market_address: &Address,
 ) -> Result<()> {
-    if &request.onchain_proof_request.market != market_address {
+    if &onchain_proof_request.market != market_address {
         Err(PrimitivesError::ValidationError(
             "market address invalid".to_string(),
         ))
@@ -94,16 +116,15 @@ pub fn validate_market_address<I: ProvingSystemInformation>(
     }
 }
 
-pub fn validate_amount_constraints<I: ProvingSystemInformation>(
-    request: &Request<I>,
+pub fn validate_amount_constraints(
+    onchain_proof_request: &OnChainProofRequest,
     maximum_allowed_stake: u128,
 ) -> Result<()> {
-    if request.onchain_proof_request.maxRewardAmount < request.onchain_proof_request.minRewardAmount
-    {
+    if onchain_proof_request.maxRewardAmount < onchain_proof_request.minRewardAmount {
         Err(PrimitivesError::ValidationError(
             "token amounts invalid".to_string(),
         ))
-    } else if request.onchain_proof_request.minimumStake > maximum_allowed_stake {
+    } else if onchain_proof_request.minimumStake > maximum_allowed_stake {
         Err(PrimitivesError::ValidationError(
             "eth stake amount invalid".to_string(),
         ))
@@ -112,19 +133,19 @@ pub fn validate_amount_constraints<I: ProvingSystemInformation>(
     }
 }
 
-pub fn validate_time_constraints<I: ProvingSystemInformation>(
-    request: &Request<I>,
+pub fn validate_time_constraints(
+    onchain_proof_request: &OnChainProofRequest,
     latest_timestamp: u64,
     minimum_proving_time: u32,
     maximum_start_delay: u32,
 ) -> Result<()> {
-    let start = request.onchain_proof_request.startAuctionTimestamp;
-    let end = request.onchain_proof_request.endAuctionTimestamp;
+    let start = onchain_proof_request.startAuctionTimestamp;
+    let end = onchain_proof_request.endAuctionTimestamp;
     if latest_timestamp < start - maximum_start_delay as u64 || latest_timestamp >= end {
         Err(PrimitivesError::ValidationError(
             "timestamp invalid: out of bounds".to_string(),
         ))
-    } else if request.onchain_proof_request.provingTime < minimum_proving_time {
+    } else if onchain_proof_request.provingTime < minimum_proving_time {
         Err(PrimitivesError::ValidationError(
             "proving time invalid: below minimum".to_string(),
         ))
@@ -138,20 +159,22 @@ pub fn validate_nonce<I: ProvingSystemInformation>(_request: &Request<I>) -> Res
     Ok(())
 }
 
-pub fn validate_signature<I: ProvingSystemInformation>(request: &Request<I>) -> Result<()> {
+pub fn validate_signature(
+    onchain_proof_request: &OnChainProofRequest,
+    signature: &PrimitiveSignature,
+) -> Result<()> {
     // compute witness
-    let witness = compute_request_witness(&request.onchain_proof_request);
+    let witness = compute_request_witness(onchain_proof_request);
     // compute permit digest
-    let computed_digest = compute_permit2_digest(&request.onchain_proof_request, witness);
+    let computed_digest = compute_permit2_digest(onchain_proof_request, witness);
     // ec recover signing public key
-    let computed_verifying_key = request
-        .signature
+    let computed_verifying_key = signature
         .recover_from_prehash(&computed_digest)
         .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    if computed_signer != request.onchain_proof_request.signer {
+    if computed_signer != onchain_proof_request.signer {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),
         ))
