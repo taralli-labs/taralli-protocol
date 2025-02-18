@@ -38,9 +38,9 @@ impl RequesterApi {
         }
     }
 
-    /// Compresses the circuit using Brotli and returns the it as a byte vector
+    /// Compresses the proving system information using Brotli and returns the it as a byte vector
     /// # Arguments
-    /// * `circuit` - The circuit to be compressed
+    /// * `proving_system_information` - The proving system information to be compressed
     /// # Returns
     /// * A byte vector containing the compressed payloa
     /// # Details
@@ -48,7 +48,10 @@ impl RequesterApi {
     /// via the environment variables.
     /// Furthermore, we chose to instantiate a new compressor for each request
     /// if the need to submit multiple requests concurrently arises.
-    fn compress_circuit(&self, circuit: ProvingSystemParams) -> Result<Vec<u8>> {
+    fn compress_proving_system_information(
+        &self,
+        proving_system_information: ProvingSystemParams,
+    ) -> Result<Vec<u8>> {
         // We opt for some default values that may be reasonable for the general use case.
         let mut brotli_encoder = brotli::CompressorWriter::new(
             Vec::new(),
@@ -66,7 +69,7 @@ impl RequesterApi {
                 .unwrap_or(24),
         );
 
-        let payload = serde_json::to_string(&circuit)
+        let payload = serde_json::to_string(&proving_system_information)
             .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
 
         brotli_encoder
@@ -88,7 +91,8 @@ impl RequesterApi {
             .map_err(|e| RequesterError::RequestSubmissionFailed(e.to_string()))?;
         let partial_request_part = multipart::Part::text(partial_request_string);
 
-        let compressed = self.compress_circuit(request.proving_system_information)?;
+        let compressed =
+            self.compress_proving_system_information(request.proving_system_information)?;
         let compressed_part = multipart::Part::bytes(compressed);
 
         let form = multipart::Form::new()

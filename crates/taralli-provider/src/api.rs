@@ -99,7 +99,7 @@ impl ProviderApi {
                                     e
                                 );
                                 return Some(Err(ProviderError::RequestParsingError(format!(
-                                    "Failed to decompress roving system information data: {e}"
+                                    "Failed to decompress proving system information data: {e}"
                                 ))));
                             }
                         };
