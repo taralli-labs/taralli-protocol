@@ -60,7 +60,6 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
 
     // Split the WebSocket into sender/receiver so we can handle them separately
     let (mut ws_sender, mut ws_receiver) = socket.split();
-
     // Use a `tokio::select!` loop to handle both reading and writing since we're in an async context.
     loop {
         tokio::select! {
@@ -85,14 +84,13 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                 }
             },
 
-            // Inbound: messages from client => (potentially) the server
+            // Inbound: messages from client => server
             // There's not a lot we want to do with incoming messages in this case, despite the usage of websockets
             // this is (mostly) a one-way communication channel.
-            // We need to handle the disconnect bit otherwise we'll have dangling connections.
             maybe_incoming = ws_receiver.next() => {
                 match maybe_incoming {
-                    Some(Ok(Message::Close(_))) => {
-                        tracing::info!("Client sent Close");
+                    Some(Ok(Message::Close(mut message))) => {
+                        tracing::info!("Client sent Close: {:?}", message.take());
                         break;
                     }
                     Some(Ok(Message::Ping(_)) | Ok(Message::Pong(_))) => {
