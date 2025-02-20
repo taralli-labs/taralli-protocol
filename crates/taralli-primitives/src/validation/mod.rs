@@ -1,5 +1,7 @@
+use std::any::Any;
+
 use crate::{
-    systems::{ProvingSystem, ProvingSystemId, SYSTEMS},
+    systems::{System, SystemId, SYSTEMS},
     PrimitivesError, Result,
 };
 use alloy::primitives::{Address, FixedBytes, U256};
@@ -8,42 +10,27 @@ use serde::{Deserialize, Serialize};
 pub mod offer;
 pub mod request;
 
-// Common validation parameters
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommonValidationConfig {
-    pub minimum_proving_time: u32,
-    pub maximum_start_delay: u32,
-    pub supported_proving_systems: Vec<ProvingSystemId>,
+pub trait CommonValidationConfig: Any {
+    fn minimum_proving_time(&self) -> u32;
+    fn maximum_start_delay(&self) -> u32;
+    fn supported_systems(&self) -> Vec<SystemId>;
 }
 
-impl Default for CommonValidationConfig {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BaseValidationConfig {
+    pub minimum_proving_time: u32,
+    pub maximum_start_delay: u32,
+    pub supported_systems: Vec<SystemId>
+}
+
+impl Default for BaseValidationConfig {
     fn default() -> Self {
         Self {
             minimum_proving_time: 30, // 30 secs,
             maximum_start_delay: 300, // 5 mins
-            supported_proving_systems: SYSTEMS.to_vec(),
+            supported_systems: SYSTEMS.to_vec(),
         }
     }
-}
-
-// Trait for type-specific validation configs
-pub trait ValidationConfig: Clone {
-    fn common(&self) -> &CommonValidationConfig;
-}
-
-// Meta config that contains all validation configs
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ValidationMetaConfig {
-    // Common config shared by all intent types
-    pub common: CommonValidationConfig,
-    // Intent-specific configs
-    pub request: request::RequestSpecificConfig,
-    pub offer: offer::OfferSpecificConfig,
-}
-
-// Helper trait to get specific config from meta config
-pub trait FromMetaConfig {
-    fn from_meta(meta: &ValidationMetaConfig) -> Self;
 }
 
 // Common trait for shared fields across all intent type's proof structures
@@ -58,28 +45,29 @@ pub trait ProofCommon {
 
 // Trait for intent types that can be validated
 pub trait Validate: Sized + Clone {
-    type Config: ValidationConfig;
+    type Config: CommonValidationConfig;
+    type VerifierConstraints;
 
-    fn proving_system_id(&self) -> ProvingSystemId;
-    fn proving_system(&self) -> &impl ProvingSystem;
+    fn system_id(&self) -> SystemId;
+    fn system(&self) -> &impl System;
     fn proof_common(&self) -> &impl ProofCommon;
 
-    fn validate_proving_system(&self, supported_systems: &[ProvingSystemId]) -> Result<()> {
-        if !supported_systems.contains(&self.proving_system_id()) {
+    fn validate_system(&self, supported_systems: &[SystemId]) -> Result<()> {
+        if !supported_systems.contains(&self.system_id()) {
             return Err(PrimitivesError::ValidationError(
                 "unsupported proving system".into(),
             ));
         }
 
         // Validate that the proving system information matches the system ID
-        if self.proving_system().system_id() != self.proving_system_id() {
+        if self.system().system_id() != self.system_id() {
             return Err(PrimitivesError::ValidationError(
                 "provided proving system does not match system id".into(),
             ));
         }
 
         // Validate the proving system specific parameters
-        self.proving_system().validate_inputs().map_err(|e| {
+        self.system().validate_inputs().map_err(|e| {
             PrimitivesError::ValidationError(format!("invalid proving system parameters: {}", e))
         })
     }
@@ -134,12 +122,12 @@ pub trait Validate: Sized + Clone {
         config: &Self::Config,
     ) -> Result<()> {
         // Use individual validators
-        self.validate_proving_system(&config.common().supported_proving_systems)?;
+        self.validate_system(&config.supported_systems())?;
         self.validate_market_address(market_address)?;
         self.validate_time_constraints(
             latest_timestamp,
-            config.common().minimum_proving_time,
-            config.common().maximum_start_delay,
+            config.minimum_proving_time(),
+            config.maximum_start_delay(),
         )?;
         self.validate_nonce()?;
 

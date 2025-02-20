@@ -8,7 +8,7 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::utils::PERMIT2_ADDRESS;
 
-use crate::error::{RequesterError, Result};
+use crate::error::{ClientError, Result};
 
 const U256_ONE: U256 = U256::from_limbs([1, 0, 0, 0]);
 const U256_256: U256 = U256::from_limbs([256, 0, 0, 0]);
@@ -61,7 +61,7 @@ where
                 .nonceBitmap(signer, word_pos)
                 .call()
                 .await
-                .map_err(|e| RequesterError::RpcRequestError(e.to_string()))?
+                .map_err(|e| ClientError::RpcRequestError(e.to_string()))?
                 ._0;
             if bitmap != U256::MAX {
                 return Ok((word_pos, bitmap));
@@ -76,6 +76,6 @@ where
                 return Ok(word_pos * U256_256 + U256::from(i));
             }
         }
-        Err(RequesterError::FindUnusedNonceError())
+        Err(ClientError::FindUnusedNonceError())
     }
 }

@@ -1,10 +1,7 @@
-use alloy::primitives::{address, fixed_bytes, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
 use crate::error::Result;
-use crate::systems::{ProvingSystem, SystemConfig, VerifierConstraints};
+use crate::systems::{System, SystemConfig};
 
 use super::system_id::Risc0;
 use super::SystemInputs;
@@ -15,35 +12,13 @@ pub struct Risc0ProofParams {
     pub inputs: Vec<u8>,
 }
 
-impl SystemConfig for Risc0ProofParams {
-    fn verifier_constraints(&self) -> VerifierConstraints {
-        VerifierConstraints {
-            verifier: Some(address!("31766974fb795dF3f7d0c010a3D5c55e4bd8113e")),
-            selector: Some(fixed_bytes!("ab750e75")),
-            is_sha_commitment: Some(true),
-            inputs_offset: Some(U256::from(32)),
-            inputs_length: Some(U256::from(64)),
-            has_partial_commitment_result_check: None,
-            submitted_partial_commitment_result_offset: None,
-            submitted_partial_commitment_result_length: None,
-            predetermined_partial_commitment: None,
-        }
-    }
+impl SystemConfig for Risc0ProofParams {}
 
-    fn validate_request(&self, _details: &ProofRequestVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-
-    fn validate_offer(&self, _details: &ProofOfferVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl ProvingSystem for Risc0ProofParams {
+impl System for Risc0ProofParams {
     type Config = Self;
     type Inputs = Vec<u8>;
 
-    fn system_id(&self) -> super::ProvingSystemId {
+    fn system_id(&self) -> super::SystemId {
         Risc0
     }
 

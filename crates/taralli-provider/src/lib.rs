@@ -1,19 +1,17 @@
-pub mod analyzer;
 pub mod api;
-pub mod bidder;
 pub mod builder;
 pub mod config;
 pub mod error;
-pub mod resolver;
+pub mod request;
 pub mod worker;
 pub mod workers;
 
-use self::analyzer::RequestAnalyzer;
+use self::request::analyzer::RequestAnalyzer;
 use self::api::ProviderApi;
-use self::bidder::RequestBidder;
+use self::request::bidder::RequestBidder;
 use self::config::ProviderConfig;
 use self::error::{ProviderError, Result};
-use self::resolver::RequestResolver;
+use self::request::resolver::RequestResolver;
 use self::worker::{ComputeWorker, WorkResult, WorkerManager};
 
 use builder::ProviderClientBuilder;

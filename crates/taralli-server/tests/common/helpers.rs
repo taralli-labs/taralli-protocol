@@ -16,7 +16,7 @@ use serde_json::json;
 
 use axum::response::sse::{Event, Sse};
 use taralli_primitives::{
-    systems::{ProvingSystemId, SYSTEMS},
+    systems::{SystemId, SYSTEMS},
     validation::{
         offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
         ValidationMetaConfig,
@@ -46,7 +46,7 @@ pub fn submit_request_body(input: String) -> Request<Body> {
         .unwrap()
 }
 
-pub fn subscribe_request_body(system_ids: &[ProvingSystemId]) -> Request<Body> {
+pub fn subscribe_request_body(system_ids: &[SystemId]) -> Request<Body> {
     // Convert system IDs to query string
     let query = system_ids
         .iter()
@@ -76,7 +76,7 @@ where
 {
     // Extract proving_system_id from the request
     let system_id = match request.get("proving_system_id").and_then(|v| v.as_str()) {
-        Some(id) => match ProvingSystemId::try_from(id) {
+        Some(id) => match SystemId::try_from(id) {
             Ok(id) => id,
             Err(_) => {
                 return (
@@ -138,7 +138,7 @@ where
     let mut invalid_ids = Vec::new();
     let mut valid_ids = Vec::new();
     for id_str in ids {
-        match ProvingSystemId::try_from(id_str) {
+        match SystemId::try_from(id_str) {
             Ok(id) => valid_ids.push(id),
             Err(_) => invalid_ids.push(id_str),
         }
@@ -172,7 +172,7 @@ pub async fn submit(app: Router, input: String) -> Response<Body> {
 
 pub async fn subscribe(
     app: Router,
-    system_ids: &[ProvingSystemId],
+    system_ids: &[SystemId],
 ) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
     let subscribe_response = app
         .clone()

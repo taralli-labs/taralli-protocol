@@ -1,34 +1,53 @@
+use std::any::TypeId;
+
 use crate::{
-    error::{Result, ServerError},
-    state::BaseState,
+    config::{ServerConfigProvider, ServerValidationConfigs}, error::{Result, ServerError}, state::BaseState
 };
-use taralli_primitives::alloy::{
+use taralli_primitives::{alloy::{
     eips::BlockId,
     network::{BlockTransactionsKind, Ethereum},
     providers::Provider,
     transports::Transport,
-};
-use taralli_primitives::validation::{FromMetaConfig, Validate};
+}, intents::{ComputeIntent, ComputeOffer, ComputeRequest}, systems::SystemParams, validation::CommonValidationConfig};
+use taralli_primitives::validation::Validate;
 use tokio::time::timeout;
+
+// Helper trait to get config from ValidationConfigs
+pub trait ValidationConfigProvider {
+    fn get_config_for_type_id(&self, type_id: TypeId) -> Option<&dyn CommonValidationConfig>;
+}
+
+// Implement for your ValidationConfigs struct
+impl ValidationConfigProvider for ServerValidationConfigs {
+    fn get_config_for_type_id(&self, type_id: TypeId) -> Option<&dyn CommonValidationConfig> {
+        match type_id {
+            t if t == TypeId::of::<ComputeRequest<SystemParams>>() => Some(&self.request),
+            t if t == TypeId::of::<ComputeOffer<SystemParams>>() => Some(&self.offer),
+            _ => None
+        }
+    }
+}
 
 pub async fn validate_intent<T: Transport + Clone, P: Provider<T> + Clone, I>(
     intent: &I,
-    app_state: &BaseState<T, P>,
-) -> Result<()>
+    state: &BaseState<T, P>,
+) -> Result<()> 
 where
-    I: Validate,
-    I::Config: FromMetaConfig,
+    I: ComputeIntent + Validate + ServerConfigProvider,
+    I::Config: CommonValidationConfig
 {
     // TODO: separate this timestamp fetch from the validation execution of the server
-    let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
-    let validation_timeout_seconds = app_state.validation_timeout_seconds();
-    let intent_validation_config = I::Config::from_meta(app_state.validation_config());
+    let latest_timestamp = get_latest_timestamp(state.rpc_provider()).await?;
+    let validation_timeout_seconds = state.validation_timeout_seconds();
+    //let intent_validation_config = I::Config::from_meta(app_state.validation_config());
+
+    let config = I::get_config(state.validation_configs());
 
     timeout(validation_timeout_seconds, async {
         intent.validate(
             latest_timestamp,
-            &app_state.market_address(),
-            &intent_validation_config,
+            &state.market_address(),
+            config
         )
     })
     .await

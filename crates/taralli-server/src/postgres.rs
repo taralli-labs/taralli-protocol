@@ -5,7 +5,7 @@ use deadpool_postgres::{Manager, Pool};
 use serde::Serialize;
 use taralli_primitives::{
     intents::ComputeOffer,
-    systems::{ProvingSystem, ProvingSystemId},
+    systems::{System, SystemId},
     utils::compute_offer_id,
 };
 use tokio_postgres::{Config, NoTls, Row};
@@ -98,12 +98,9 @@ impl TryFrom<Row> for StoredOffer {
 
 impl Db {
     /// Store a submitted ComputeOffer within the database
-    pub async fn store_offer<S: ProvingSystem>(
-        &self,
-        offer: &ComputeOffer<S>,
-    ) -> Result<StoredOffer> {
-        let offer_id = compute_offer_id(&offer.proof_offer, offer.signature);
-        let proving_system_bytes = serde_json::to_vec(&offer.proving_system)
+    pub async fn store_offer<S: System>(&self, offer: &ComputeOffer<S>) -> Result<StoredOffer> {
+        let offer_id = compute_offer_id(&offer.proof_offer, &offer.signature);
+        let proving_system_bytes = serde_json::to_vec(&offer.system)
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
         let proof_offer_bytes = serde_json::to_vec(&offer.proof_offer)
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
@@ -125,7 +122,7 @@ impl Db {
                 &prepared_stmt,
                 &[
                     &offer_id.as_slice(),
-                    &offer.proving_system_id.as_str(),
+                    &offer.system_id.as_str(),
                     &proving_system_bytes,
                     &proof_offer_bytes,
                     &offer.signature.as_bytes().to_vec(),
@@ -138,10 +135,7 @@ impl Db {
     }
 
     /// query db for active compute offers by proving system id
-    pub async fn get_active_offers_by_id(
-        &self,
-        proving_system_id: ProvingSystemId,
-    ) -> Result<Vec<StoredOffer>> {
+    pub async fn get_active_offers_by_id(&self, system_id: SystemId) -> Result<Vec<StoredOffer>> {
         let conn = self
             .pool
             .get()
@@ -152,7 +146,7 @@ impl Db {
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
         let rows = conn
-            .query(&prepared_stmt, &[&proving_system_id.as_str()])
+            .query(&prepared_stmt, &[&system_id.as_str()])
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
 

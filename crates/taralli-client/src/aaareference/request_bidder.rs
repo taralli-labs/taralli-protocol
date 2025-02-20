@@ -1,5 +1,5 @@
 use crate::config::BidderConfig;
-use crate::error::{ProviderError, Result};
+use crate::error::{ClientError, Result};
 use std::marker::PhantomData;
 use taralli_primitives::abi::universal_bombetta::UniversalBombetta::{
     ProofRequest, UniversalBombettaInstance,
@@ -44,14 +44,14 @@ where
 
         // check auction has started
         if current_block_ts < proof_request.startAuctionTimestamp {
-            return Err(ProviderError::TransactionSetupError(
+            return Err(ClientError::TransactionSetupError(
                 "Auction has not started based on current block ts".into(),
             ));
         }
 
         // check that the deadline is not passed
         if current_block_ts > proof_request.endAuctionTimestamp {
-            return Err(ProviderError::TransactionSetupError(
+            return Err(ClientError::TransactionSetupError(
                 "Auction has expired".into(),
             ));
         }
@@ -91,10 +91,10 @@ where
             .activeProofRequestData(request_id)
             .call()
             .await
-            .map_err(|e| ProviderError::TransactionSetupError(e.to_string()))?;
+            .map_err(|e| ClientError::TransactionSetupError(e.to_string()))?;
 
         if active_job_return.requester != Address::ZERO {
-            return Err(ProviderError::TransactionSetupError(
+            return Err(ClientError::TransactionSetupError(
                 "Another Bid has already submitted for this Auction".into(),
             ));
         }
@@ -110,10 +110,10 @@ where
             .value(U256::from(proof_request.minimumStake))
             .send()
             .await
-            .map_err(|e| ProviderError::TransactionError(e.to_string()))?
+            .map_err(|e| ClientError::TransactionError(e.to_string()))?
             .get_receipt()
             .await
-            .map_err(|e| ProviderError::TransactionFailure(e.to_string()))?;
+            .map_err(|e| ClientError::TransactionFailure(e.to_string()))?;
 
         Ok(receipt)
     }
@@ -144,7 +144,7 @@ where
     ) -> Result<u64> {
         // Ensure target_amount is within min_reward and max_reward
         if target_amount < min_reward || target_amount > max_reward {
-            return Err(ProviderError::TransactionSetupError(
+            return Err(ClientError::TransactionSetupError(
                 "Target amount is out of bounds".into(),
             ));
         }
@@ -156,7 +156,7 @@ where
 
         // Convert U256 back to u64
         target_timestamp.try_into().map_err(|e| {
-            ProviderError::TransactionSetupError(format!(
+            ClientError::TransactionSetupError(format!(
                 "Failed to convert target timestamp: {}",
                 e
             ))

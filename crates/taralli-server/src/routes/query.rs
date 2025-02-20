@@ -9,13 +9,13 @@ use axum::{
 };
 use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::systems::SystemId;
 
 pub async fn get_active_offers_by_id_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(app_state): State<OfferState<T, P>>,
-    Path(proving_system_id): Path<String>,
+    Path(system_id): Path<String>,
 ) -> Result<(StatusCode, Json<serde_json::Value>)> {
-    let proving_system_id = ProvingSystemId::try_from(proving_system_id.as_str())
+    let proving_system_id = SystemId::try_from(system_id.as_str())
         .map_err(|e| ServerError::QueryError(e.to_string()))?;
 
     let offers = app_state

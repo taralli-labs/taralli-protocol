@@ -32,19 +32,14 @@ async fn main() -> Result<()> {
     // Load configuration
     let config = Config::from_file("config.json").context("Failed to load config")?;
 
+    // Get the validation configs from the config
+    let validation_configs = config.get_validation_configs();
+
     // tracing
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(config.log_level()?)
         .init();
-
-    // Setup validation config
-    tracing::info!("Loading validation config");
-    let validation_config = ValidationMetaConfig {
-        common: config.common_validation_config.clone(),
-        request: config.request_validation_config.clone(),
-        offer: config.offer_validation_config.clone(),
-    };
 
     tracing::info!("Setting up RPC provider");
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
@@ -63,7 +58,7 @@ async fn main() -> Result<()> {
         rpc_provider.clone(),
         config.market_address,
         Duration::from_secs(config.validation_timeout_seconds as u64),
-        validation_config.clone(),
+        validation_configs,
     );
 
     tracing::info!("Setting up routers");
@@ -85,7 +80,7 @@ async fn main() -> Result<()> {
             get(get_active_offers_by_id_handler),
         )
         .with_state(offer_state);
-    
+
     tracing::info!("Merging routers");
     // Merge routers
     let app = request_routes
