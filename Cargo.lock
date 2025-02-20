@@ -8798,6 +8798,7 @@ dependencies = [
  "brotli",
  "bytes",
  "color-eyre",
+ "dotenv",
  "futures",
  "futures-util",
  "hex",
