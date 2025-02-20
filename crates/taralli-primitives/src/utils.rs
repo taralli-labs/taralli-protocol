@@ -58,7 +58,7 @@ lazy_static! {
         keccak256(PROOF_OFFER_WITNESS_TYPE_STRING.as_bytes());
 }
 
-pub fn compute_request_id(proof_request: &ProofRequest, signature: Signature) -> B256 {
+pub fn compute_request_id(proof_request: &ProofRequest, signature: &Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_request.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
@@ -141,7 +141,7 @@ pub fn compute_request_permit2_digest(proof_request: &ProofRequest, witness: B25
     hash_typed_data(PERMIT2_DOMAIN_SEPARATOR, data_hash)
 }
 
-pub fn compute_offer_id(proof_offer: &ProofOffer, signature: Signature) -> B256 {
+pub fn compute_offer_id(proof_offer: &ProofOffer, signature: &Signature) -> B256 {
     // encode + hash `extraData` and `signature`
     let extra_data_hash = keccak256(proof_offer.extraData.abi_encode());
     let signature_hash = keccak256(signature.as_bytes().abi_encode());
@@ -310,7 +310,7 @@ mod tests {
     async fn test_compute_request_id() {
         let mock_request = get_mock_proof_request();
         let signature = Signature::try_from(&DUMMY_SIGNATURE_BYTES[..]).unwrap();
-        let _local_result = compute_request_id(&mock_request, signature);
+        let _local_result = compute_request_id(&mock_request, &signature);
     }
 
     #[tokio::test]

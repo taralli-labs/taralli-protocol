@@ -13,7 +13,7 @@ use futures::{
     SinkExt,
 };
 use serde::Deserialize;
-use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::systems::SystemId;
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::error::{Result, ServerError};
@@ -47,7 +47,7 @@ pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + 
     let mut invalid_ids = Vec::new();
     let mut valid_ids = Vec::new();
     for id_str in ids {
-        match ProvingSystemId::try_from(id_str) {
+        match SystemId::try_from(id_str) {
             Ok(id) => valid_ids.push(id),
             Err(_) => invalid_ids.push(id_str),
         }
@@ -76,7 +76,7 @@ pub async fn subscribe_handler<T: Transport + Clone + 'static, P: Provider<T> + 
 async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
     app_state: Arc<RequestState<T, P>>,
-    system_ids: Vec<ProvingSystemId>,
+    system_ids: Vec<SystemId>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
     // let subscription = app_state.subscription_manager(). add_subscription();
@@ -84,7 +84,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
 
     let receivers = app_state
         .subscription_manager()
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&system_ids)
         .await;
 
     // Create a broadcast stream from the subscription receiver.

@@ -136,17 +136,16 @@ impl ProviderApi {
             ProviderError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
         })?;
 
-
-        let system_ids =  [ProvingSystemId::Arkworks];
+        let system_ids = [ProvingSystemId::Arkworks];
         let query = system_ids
-        .iter()
-        .map(|id| id.as_str().to_string())
-        .collect::<Vec<_>>()
-        .join(",");
-    
+            .iter()
+            .map(|id| id.as_str().to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+
         let uri = format!("/subscribe?system_ids={}", query);
 
-            let ws_url = url
+        let ws_url = url
             .join(&uri)
             .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?
             .to_string();

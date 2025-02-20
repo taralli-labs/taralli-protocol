@@ -1,8 +1,8 @@
 use futures_util::StreamExt;
 use std::marker::PhantomData;
 use std::time::Duration;
-use taralli_primitives::abi::universal_bombetta::UniversalBombetta::{
-    Bid, Resolve, UniversalBombettaInstance,
+use taralli_primitives::abi::universal_porchetta::UniversalPorchetta::{
+    Bid, Resolve, UniversalPorchettaInstance,
 };
 use taralli_primitives::alloy::{
     network::Network,
@@ -11,9 +11,9 @@ use taralli_primitives::alloy::{
     transports::Transport,
 };
 
-use crate::error::{RequesterError, Result};
+use crate::error::{ClientError, Result};
 
-pub struct RequestTracker<T, P, N>
+pub struct OfferTracker<T, P, N>
 where
     T: Transport + Clone,
     P: Provider<T, N> + Clone,
@@ -24,7 +24,7 @@ where
     phantom_data: PhantomData<(T, N)>,
 }
 
-impl<T, P, N> RequestTracker<T, P, N>
+impl<T, P, N> OfferTracker<T, P, N>
 where
     T: Transport + Clone,
     P: Provider<T, N> + Clone,
@@ -38,21 +38,21 @@ where
         }
     }
 
-    /// Start tracking auction events for a request
+    /// Start tracking auction events for an offer
     pub async fn start_auction_tracking(
         &self,
-        request_id: B256,
+        offer_id: B256,
         timeout: Duration,
     ) -> Result<Option<Bid>> {
         let market_contract =
-            UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
+            UniversalPorchettaInstance::new(self.market_address, self.rpc_provider.clone());
 
-        let bid_filter = market_contract.Bid_filter().topic2(request_id);
+        let bid_filter = market_contract.Bid_filter().topic2(offer_id);
 
         let event_poller = bid_filter
             .watch()
             .await
-            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
+            .map_err(|e| ClientError::TrackIntentError(e.to_string()))?;
 
         let mut bid_stream = event_poller.into_stream();
 
@@ -84,19 +84,18 @@ where
     /// Start tracking resolution events for a request
     pub async fn start_resolution_tracking(
         &self,
-        request_id: B256,
+        offer_id: B256,
         timeout: Duration,
     ) -> Result<Option<Resolve>> {
-        // Changed return type - no longer returning impl Future
         let market_contract =
-            UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
+            UniversalPorchettaInstance::new(self.market_address, self.rpc_provider.clone());
 
-        let resolve_filter = market_contract.Resolve_filter().topic2(request_id);
+        let resolve_filter = market_contract.Resolve_filter().topic2(offer_id);
 
         let event_poller = resolve_filter
             .watch()
             .await
-            .map_err(|e| RequesterError::TrackRequestError(e.to_string()))?;
+            .map_err(|e| ClientError::TrackIntentError(e.to_string()))?;
 
         let mut resolve_stream = event_poller.into_stream();
 

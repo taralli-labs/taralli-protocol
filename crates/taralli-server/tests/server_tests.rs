@@ -5,7 +5,7 @@ use common::helpers::{setup_app, submit, subscribe, MAX_BODY_SIZE};
 use futures::Stream;
 use hyper::StatusCode;
 use serde_json::{json, Value};
-use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::systems::SystemId;
 use tokio_stream::StreamExt;
 
 mod common;
@@ -34,7 +34,7 @@ async fn test_submit_with_no_subscribers() {
 #[tokio::test]
 async fn test_broadcast_single() {
     let router = setup_app(None).await;
-    let _stream = subscribe(router, &[ProvingSystemId::Arkworks]).await;
+    let _stream = subscribe(router, &[SystemId::Arkworks]).await;
 }
 
 #[tokio::test]
@@ -43,7 +43,7 @@ async fn test_broadcast_over_with_no_more_subscribers() {
     let router = setup_app(Some(1)).await;
 
     // Create and immediately drop the subscriber to ensure no receivers
-    drop(subscribe(router.clone(), &[ProvingSystemId::Arkworks]).await);
+    drop(subscribe(router.clone(), &[SystemId::Arkworks]).await);
 
     let arkworks_msg = json!({
         "proving_system_id": "arkworks",
@@ -74,11 +74,11 @@ async fn test_single_subscriber_multiple_systems() {
     let mut stream = subscribe(
         router.clone(),
         &[
-            ProvingSystemId::Arkworks,
-            ProvingSystemId::Risc0,
-            ProvingSystemId::Gnark,
-            ProvingSystemId::Sp1,
-            ProvingSystemId::AlignedLayer,
+            SystemId::Arkworks,
+            SystemId::Risc0,
+            SystemId::Gnark,
+            SystemId::Sp1,
+            SystemId::AlignedLayer,
         ],
     )
     .await;
@@ -127,7 +127,7 @@ async fn test_multiple_subscribers_single_system() {
     // Create three separate subscribers all listening to Arkworks
     let mut streams = Vec::new();
     for _ in 0..3 {
-        let stream = subscribe(router.clone(), &[ProvingSystemId::Arkworks]).await;
+        let stream = subscribe(router.clone(), &[SystemId::Arkworks]).await;
         streams.push(stream);
     }
 
@@ -163,28 +163,24 @@ async fn test_multiple_subscribers_multiple_systems() {
     let stream1 = subscribe(
         router.clone(),
         &[
-            ProvingSystemId::Arkworks,
-            ProvingSystemId::Risc0,
-            ProvingSystemId::Gnark,
-            ProvingSystemId::Sp1,
-            ProvingSystemId::AlignedLayer,
+            SystemId::Arkworks,
+            SystemId::Risc0,
+            SystemId::Gnark,
+            SystemId::Sp1,
+            SystemId::AlignedLayer,
         ],
     )
     .await;
 
-    let stream2 = subscribe(
-        router.clone(),
-        &[ProvingSystemId::Arkworks, ProvingSystemId::Risc0],
-    )
-    .await;
+    let stream2 = subscribe(router.clone(), &[SystemId::Arkworks, SystemId::Risc0]).await;
 
     let stream3 = subscribe(
         router.clone(),
-        &[ProvingSystemId::Arkworks, ProvingSystemId::AlignedLayer],
+        &[SystemId::Arkworks, SystemId::AlignedLayer],
     )
     .await;
 
-    let stream4 = subscribe(router.clone(), &[ProvingSystemId::Sp1]).await;
+    let stream4 = subscribe(router.clone(), &[SystemId::Sp1]).await;
 
     // Create test messages for different systems
     let arkworks_msg = json!({

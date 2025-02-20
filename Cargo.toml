@@ -2,8 +2,7 @@
 resolver = "2"
 members = [
     "crates/taralli-primitives",
-    "crates/taralli-provider",
-    "crates/taralli-requester",
+    "crates/taralli-client",
     "crates/taralli-server",
 ]
 

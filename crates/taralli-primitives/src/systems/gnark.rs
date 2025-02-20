@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
 use crate::error::Result;
-use crate::systems::{MultiModeSystem, ProvingSystem, SystemConfig, VerifierConstraints};
+use crate::systems::{MultiModeSystem, System, SystemConfig};
 
 use super::system_id::Gnark;
 use super::SystemInputs;
@@ -23,29 +21,13 @@ pub struct GnarkConfig {
     pub mode: GnarkMode,
 }
 
-impl SystemConfig for GnarkConfig {
-    fn verifier_constraints(&self) -> VerifierConstraints {
-        match self.mode {
-            GnarkMode::Groth16Bn254 => VerifierConstraints::default(),
-            GnarkMode::PlonkBn254 => VerifierConstraints::default(),
-            GnarkMode::PlonkBls12_381 => VerifierConstraints::default(),
-        }
-    }
-
-    fn validate_request(&self, _details: &ProofRequestVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-
-    fn validate_offer(&self, _details: &ProofOfferVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-}
+impl SystemConfig for GnarkConfig {}
 
 // Implement MultiModeSystem to indicate Gnark supports multiple proving modes
 impl MultiModeSystem for GnarkConfig {
     type Mode = GnarkMode;
 
-    fn proving_mode(&self) -> &Self::Mode {
+    fn mode(&self) -> &Self::Mode {
         &self.mode
     }
 }
@@ -58,11 +40,11 @@ pub struct GnarkProofParams {
     pub public_inputs: Value, // Public inputs in JSON format
 }
 
-impl ProvingSystem for GnarkProofParams {
+impl System for GnarkProofParams {
     type Config = GnarkConfig;
     type Inputs = Value;
 
-    fn system_id(&self) -> super::ProvingSystemId {
+    fn system_id(&self) -> super::SystemId {
         Gnark
     }
 

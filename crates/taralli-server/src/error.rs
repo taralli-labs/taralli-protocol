@@ -27,6 +27,10 @@ pub enum ServerError {
     SerializationError(String),
     #[error("Deserialization error: {0}")]
     DeserializationError(String),
+    #[error("Unsupported intent error")]
+    UnsupportedIntentType,
+    #[error("Validation config type mismatch error")]
+    ValidationConfigTypeMismatch,
     #[error("Primitives error: {0}")]
     PrimitivesError(#[from] PrimitivesError),
 }

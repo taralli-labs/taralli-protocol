@@ -7,12 +7,12 @@ use taralli_primitives::{
 };
 
 use crate::{
-    analyzer::RequestAnalyzer,
+    request::analyzer::RequestAnalyzer,
     api::ProviderApi,
-    bidder::RequestBidder,
+    request::bidder::RequestBidder,
     config::{AnalyzerConfig, ApiConfig, BidderConfig, ProviderConfig, ResolverConfig},
     error::{ProviderError, Result},
-    resolver::RequestResolver,
+    request::resolver::RequestResolver,
     worker::{ComputeWorker, WorkerManager},
     ProviderClient,
 };
