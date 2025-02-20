@@ -1,19 +1,12 @@
-use std::{env, path::Path, str::FromStr, sync::Arc, time::Duration, u32};
+use std::{path::Path, str::FromStr, u32};
 
 use alloy::{
-    primitives::{fixed_bytes, Address, FixedBytes, Uint, U256},
-    providers::ProviderBuilder,
-    signers::{k256::ecdsa, local::PrivateKeySigner, Signature, Signer},
+    primitives::{address, Address, FixedBytes, Uint, U256},
+    signers::{local::PrivateKeySigner, Signer},
     sol_types::SolValue,
 };
-use axum::{
-    routing::{get, post},
-    Router,
-};
-use dotenv::dotenv;
 use rstest::*;
 
-use taralli_primitives::alloy::primitives::PrimitiveSignature;
 use taralli_primitives::systems::risc0::Risc0ProofParams;
 use taralli_primitives::{
     market::UNIVERSAL_BOMBETTA_ADDRESS,
@@ -21,43 +14,35 @@ use taralli_primitives::{
     utils::{compute_permit2_digest, compute_request_witness},
     OnChainProofRequest, Request,
 };
-use taralli_server::{
-    app_state::{AppState, AppStateConfig},
-    config::Config,
-    routes::{submit::submit_handler, subscribe::websocket_subscribe_handler},
-    subscription_manager::SubscriptionManager,
-};
-use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use taralli_provider::{api::ProviderApi, config::ApiConfig};
+use taralli_requester::{api::RequesterApi, create_dummy_signature};
+use url::Url;
 
-/// create dummy ECDSA signature
-pub fn create_dummy_signature() -> PrimitiveSignature {
-    PrimitiveSignature::try_from(&DUMMY_SIGNATURE_BYTES[..]).unwrap()
+const DUMMY_PRIV_KEY: &str = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+#[fixture]
+pub fn requester_fixture() -> RequesterApi {
+    RequesterApi::new(Url::parse("http://localhost:8000").unwrap())
 }
 
-/// Dummy signature bytes used as placeholder before signing
-pub const DUMMY_SIGNATURE_BYTES: [u8; 65] = [
-    132, 12, 252, 87, 40, 69, 245, 120, 110, 112, 41, 132, 194, 165, 130, 82, 140, 173, 75, 73,
-    178, 161, 11, 157, 177, 190, 127, 202, 144, 5, 133, 101, 37, 231, 16, 156, 235, 152, 22, 141,
-    149, 176, 155, 24, 187, 246, 182, 133, 19, 14, 5, 98, 242, 51, 135, 125, 73, 43, 148, 238, 224,
-    197, 182, 209, 0, // v value (false/0)
-];
-
-pub const DUMMY_PRIV_KEY: &str = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+#[fixture]
+pub fn provider_fixture() -> ProviderApi {
+    ProviderApi::new(ApiConfig::default())
+}
 
 /// Generate a Request to be sent to the server.
 /// The contents of the request are unimportant, as long as we pass the validation on submit().
 #[fixture]
 pub async fn request_fixture() -> Request<ProvingSystemParams> {
-    let risc0_guest_program_path = Path::new(
-        "/Users/gabrielsegatti/repo/taralli-protocol/contracts/test-proof-data/risc0/is-even",
-    );
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("Failed to get crates")
+        .parent()
+        .expect("Failed to get root");
+    let risc0_guest_program_path = repo_root.join("contracts/test-proof-data/risc0/is-even");
 
-    println!("{:?}", risc0_guest_program_path);
-    // proof input
     let proof_input = U256::from(1304);
     let inputs = proof_input.abi_encode();
-    // load elf binary
     let elf = std::fs::read(risc0_guest_program_path).expect("Couldn't read elf");
     let mut proof_request: Request<ProvingSystemParams> = Request {
         proving_system_id: ProvingSystemId::Risc0,
@@ -70,7 +55,7 @@ pub async fn request_fixture() -> Request<ProvingSystemParams> {
         ))
         .unwrap(),
         onchain_proof_request: OnChainProofRequest {
-            signer: Address::random(),
+            signer: address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
             market: UNIVERSAL_BOMBETTA_ADDRESS,
             nonce: Uint::from(0u64),
             token: Address::random(),
@@ -95,12 +80,12 @@ pub async fn request_fixture() -> Request<ProvingSystemParams> {
 
     let signer = PrivateKeySigner::from_str(DUMMY_PRIV_KEY).expect("Couldn't get priv key");
     let witness = compute_request_witness(&proof_request.onchain_proof_request);
-    // compute permit digest
     let permit2_digest = compute_permit2_digest(&proof_request.onchain_proof_request, witness);
-
-    let signature = signer.sign_hash(&permit2_digest).await.expect("Couldn't sign req");
+    let signature = signer
+        .sign_hash(&permit2_digest)
+        .await
+        .expect("Couldn't sign req");
     proof_request.signature = signature;
-
 
     proof_request
 }

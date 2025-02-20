@@ -34,9 +34,10 @@ hex = "0.4.3"
 hyper = "1.6.0"
 http-body-util = "0.1.2"
 bincode = "1.3.3"
-dotenv = "0.15.0"
 
 [dev-dependencies]
 tower = { version = "0.5.1", features = ["util"] }
 rstest = "0.17"
 taralli-requester = { workspace = true }
+taralli-provider = { workspace = true }
+serial_test = "3.1.1"

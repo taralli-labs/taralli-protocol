@@ -186,15 +186,10 @@ impl ProviderApi {
             ProviderError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
         })?;
 
-        let ws_url = url
-            .join("subscribe")
-            .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?
-            .to_string();
-
-        tracing::info!("Connecting to WebSocket: {ws_url}");
+        tracing::info!("Connecting to WebSocket: {url}");
 
         let request = tungstenite::http::Request::builder()
-            .uri(ws_url)
+            .uri(url.as_str())
             .header(
                 "Host",
                 url.host_str().ok_or_else(|| {
@@ -214,23 +209,32 @@ impl ProviderApi {
         let (ws_stream, _resp) = connect_async(request).await.map_err(|e| {
             ProviderError::ServerSubscriptionError(format!("WebSocket connect error: {e}"))
         })?;
+
         // Split the websocket since we're only receiving data on this client side.
         // Therefore, sender side will have the purpose of sending packets to close the connection.
         // Hence it'll be within a separate thread.
         let (ws_sender, ws_listener) = ws_stream.split();
 
-        // Create a oneshot channels so sender and receiver from websocket can both be closed appropriately.
+        // Create oneshot channels so sender and receiver from websocket can both be closed appropriately.
         let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel::<()>();
+        let (cleanup_sender, cleanup_receiver) = tokio::sync::oneshot::channel::<()>(); // <-- new!
 
         // Spawn the shutdown handler with the sender half.
         tokio::spawn(Self::wait_for_shutdown_and_close_ws(
             ws_sender,
             shutdown_sender,
+            cleanup_receiver,
         ));
 
         // Create a stream that processes messages until shutdown is received
         let parsed_stream = Self::get_stream_with_shutdown(ws_listener, shutdown_receiver).await?;
-        Ok(Box::pin(parsed_stream))
+
+        let wrapped_stream = CleanupStream {
+            inner: parsed_stream,
+            cleanup_sender: Some(cleanup_sender), // <-- new!
+        };
+
+        Ok(Box::pin(wrapped_stream))
     }
 
     /// Waits for a shutdown and attempts to gracefully close the WebSocket connection.
@@ -242,9 +246,11 @@ impl ProviderApi {
     /// # Parameters
     /// - `ws_sender`: The sending side of the WebSocket.
     /// - `shutdown_sender`: The sending side of IPC communication linking WebSocket streams.
+    /// - `cleanup_receiver`: The receiving side of IPC communication, triggered when the stream is dropped.
     pub async fn wait_for_shutdown_and_close_ws(
         mut ws_sender: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
         shutdown_sender: tokio::sync::oneshot::Sender<()>,
+        mut cleanup_receiver: tokio::sync::oneshot::Receiver<()>,
     ) {
         let mut term_signal =
             tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
@@ -254,6 +260,9 @@ impl ProviderApi {
         tokio::select! {
             _ = signal::ctrl_c() => tracing::warn!("Received SIGINT (Ctrl+C), shutting down."),
             _ = term_signal.recv() => tracing::warn!("Received SIGTERM, shutting down."),
+            _ = &mut cleanup_receiver => {
+                tracing::info!("Cleanup triggered (stream dropped), closing connection.");
+            }
         }
 
         // Send a Close frame before exiting
@@ -282,5 +291,32 @@ impl ProviderApi {
         }
 
         tracing::info!("WebSocket closed.");
+    }
+}
+
+/// Wrapper around the RequestStream type.
+/// The intent here is to implement a custom `Drop` so we can set the closing of WebSocket conns.
+pub struct CleanupStream {
+    inner: RequestStream,
+    cleanup_sender: Option<tokio::sync::oneshot::Sender<()>>,
+}
+
+impl Stream for CleanupStream {
+    type Item = Result<Request<ProvingSystemParams>>;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        Pin::new(&mut self.inner).poll_next(cx)
+    }
+}
+
+impl Drop for CleanupStream {
+    fn drop(&mut self) {
+        // Start closing the websocket.
+        if let Some(sender) = self.cleanup_sender.take() {
+            let _ = sender.send(());
+        }
     }
 }

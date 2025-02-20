@@ -11,6 +11,7 @@ use self::config::RequesterConfig;
 use self::error::{RequesterError, Result};
 use self::tracker::RequestTracker;
 use std::time::Duration;
+use taralli_primitives::alloy::primitives::PrimitiveSignature;
 use taralli_primitives::alloy::{
     network::Network, providers::Provider, signers::Signer, transports::Transport,
 };
@@ -161,3 +162,16 @@ where
         Ok(())
     }
 }
+
+/// create dummy ECDSA signature
+pub fn create_dummy_signature() -> PrimitiveSignature {
+    PrimitiveSignature::try_from(&DUMMY_SIGNATURE_BYTES[..]).unwrap()
+}
+
+/// Dummy signature bytes used as placeholder before signing
+pub const DUMMY_SIGNATURE_BYTES: [u8; 65] = [
+    132, 12, 252, 87, 40, 69, 245, 120, 110, 112, 41, 132, 194, 165, 130, 82, 140, 173, 75, 73,
+    178, 161, 11, 157, 177, 190, 127, 202, 144, 5, 133, 101, 37, 231, 16, 156, 235, 152, 22, 141,
+    149, 176, 155, 24, 187, 246, 182, 133, 19, 14, 5, 98, 242, 51, 135, 125, 73, 43, 148, 238, 224,
+    197, 182, 209, 0, // v value (false/0)
+];
