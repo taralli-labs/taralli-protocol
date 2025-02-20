@@ -1,10 +1,25 @@
-use axum::body::{to_bytes, BodyDataStream};
-use common::helpers::{setup_app, submit, subscribe, MAX_BODY_SIZE};
+use axum::{body::{to_bytes, BodyDataStream}, Router};
+use common::{helpers::{setup_app, submit, subscribe, MAX_BODY_SIZE}};
 use futures::{stream::MapOk, StreamExt};
 use hyper::StatusCode;
 use serde_json::{json, Value};
-
+use taralli_primitives::{systems::{ProvingSystemInformation, ProvingSystemParams}, Request};
+use rstest::*;
+use url::Url;
 mod common;
+use crate::common::fixtures::request_fixture;
+use taralli_requester::{api::RequesterApi, RequesterClient};
+
+
+
+#[tokio::test]
+#[rstest]
+async fn test_submit_with_no_subscribers_new() {
+    let request = request_fixture().await;
+    let client = RequesterApi::new(Url::parse("http://localhost:8000").unwrap());
+    let response = client.submit_request(request).await.expect("Couldn't Submit()");
+    println!("{:?}", response.text().await);
+}
 
 #[tokio::test]
 async fn test_submit_with_no_subscribers() {
