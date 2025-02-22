@@ -52,7 +52,8 @@ jobs:
     - name: Build Docker image
       uses: docker/build-push-action@v6
       with:
-        context: ${{ github.workspace }}/crates/taralli-server
+        context: ${{ github.workspace }}
+        file: crates/taralli-server/Dockerfile
         platforms: linux/amd64
         push: false
         tags: taralli-server:latest
