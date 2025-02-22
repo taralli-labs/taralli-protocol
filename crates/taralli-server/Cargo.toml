@@ -41,3 +41,7 @@ rstest = "0.17"
 taralli-requester = { workspace = true }
 taralli-provider = { workspace = true }
 serial_test = "3.1.1"
+
+[features]
+default = []
+ci-test = []

@@ -174,8 +174,6 @@ pub fn validate_signature(
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    println!("{:?} - {:?}", computed_signer, onchain_proof_request.signer);
-
     if computed_signer != onchain_proof_request.signer {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),

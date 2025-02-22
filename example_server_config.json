@@ -1,6 +1,6 @@
 {
     "server_port": 8000,
-    "rpc_url": "",
+    "rpc_url": "https://eth-holesky.g.alchemy.com/",
     "log_level": "INFO",
     "validation_timeout_seconds": 30,
     "minimum_allowed_proving_time": 10,

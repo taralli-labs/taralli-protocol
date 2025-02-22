@@ -22,7 +22,15 @@ where
     P: Provider<T> + Clone,
 {
     // TODO: remove this async process from the validation execution of the server and use input parameter instead
+    #[cfg(not(feature = "ci-test"))]
     let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
+
+    // We have some tests for the transport of data between submit/subscribe.
+    // Since said tests are carried by communicating with the deployed binary of the server, mocking this function
+    // is only possible via feature flags.
+    #[cfg(feature = "ci-test")]
+    let latest_timestamp = request.onchain_proof_request.startAuctionTimestamp
+        - app_state.maximum_allowed_start_delay() as u64;
 
     timeout(timeout_seconds, async {
         validate_partial_request(

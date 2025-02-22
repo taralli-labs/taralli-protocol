@@ -49,5 +49,20 @@ jobs:
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
 
+    - name: Build Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ github.workspace }}/crates/taralli-server
+        platforms: linux/amd64
+        push: false
+        tags: taralli-server:latest
+    
+    - name: Start services with Docker Compose
+      run: docker-compose up -d
+    
     - name: Run tests
       run: cargo test --locked --verbose
+
+    - name: Tear down Docker Compose services
+      run: docker-compose down
+    
