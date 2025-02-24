@@ -56,7 +56,7 @@ jobs:
         file: crates/taralli-server/Dockerfile
         platforms: linux/amd64
         push: false
-        tags: taralli-server:latest
+        tags: taralli-server:latest 
 
     - name: Install Docker Compose
       run: |
@@ -64,11 +64,12 @@ jobs:
         sudo apt-get install -y docker-compose
     
     - name: Start services with Docker Compose
-      run: docker-compose up -d
+      run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
     
     - name: Run tests
       run: cargo test --locked --verbose
 
-    - name: Tear down Docker Compose services
-      run: docker-compose down
+    - name: Teardown Docker services
+      run: docker-compose -f crates/taralli-server/docker-compose.yml down
+    
     
