@@ -72,7 +72,7 @@ pub struct ApiConfig {
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
-            server_url: Url::parse("http://localhost:8080").unwrap(),
+            server_url: Url::parse("http://localhost:8000").unwrap(),
             request_timeout: 30,
             max_retries: 3,
         }

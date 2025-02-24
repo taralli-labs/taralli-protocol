@@ -25,7 +25,6 @@ async fn main() -> Result<()> {
 
     // Load configuration
     let config = Config::from_file("config.json").context("Failed to load config")?;
-    // tracing
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(config.log_level()?)

@@ -44,16 +44,16 @@ pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone>(
                         StatusCode::OK,
                         Json(json!({
                             "message": "Proof request accepted and submitted to Proof Providers.",
-                            "broadcast_receivers": recv_count
+                            "broadcasted_to": recv_count
                         })),
                     ))
                 }
                 Err(_) => {
                     tracing::debug!("No active subscribers to receive the broadcast");
                     Err((
-                        StatusCode::BAD_REQUEST,
+                        StatusCode::OK,
                         Json(json!({
-                            "error": "No providers subscribed to listen for this request."
+                            "message": "No providers subscribed to listen for this request."
                         })),
                     ))
                 }
