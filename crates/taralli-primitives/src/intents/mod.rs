@@ -1,24 +1,19 @@
-use crate::abi::universal_bombetta::UniversalBombetta;
-use crate::abi::universal_porchetta::UniversalPorchetta;
-use crate::systems::{ProvingSystem, ProvingSystemId};
-use alloy::primitives::PrimitiveSignature;
+use crate::systems::{System, SystemParams};
+use crate::validation::Validate;
+use alloy::primitives::B256;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+
+pub mod offer;
+pub mod request;
 
 /// Compute Intent types
+/// Trait representing common behavior for compute intents
+pub trait ComputeIntent: Validate + Serialize + for<'de> Deserialize<'de> + Send + Sync {
+    type System: System;
+    type ProofCommitment;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ComputeRequest<P: ProvingSystem> {
-    pub proving_system_id: ProvingSystemId,
-    pub proving_system: P,
-    pub proof_request: UniversalBombetta::ProofRequest,
-    pub signature: PrimitiveSignature,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ComputeOffer<P: ProvingSystem> {
-    pub proving_system_id: ProvingSystemId,
-    pub proving_system: P,
-    pub proof_offer: UniversalPorchetta::ProofOffer,
-    pub signature: PrimitiveSignature,
+    fn compute_id(&self) -> B256;
+    fn system_params(&self) -> Option<&SystemParams> {
+        self.system().system_params()
+    }
 }

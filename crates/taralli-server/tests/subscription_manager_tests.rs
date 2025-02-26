@@ -1,4 +1,4 @@
-use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::systems::SystemId;
 use taralli_server::subscription_manager::SubscriptionManager;
 
 #[tokio::test]
@@ -6,11 +6,11 @@ use taralli_server::subscription_manager::SubscriptionManager;
 async fn should_broadcast() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
     let mut recv = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 1)
+        .broadcast(SystemId::Arkworks, 1)
         .await
         .unwrap();
     assert_eq!(Some(1), Some(recv.recv().await.unwrap()));
@@ -20,7 +20,7 @@ async fn should_broadcast() {
 async fn should_not_broadcast_without_receivers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
     assert!(subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 1)
+        .broadcast(SystemId::Arkworks, 1)
         .await
         .is_err());
 }
@@ -29,15 +29,15 @@ async fn should_not_broadcast_without_receivers() {
 async fn should_receive_lagged() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(1);
     assert!(subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 1)
+        .broadcast(SystemId::Arkworks, 1)
         .await
         .is_err());
     let mut recv = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 2)
+        .broadcast(SystemId::Arkworks, 2)
         .await
         .unwrap();
     assert_eq!(Some(2), Some(recv.recv().await.unwrap()));
@@ -47,12 +47,12 @@ async fn should_receive_lagged() {
 async fn should_broadcast_multiple_times() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(10);
     let mut recv = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     for i in 0..10 {
         subscription_manager
-            .broadcast(ProvingSystemId::Arkworks, i)
+            .broadcast(SystemId::Arkworks, i)
             .await
             .unwrap();
     }
@@ -65,16 +65,16 @@ async fn should_broadcast_multiple_times() {
 async fn should_broadcast_multiple_times_to_many_subscribers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::new(10);
     let mut r1 = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     let mut r2 = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     for i in 0..10 {
         subscription_manager
-            .broadcast(ProvingSystemId::Arkworks, i)
+            .broadcast(SystemId::Arkworks, i)
             .await
             .unwrap();
         assert_eq!(Some(i), Some(r1.recv().await.unwrap()));
@@ -87,18 +87,18 @@ async fn should_broadcast_multiple_times_to_many_subscribers() {
 async fn should_drop_receivers() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
     let recv = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     drop(recv);
     // `broadcast()` to no recvs returns errored.
     let _ = subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 1)
+        .broadcast(SystemId::Arkworks, 1)
         .await
         .unwrap_err();
     // Check receiver count directly from the channel
     let count = subscription_manager
-        .get_or_create_sender(ProvingSystemId::Arkworks)
+        .get_or_create_sender(SystemId::Arkworks)
         .await
         .receiver_count();
     assert_eq!(count, 0);
@@ -109,24 +109,24 @@ async fn should_drop_receivers() {
 async fn should_continue_broadcast_after_subscriber_removed() {
     let subscription_manager: SubscriptionManager<i32> = SubscriptionManager::default();
     let r1 = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     let mut r2 = subscription_manager
-        .subscribe_to_ids(&[ProvingSystemId::Arkworks])
+        .subscribe_to_ids(&[SystemId::Arkworks])
         .await
         .remove(0);
     // Simulate one client disconnection and broadcast
     drop(r1);
     subscription_manager
-        .broadcast(ProvingSystemId::Arkworks, 1)
+        .broadcast(SystemId::Arkworks, 1)
         .await
         .unwrap();
     // Verify that the remaining subscriber receives the message
     assert_eq!(Some(1), Some(r2.recv().await.unwrap()));
     // Check receiver count directly from the channel
     let count = subscription_manager
-        .get_or_create_sender(ProvingSystemId::Arkworks)
+        .get_or_create_sender(SystemId::Arkworks)
         .await
         .receiver_count();
     assert_eq!(count, 1);

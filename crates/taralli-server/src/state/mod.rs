@@ -3,7 +3,8 @@ use std::time::Duration;
 use taralli_primitives::alloy::{
     network::Ethereum, primitives::Address, providers::Provider, transports::Transport,
 };
-use taralli_primitives::validation::ValidationMetaConfig;
+
+use crate::config::ServerValidationConfigs;
 
 pub mod offer;
 pub mod request;
@@ -14,7 +15,7 @@ pub struct BaseState<T, P> {
     rpc_provider: P,
     market_address: Address,
     validation_timeout_seconds: Duration,
-    validation_config: ValidationMetaConfig,
+    validation_configs: ServerValidationConfigs,
     phantom: PhantomData<T>,
 }
 
@@ -27,13 +28,13 @@ where
         rpc_provider: P,
         market_address: Address,
         validation_timeout_seconds: Duration,
-        validation_config: ValidationMetaConfig,
+        validation_configs: ServerValidationConfigs,
     ) -> Self {
         Self {
             rpc_provider,
             market_address,
             validation_timeout_seconds,
-            validation_config,
+            validation_configs,
             phantom: PhantomData,
         }
     }
@@ -50,7 +51,7 @@ where
         self.validation_timeout_seconds
     }
 
-    pub fn validation_config(&self) -> &ValidationMetaConfig {
-        &self.validation_config
+    pub fn validation_configs(&self) -> &ServerValidationConfigs {
+        &self.validation_configs
     }
 }
