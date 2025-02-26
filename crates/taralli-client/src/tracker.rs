@@ -13,7 +13,7 @@ use taralli_primitives::{
         universal_bombetta::UniversalBombetta::{self, UniversalBombettaInstance},
         universal_porchetta::UniversalPorchetta::{self, UniversalPorchettaInstance},
     },
-    intents::{ComputeOffer, ComputeRequest},
+    intents::{offer::ComputeOffer, request::ComputeRequest},
     systems::SystemParams,
 };
 

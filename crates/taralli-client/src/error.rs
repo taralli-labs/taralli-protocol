@@ -3,6 +3,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ClientError {
+    #[error("Config error: {0}")]
+    ConfigError(String),
     #[error("Failed to setup bid: {0}")]
     TransactionSetupError(String),
     #[error("Failed to setup event filter: {0}")]
@@ -13,8 +15,8 @@ pub enum ClientError {
     ServerSubscriptionError(String),
     #[error("Failed intent analysis: {0}")]
     IntentAnalysisError(String),
-    #[error("Failed to execute worker: {0}")]
-    WorkerExecutionFailed(String),
+    #[error("Worker failed with error: {0}")]
+    WorkerError(String),
     #[error("Client builder error: {0}")]
     BuilderError(String),
     #[error("Failed to submit intent: {0}")]
@@ -54,7 +56,7 @@ pub enum ClientError {
     #[error("Invalid client mode: {0}")]
     InvalidMode(String),
     #[error("Provider search is not implemented, error")]
-    ProviderSearchingUnimplemented
+    ProviderSearchingUnimplemented,
 }
 
 pub type Result<T> = core::result::Result<T, ClientError>;

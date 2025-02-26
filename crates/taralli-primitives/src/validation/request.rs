@@ -6,7 +6,7 @@ use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
 use crate::Result;
 use crate::{
     abi::universal_bombetta::UniversalBombetta::ProofRequest,
-    intents::ComputeRequest,
+    intents::request::ComputeRequest,
     systems::{System, SystemId},
     utils::{compute_request_permit2_digest, compute_request_witness},
     PrimitivesError,

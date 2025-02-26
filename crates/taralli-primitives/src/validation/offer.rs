@@ -2,14 +2,12 @@ use alloy::primitives::{Address, FixedBytes, U256};
 use alloy::sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate
-};
+use super::{BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate};
 use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
 use crate::Result;
 use crate::{
     abi::universal_porchetta::UniversalPorchetta::ProofOffer,
-    intents::ComputeOffer,
+    intents::offer::ComputeOffer,
     systems::{System, SystemId},
     utils::{compute_offer_permit2_digest, compute_offer_witness},
     PrimitivesError,
@@ -86,7 +84,11 @@ pub fn validate_offer<S: System>(
 ) -> Result<()> {
     // Offer-specific validation logic
     validate_signature(offer)?;
-    validate_amount_constraints(offer, config.maximum_allowed_reward, config.minimum_allowed_stake)?;
+    validate_amount_constraints(
+        offer,
+        config.maximum_allowed_reward,
+        config.minimum_allowed_stake,
+    )?;
     validate_offer_verifier_details(offer)?;
     Ok(())
 }
@@ -112,11 +114,9 @@ pub fn validate_amount_constraints<S: System>(
 pub fn validate_offer_verifier_details<S: System>(offer: &ComputeOffer<S>) -> Result<()> {
     // Decode and validate verifier details from the request
     let _verifier_details =
-        ProofOfferVerifierDetails::abi_decode(&offer.proof_offer.extraData, true).map_err(
-            |e| {
-                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-            },
-        )?;
+        ProofOfferVerifierDetails::abi_decode(&offer.proof_offer.extraData, true).map_err(|e| {
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+        })?;
     Ok(())
 }
 

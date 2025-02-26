@@ -1,11 +1,11 @@
 use alloy::primitives::{Address, U256};
 use serde::Deserialize;
-use taralli_primitives::intents::{ComputeOffer, ComputeRequest};
+use std::fs;
+use std::str::FromStr;
+use taralli_primitives::intents::{offer::ComputeOffer, request::ComputeRequest};
 use taralli_primitives::systems::System;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::request::RequestValidationConfig;
-use std::fs;
-use std::str::FromStr;
 use taralli_primitives::validation::{BaseValidationConfig, Validate};
 use thiserror::Error;
 use tracing::Level;
@@ -13,7 +13,7 @@ use url::Url;
 
 #[derive(Debug, Deserialize)]
 pub struct RawValidationConfig {
-    pub common_validation_config: BaseValidationConfig,
+    pub base_validation_config: BaseValidationConfig,
     pub request_validation_config: RawRequestConfig,
     pub offer_validation_config: RawOfferConfig,
 }
@@ -36,17 +36,17 @@ pub struct ServerValidationConfigs {
 }
 
 // derive type specific config from compute intent
-pub trait ServerConfigProvider: Validate {
+pub trait ServerValidationConfigProvider: Validate {
     fn get_config(configs: &ServerValidationConfigs) -> &Self::Config;
 }
 
-impl<S: System> ServerConfigProvider for ComputeRequest<S> {
+impl<S: System> ServerValidationConfigProvider for ComputeRequest<S> {
     fn get_config(configs: &ServerValidationConfigs) -> &Self::Config {
         &configs.request
     }
 }
 
-impl<S: System> ServerConfigProvider for ComputeOffer<S> {    
+impl<S: System> ServerValidationConfigProvider for ComputeOffer<S> {
     fn get_config(configs: &ServerValidationConfigs) -> &Self::Config {
         &configs.offer
     }
@@ -104,10 +104,14 @@ impl Config {
     pub fn get_offer_validation_config(&self) -> OfferValidationConfig {
         OfferValidationConfig {
             base: self.base_validation_config.clone(),
-            maximum_allowed_reward: U256::from_str(&self.offer_validation_config.maximum_allowed_reward)
-                .expect("Invalid maximum_allowed_reward"),
-            minimum_allowed_stake: U256::from_str(&self.offer_validation_config.minimum_allowed_stake)
-                .expect("Invalid minimum_allowed_stake"),
+            maximum_allowed_reward: U256::from_str(
+                &self.offer_validation_config.maximum_allowed_reward,
+            )
+            .expect("Invalid maximum_allowed_reward"),
+            minimum_allowed_stake: U256::from_str(
+                &self.offer_validation_config.minimum_allowed_stake,
+            )
+            .expect("Invalid minimum_allowed_stake"),
         }
     }
 

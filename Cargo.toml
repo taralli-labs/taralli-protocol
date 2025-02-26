@@ -1,9 +1,11 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/taralli-primitives",
-    "crates/taralli-client",
-    "crates/taralli-server",
+    "bin/*",
+    "crates/taralli-primitives/",
+    "crates/taralli-client/",
+    "crates/taralli-server/",
+    "crates/taralli-worker/",
 ]
 
 [workspace.lints.rust]

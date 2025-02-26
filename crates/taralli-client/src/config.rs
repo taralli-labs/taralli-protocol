@@ -1,7 +1,24 @@
+use std::{collections::HashMap, fmt, marker::PhantomData, sync::Arc};
+
+use alloy::{
+    network::Network, primitives::Address, providers::Provider, signers::Signer,
+    transports::Transport,
+};
 use serde::{Deserialize, Serialize};
-use taralli_primitives::alloy::{primitives::Address, signers::Signer};
-use taralli_primitives::systems::SystemId;
+use taralli_primitives::{
+    intents::ComputeIntent,
+    systems::SystemId,
+    validation::{offer::OfferValidationConfig, request::RequestValidationConfig},
+};
 use url::Url;
+
+use crate::worker::{ComputeWorker, WorkerManager};
+
+#[derive(Clone)]
+pub struct ClientValidationConfigs {
+    pub request: RequestValidationConfig,
+    pub offer: OfferValidationConfig,
+}
 
 // #[derive(Debug, Clone, Serialize, Deserialize)]
 // pub struct AnalyzerConfig {
@@ -18,12 +35,11 @@ use url::Url;
 //     }
 // }
 
-// #[derive(Debug, Clone, Serialize, Deserialize)]
-// pub struct BidderConfig {
-//     pub market_address: Address,
-//     pub min_bid_delay: u64,
-//     pub max_bid_attempts: u32,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BidderConfig {
+    pub min_bid_delay: u64,
+    pub max_bid_attempts: u32,
+}
 
 // impl Default for BidderConfig {
 //     fn default() -> Self {
@@ -79,72 +95,156 @@ use url::Url;
 //     pub decimal: u8,
 // }
 
-// requester client configs
-#[derive(Clone)]
-pub struct RequesterSearchConfig {}
-#[derive(Clone)]
-pub struct OfferAcceptanceConfig {}
-#[derive(Clone)]
-pub struct RequestConfig {}
+// Serializable configs (for loading from files)
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProviderOfferingConfigFile {
+    pub system_id: SystemId,
+    pub validation_config: OfferValidationConfig,
+}
 
-// provider client configs
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProviderStreamingConfigFile {
+    pub supported_systems: Vec<SystemId>,
+    pub validation_config: RequestValidationConfig,
+}
+
+// Runtime configs (with workers)
 #[derive(Clone)]
-pub struct ProviderSearchConfig {}
+pub struct ProviderOfferingConfig<I: ComputeIntent> {
+    pub system_id: SystemId,
+    pub worker: Arc<dyn ComputeWorker<I> + Send + Sync>,
+    pub validation_config: OfferValidationConfig,
+}
+
 #[derive(Clone)]
-pub struct RequestAcceptanceConfig {}
-// #[derive(Clone)]
-// pub struct StreamConfig {}
-#[derive(Clone)]
-pub struct OfferConfig{}
-#[derive(Clone)]
-pub struct WorkerConfig {}
-#[derive(Clone)]
-pub struct ResolverConfig {}
+pub struct ProviderStreamingConfig<I: ComputeIntent> {
+    pub worker_manager: Arc<WorkerManager<I>>,
+    pub validation_config: RequestValidationConfig,
+}
+
+// Debug implementations
+impl<I: ComputeIntent> fmt::Debug for ProviderOfferingConfig<I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProviderOfferingConfig")
+            .field("system_id", &self.system_id)
+            .field("validation_config", &self.validation_config)
+            .field("worker", &"<ComputeWorker>")
+            .finish()
+    }
+}
+
+impl<I: ComputeIntent> fmt::Debug for ProviderStreamingConfig<I> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ProviderStreamingConfig")
+            .field("validation_config", &self.validation_config)
+            .field("worker_manager", &"<WorkerManager>")
+            .finish()
+    }
+}
+
+// Conversion functions
+impl ProviderOfferingConfigFile {
+    pub fn to_runtime_config<I: ComputeIntent>(
+        &self,
+        worker: Arc<dyn ComputeWorker<I> + Send + Sync>,
+    ) -> ProviderOfferingConfig<I> {
+        ProviderOfferingConfig {
+            system_id: self.system_id,
+            worker,
+            validation_config: self.validation_config.clone(),
+        }
+    }
+}
+
+impl ProviderStreamingConfigFile {
+    pub fn to_runtime_config<I: ComputeIntent>(
+        &self,
+        worker_factory: impl Fn(SystemId) -> Arc<dyn ComputeWorker<I> + Send + Sync>,
+    ) -> ProviderStreamingConfig<I> {
+        let mut workers = HashMap::new();
+        for system_id in &self.supported_systems {
+            workers.insert(*system_id, worker_factory(*system_id));
+        }
+
+        let worker_manager = Arc::new(WorkerManager::new(workers));
+
+        ProviderStreamingConfig {
+            worker_manager,
+            validation_config: self.validation_config.clone(),
+        }
+    }
+}
+
+/// requester client configs
+// requester searching
+#[derive(Clone, Debug, Deserialize)]
+pub struct RequesterSearcherConfig {
+    pub system_id: SystemId,
+    pub validation_config: OfferValidationConfig,
+}
+#[derive(Clone, Debug, Deserialize)]
+pub struct OfferAcceptanceConfig {}
+// requester requesting
+#[derive(Clone, Debug, Deserialize)]
+pub struct RequesterRequestingConfig {
+    pub system_id: SystemId,
+    pub validation_config: RequestValidationConfig,
+}
+
+/// provider client configs
+// #[derive(Clone, Debug, Deserialize)]
+// pub struct ProviderOfferingConfig<I: ComputeIntent> {
+//     pub system_id: SystemId,
+//     pub worker: Box<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
+//     pub validation_config: OfferValidationConfig
+// }
+
+// #[derive(Clone, Debug, Deserialize)]
+// pub struct ProviderStreamingConfig<I: ComputeIntent> {
+//     pub system_id: SystemId,
+//     pub workers: WorkerManager<I>,
+//     pub validation_config: OfferValidationConfig
+// }
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct WorkerConfig {
+    pub supported_proving_systems: Vec<SystemId>,
+    pub max_concurrent_jobs: u32,
+}
 
 // Client modes
+#[derive(Clone, Debug, Deserialize)]
 pub enum ClientMode {
     Requester(RequesterMode),
     Provider(ProviderMode),
 }
 
 // Requester-specific modes
+#[derive(Clone, Debug, Deserialize)]
 pub enum RequesterMode {
     // Search for existing compute offers
     Searching {
-        search_config: RequesterSearchConfig,
-        offer_acceptance_config: OfferAcceptanceConfig,
+        requester_searcher_config: RequesterSearcherConfig,
     },
     // Create compute requests
     Requesting {
-        request_config: RequestConfig,
+        requester_requesting_config: RequesterRequestingConfig,
     },
 }
 
 // Provider-specific modes
-#[derive(Clone)]
+#[derive(Clone, Debug, Deserialize)]
 pub enum ProviderMode {
-    // Search for compute requests to bid on
-    Searching {
-        search_config: ProviderSearchConfig,
-        bidding_config: RequestAcceptanceConfig,
-        worker_config: WorkerConfig,
-        resolver_config: ResolverConfig,
-    },
-    // Process incoming compute requests over ws stream
     Streaming {
-        bidding_config: RequestAcceptanceConfig,
-        worker_config: WorkerConfig,
-        resolver_config: ResolverConfig,
+        provider_streaming_config_file: ProviderStreamingConfigFile,
     },
     // Create compute offers
     Offering {
-        offer_config: OfferConfig,
-        worker_config: WorkerConfig,
-        resolver_config: ResolverConfig,
+        provider_offering_config_file: ProviderOfferingConfigFile,
     },
 }
 
-/*#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ClientConfig<T, P, N, S>
 where
     T: Transport + Clone,
@@ -155,6 +255,7 @@ where
     pub rpc_provider: P,
     pub signer: S,
     pub server_url: Url,
+    pub market_address: Address,
     pub mode: ClientMode,
     phantom_data: PhantomData<(T, N)>,
 }
@@ -170,15 +271,16 @@ where
         rpc_provider: P,
         signer: S,
         server_url: Url,
-        mode: ClientMode
+        market_address: Address,
+        mode: ClientMode,
     ) -> Self {
         Self {
             rpc_provider,
             signer,
             server_url,
+            market_address,
             mode,
             phantom_data: PhantomData,
         }
     }
 }
-*/

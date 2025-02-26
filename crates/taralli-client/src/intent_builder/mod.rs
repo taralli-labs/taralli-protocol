@@ -29,86 +29,8 @@ pub const MOCK_SIGNATURE_BYTES: [u8; 65] = [
     132, 12, 252, 87, 40, 69, 245, 120, 110, 112, 41, 132, 194, 165, 130, 82, 140, 173, 75, 73,
     178, 161, 11, 157, 177, 190, 127, 202, 144, 5, 133, 101, 37, 231, 16, 156, 235, 152, 22, 141,
     149, 176, 155, 24, 187, 246, 182, 133, 19, 14, 5, 98, 242, 51, 135, 125, 73, 43, 148, 238, 224,
-    197, 182, 209, 0, // v value (false/0)
+    197, 182, 209, 0,
 ];
-
-// #[async_trait]
-// pub trait BaseBuilder<P>: IntentBuilder
-// where
-//     P: Provider,
-// {
-//     type Intent;
-//     fn new(rpc_provider: P, signer_address: Address, market_address: Address, system_id: SystemId) -> Self;
-//     /// Helper methods
-//     async fn set_new_nonce(&mut self) -> Result<&mut Self>;
-//     async fn set_timestamps_from_auction_length(&mut self) -> Result<&mut Self>;
-//     fn set_time_params(&mut self, start_auction_ts: u64, end_auction_ts: u64, proving_time: u32,) -> &mut Self;
-//     fn set_verification_commitment_params(&mut self, inputs_commitment: B256, extra_data: Bytes) -> &mut Self;
-//     /// Proof Commitment Setters
-//     fn auction_length(&mut self, auction_length: u32) -> &mut Self;
-//     fn market_address(&mut self, market_address: Address) -> &mut Self;
-//     fn nonce(&mut self, nonce: U256) -> &mut Self;
-//     fn reward_token_address(&mut self, token_address: Address) -> &mut Self;
-//     fn start_auction_timestamp(&mut self, timestamp: u64) -> &mut Self;
-//     fn end_auction_timestamp(&mut self, timestamp: u64) -> &mut Self;
-//     fn proving_time(&mut self, seconds_to_prove: u32) -> &mut Self;
-//     fn extra_data(&mut self, extra_data: Bytes) -> &mut Self;
-//     /// System Setters
-//     fn system(&mut self, info: Value) -> &mut Self;
-//     fn system_id(&mut self, system_id: SystemId) -> &mut Self;
-//     fn inputs(&mut self, inputs: Vec<u8>) -> &mut Self;
-// }
-
-// Factory for creating the appropriate builder based on mode
-/*pub enum IntentBuilder<T, P, N> {
-    Request(ComputeRequestBuilder<T, P, N>),
-    Offer(ComputeOfferBuilder<T, P, N>),
-}
-
-impl<T, P, N> IntentBuilder<T, P, N>
-where
-    T: Transport + Clone,
-    P: Provider<T, N> + Clone,
-    N: Network + Clone,
-{
-    pub fn for_mode(
-        rpc_provider: P,
-        signer_address: Address,
-        market_address: Address,
-        mode: &ClientMode,
-    ) -> Result<Self> {
-        let base = BaseIntentBuilder::new(rpc_provider, signer_address, market_address);
-
-        match mode {
-            ClientMode::Requester(RequesterMode::Requesting { config, request_config }) => {
-                Ok(Self::Request(ComputeRequestBuilder {
-                    base,
-                    max_reward_amount: todo!(),
-                    min_reward_amount: todo!(),
-                    minimum_stake: todo!(),
-                }))
-            }
-            ClientMode::Requester(RequesterMode::Searcher { config, .. }) => {
-                Ok(Self::Bid(BidBuilder {
-                    base,
-                    config: config.clone(),
-                }))
-            }
-            ClientMode::Provider(crate::config::ProviderMode::Offering { config, .. }) => {
-                Ok(Self::Offer(OfferBuilder {
-                    base,
-                    config: config.clone(),
-                }))
-            }
-            ClientMode::Provider(ProviderMode::Searcher { config, .. }) => {
-                Ok(Self::Bid(BidBuilder {
-                    base,
-                    config: config.clone(),
-                }))
-            }
-        }
-    }
-}*/
 
 #[derive(Clone)]
 pub struct BaseIntentBuilder<T, P, N>
@@ -125,6 +47,7 @@ where
     pub market_address: Address,
     pub nonce: U256,
     pub reward_token_address: Address,
+    pub reward_token_decimals: u8,
     pub start_auction_timestamp: u64,
     pub end_auction_timestamp: u64,
     pub proving_time: u32,
@@ -159,6 +82,7 @@ where
             market_address,
             nonce: U256::ZERO,
             reward_token_address: Address::ZERO,
+            reward_token_decimals: 0u8,
             start_auction_timestamp: 0u64,
             end_auction_timestamp: 0u64,
             proving_time: 0u32,
@@ -265,6 +189,11 @@ where
 
     pub fn reward_token_address(mut self, token_address: Address) -> Self {
         self.reward_token_address = token_address;
+        self
+    }
+
+    pub fn reward_token_decimals(mut self, token_decimals: u8) -> Self {
+        self.reward_token_decimals = token_decimals;
         self
     }
 

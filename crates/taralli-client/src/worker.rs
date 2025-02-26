@@ -1,9 +1,10 @@
 use crate::error::{ClientError, Result};
 use async_trait::async_trait;
 use std::collections::HashMap;
+use std::sync::Arc;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
-use taralli_primitives::intents::{ComputeIntent, ComputeRequest};
-use taralli_primitives::systems::{SystemId, SystemParams};
+use taralli_primitives::intents::ComputeIntent;
+use taralli_primitives::systems::SystemId;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceRequirements {
@@ -24,23 +25,23 @@ pub trait ComputeWorker<I: ComputeIntent>: Send + Sync {
     async fn execute(&self, intent: &I) -> Result<WorkResult>;
 }
 
-pub(crate) struct WorkerManager<I: ComputeIntent> {
-    pub workers: HashMap<SystemId, Box<dyn ComputeWorker<I>>>,
+#[derive(Clone)]
+pub struct WorkerManager<I: ComputeIntent> {
+    pub workers: HashMap<SystemId, Arc<dyn ComputeWorker<I> + Send + Sync>>,
 }
 
 impl<I: ComputeIntent> WorkerManager<I> {
-    pub(crate) fn new(workers: HashMap<SystemId, Box<dyn ComputeWorker<I>>>) -> Self {
+    pub fn new(
+        workers: HashMap<SystemId, Arc<dyn ComputeWorker<I> + Send + Sync + 'static>>,
+    ) -> Self {
         Self { workers }
     }
 
-    pub(crate) async fn execute(
-        &self,
-        intent: &I,
-    ) -> Result<WorkResult> {
-        let worker = self.workers.get(&<dyn ComputeIntent::system_id(intent)>).ok_or_else(|| {
-            ClientError::WorkerExecutionFailed(format!(
+    pub async fn execute(&self, intent: &I) -> Result<WorkResult> {
+        let worker = self.workers.get(&I::system_id(intent)).ok_or_else(|| {
+            ClientError::WorkerError(format!(
                 "worker not set for proving system id: {:?}",
-                ComputeIntent::system_id(intent)
+                I::system_id(intent)
             ))
         })?;
 

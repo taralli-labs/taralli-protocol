@@ -2,7 +2,7 @@ use crate::brotli::BrotliFile;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::intents::{ComputeOffer, ComputeRequest};
+use taralli_primitives::intents::{offer::ComputeOffer, request::ComputeRequest};
 use taralli_primitives::systems::SystemParams;
 
 use crate::error::{Result, ServerError};

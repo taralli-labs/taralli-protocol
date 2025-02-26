@@ -24,13 +24,10 @@ abstract contract Porchetta is IPorchetta {
     /// @notice Place a bid for a signed proof offer.
     /// @param offer The offer that is being bid upon.
     /// @param signature The signature of the proof offer.
-    /// @param submittedPartialCommitment The partial commitment provided by the proof requester to be used in checking the
-    ///                                   correctness of the submission alongside the requester's `predeterminedPartialCommitment`
-    ///                                   if needed.
     /// @return rewardToken the address of the reward token
     ///         rewardAmount The token reward amount available upon resolution.
     ///         provingDeadline The timestamp defining when the proof offer must be resolved.
-    function bid(ProofOffer calldata offer, bytes calldata signature, bytes32 submittedPartialCommitment)
+    function bid(ProofOffer calldata offer, bytes calldata signature)
         external
         virtual
         returns (address, uint256, uint256)

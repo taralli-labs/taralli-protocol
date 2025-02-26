@@ -1,66 +1,71 @@
 use alloy::primitives::Address;
 use async_trait::async_trait;
-use taralli_primitives::systems::SystemId;
+use taralli_primitives::{
+    intents::offer::ComputeOffer,
+    systems::{SystemId, SystemParams},
+};
+use url::Url;
 
-use crate::error::Result;
+use crate::{
+    api::ApiClient,
+    error::{ClientError, Result},
+};
 
 /// core searcher trait
 #[async_trait]
 pub trait IntentSearcher {
     type Intent;
-    async fn search(&self) -> Result<Vec<Self::Intent>>;
+    async fn search(&self) -> Result<Self::Intent>;
 }
 
-pub struct OfferSearcher {
+pub struct ComputeOfferSearcher {
+    api_client: ApiClient,
     system_id: SystemId,
-    market_address: Address,
+    _market_address: Address,
 }
 
-impl OfferSearcher {
-    pub fn new(system_id: SystemId, market_address: Address) -> Self {
+impl ComputeOfferSearcher {
+    pub fn new(server_url: Url, system_id: SystemId, market_address: Address) -> Self {
         Self {
+            api_client: ApiClient::new(server_url),
             system_id,
-            market_address,
+            _market_address: market_address,
         }
     }
 }
 
-/*pub struct IntentSearcher {
-    search_config: SearchConfig,
-    searcher_type: SearcherType,
-    phantom: PhantomData<(T, P, N)>,
+#[async_trait]
+impl IntentSearcher for ComputeOfferSearcher {
+    type Intent = ComputeOffer<SystemParams>;
+
+    async fn search(&self) -> Result<Self::Intent> {
+        // Query the server for active offers matching system_id
+        let response = self.api_client.query_market_offers(self.system_id).await?;
+
+        // Parse response into JSON and extract intents array
+        let json = response
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
+
+        let offers = json
+            .get("intents")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| ClientError::ServerRequestError("Invalid response format".into()))?;
+
+        // Convert stored intents into ComputeOffers
+        let offers = offers
+            .iter()
+            .map(|stored| serde_json::from_value::<ComputeOffer<SystemParams>>(stored.clone()))
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(|e| {
+                ClientError::ServerRequestError(format!("Failed to parse offers: {}", e))
+            })?;
+
+        let first_offer = offers
+            .first()
+            .ok_or_else(|| ClientError::ServerRequestError("No offers available".into()))?;
+
+        Ok(first_offer.clone())
+    }
 }
-
-enum SearcherType {
-    RequestSearcher(BiddingConfig),
-    OfferSearcher(AcceptanceConfig),
-}
-
-impl IntentSearcher {
-    pub fn new_request_searcher(
-        search_config: RequesterSearchConfig,
-        bidding_config: BiddingConfig,
-    ) -> Self {
-        Self {
-            search_config,
-            searcher_type: SearcherType::RequestSearcher(bidding_config)
-        }
-    }
-
-    pub fn new_provider_searcher(
-        search_config: RequesterSearchConfig,
-        bidding_config: BiddingConfig
-    ) -> Self {
-        Self {
-            search_config,
-            searcher_type: SearcherType::RequestSearcher(bidding_config)
-        }
-    }
-
-    pub async fn search(&self) -> Result<IntentStream> {
-        match &self.searcher_type {
-            SearcherType::RequestSearcher(config) => self.search_requests(config).await,
-            SearcherType::OfferSearcher(config) => self.search_offers(config).await,
-        }
-    }
-}*/

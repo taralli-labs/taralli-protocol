@@ -16,18 +16,19 @@ use serde_json::json;
 
 use axum::response::sse::{Event, Sse};
 use taralli_primitives::{
-    systems::{SystemId, SYSTEMS},
-    validation::{
-        offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
-        ValidationMetaConfig,
-    },
+    systems::{system_id::Arkworks, SystemId, SYSTEMS},
+    validation::BaseValidationConfig,
 };
 use tokio_stream::wrappers::BroadcastStream;
 
 use bytes::Bytes;
 use futures::stream::MapOk;
 use serde_json::Value;
-use taralli_server::{config::Config, state::BaseState, subscription_manager::SubscriptionManager};
+use taralli_server::{
+    config::{Config, RawOfferConfig, RawRequestConfig},
+    state::BaseState,
+    subscription_manager::SubscriptionManager,
+};
 use tower_http::trace::TraceLayer;
 
 use futures_util::stream::{StreamExt, TryStreamExt};
@@ -211,16 +212,50 @@ where
 }
 
 pub async fn setup_app(size: Option<usize>) -> Router {
+    //     "log_level": "INFO",
+    //     "validation_timeout_seconds": 30,
+    //     "market_address": "0xe05e737478E4f0b886981aD85CF9a59D55413e8b",
+    //     "base_validation_config": {
+    //         "minimum_proving_time": 10,
+    //         "maximum_start_delay": 300,
+    //         "supported_proving_systems": [
+    //             "Arkworks",
+    //             "Risc0",
+    //             "Sp1",
+    //             "AlignedLayer",
+    //             "Gnark"
+    //         ]
+    //     },
+    //     "request_validation_config": {
+    //         "maximum_allowed_stake": 1000000000000000000000
+    //     },
+    //     "offer_validation_config": {
+    //         "maximum_allowed_reward": "1000000000000000000000",
+    //         "minimum_allowed_stake": "100000000000000000000"
+    //     }
+    // }
+
     let config = Config {
         server_port: 8080,
         rpc_url: "http://localhost:8545".to_owned(),
         log_level: "DEBUG".to_owned(),
         validation_timeout_seconds: 1,
         market_address: Address::default(),
-        common_validation_config: CommonValidationConfig::default(),
-        request_validation_config: RequestSpecificConfig::default(),
-        offer_validation_config: OfferSpecificConfig::default(),
+        base_validation_config: BaseValidationConfig {
+            minimum_proving_time: 10,
+            maximum_start_delay: 10,
+            supported_systems: vec![Arkworks],
+        },
+        request_validation_config: RawRequestConfig {
+            maximum_allowed_stake: 1000000000000000000000,
+        },
+        offer_validation_config: RawOfferConfig {
+            maximum_allowed_reward: "1000000000000000000000".to_string(),
+            minimum_allowed_stake: "100000000000000000000".to_string(),
+        },
     };
+
+    let validation_configs = config.get_validation_configs();
 
     let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url().unwrap());
     let subscription_manager: SubscriptionManager<Value> =
@@ -228,17 +263,11 @@ pub async fn setup_app(size: Option<usize>) -> Router {
 
     subscription_manager.init_channels(&SYSTEMS).await;
 
-    let validation_meta_config = ValidationMetaConfig {
-        common: config.common_validation_config,
-        request: config.request_validation_config,
-        offer: config.offer_validation_config,
-    };
-
     let base_state = BaseState::new(
         rpc_provider,
         config.market_address,
         Duration::from_secs(config.validation_timeout_seconds as u64),
-        validation_meta_config,
+        validation_configs,
     );
 
     let value_state = ValueState::new(base_state, subscription_manager);

@@ -28,7 +28,7 @@ pub struct VerifierConstraints {
 }
 
 // Base trait for system configuration
-pub trait SystemConfig: Debug + Clone {
+pub trait SystemConfig: for<'de> Deserialize<'de> + Debug + Clone {
     // Common configuration methods all systems must implement
 }
 
@@ -51,7 +51,7 @@ pub enum SystemInputs {
 }
 
 // Main trait that all systems implement
-pub trait System: Send + Sync + 'static + Clone + Serialize {
+pub trait System: Send + Sync + 'static + Clone + Serialize + for<'de> Deserialize<'de> {
     type Config: SystemConfig;
     type Inputs: Debug + Clone;
 
@@ -59,6 +59,9 @@ pub trait System: Send + Sync + 'static + Clone + Serialize {
     fn config(&self) -> &Self::Config;
     fn inputs(&self) -> SystemInputs;
     fn validate_inputs(&self) -> Result<()>;
+    fn system_params(&self) -> Option<&SystemParams> {
+        None
+    }
 }
 
 // Helper macro to count the number of variants
@@ -158,6 +161,10 @@ macro_rules! systems {
                 match self {
                     $(Self::$variant(params) => params.validate_inputs()),*
                 }
+            }
+
+            fn system_params(&self) -> Option<&SystemParams> {
+                Some(self)
             }
         }
 

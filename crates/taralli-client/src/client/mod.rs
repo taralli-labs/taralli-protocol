@@ -1,13 +1,10 @@
-use std::marker::PhantomData;
-use alloy::primitives::Address;
-use url::Url;
 use crate::api::ApiClient;
+use alloy::primitives::Address;
+use std::marker::PhantomData;
+use url::Url;
 
-pub mod requester_requesting;
-pub mod requester_searching;
-pub mod provider_offering;
-pub mod provider_searching;
-pub mod provider_streaming;
+pub mod provider;
+pub mod requester;
 
 // Base client components shared across all modes
 pub struct BaseClient<T, P, N, S> {

@@ -20,7 +20,7 @@ pub trait CommonValidationConfig: Any {
 pub struct BaseValidationConfig {
     pub minimum_proving_time: u32,
     pub maximum_start_delay: u32,
-    pub supported_systems: Vec<SystemId>
+    pub supported_systems: Vec<SystemId>,
 }
 
 impl Default for BaseValidationConfig {

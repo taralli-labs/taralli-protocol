@@ -6,8 +6,9 @@ use taralli_primitives::alloy::{
     providers::Provider,
     transports::Transport,
 };
-use taralli_primitives::intents::ComputeOffer;
+use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::systems::{SystemId, SystemParams};
+use taralli_primitives::validation::offer::OfferValidationConfig;
 
 use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
@@ -25,6 +26,8 @@ where
     pub reward_amount: U256,
     pub stake_token_address: Address,
     pub stake_amount: U256,
+    // Compute offer validation config
+    pub validation_config: OfferValidationConfig,
 }
 
 impl<T, P, N> ComputeOfferBuilder<T, P, N>
@@ -38,6 +41,7 @@ where
         signer_address: Address,
         market_address: Address,
         system_id: SystemId,
+        validation_config: OfferValidationConfig,
     ) -> Self {
         // build permit2 nonce manager
         let permit2_nonce_manager = Permit2NonceManager::new(rpc_provider.clone(), signer_address);
@@ -49,6 +53,7 @@ where
             market_address,
             nonce: U256::ZERO,
             reward_token_address: Address::ZERO,
+            reward_token_decimals: 0u8,
             start_auction_timestamp: 0u64,
             end_auction_timestamp: 0u64,
             proving_time: 0u32,
@@ -63,7 +68,99 @@ where
             reward_amount: U256::ZERO,
             stake_token_address: Address::ZERO,
             stake_amount: U256::ZERO,
+            validation_config,
         }
+    }
+
+    pub async fn set_new_nonce(mut self) -> Result<Self> {
+        self.base = self.base.set_new_nonce().await?;
+        Ok(self)
+    }
+
+    pub async fn set_auction_timestamps_from_auction_length(mut self) -> Result<Self> {
+        self.base = self
+            .base
+            .set_auction_timestamps_from_auction_length()
+            .await?;
+        Ok(self)
+    }
+
+    pub fn set_time_params(
+        mut self,
+        start_auction_ts: u64,
+        end_auction_ts: u64,
+        proving_time: u32,
+    ) -> Self {
+        self.base = self
+            .base
+            .set_time_params(start_auction_ts, end_auction_ts, proving_time);
+        self
+    }
+
+    pub fn set_verification_commitment_params(
+        mut self,
+        inputs_commitment: B256,
+        extra_data: Bytes,
+    ) -> Self {
+        self.base = self
+            .base
+            .set_verification_commitment_params(inputs_commitment, extra_data);
+        self
+    }
+
+    pub fn auction_length(mut self, auction_length: u32) -> Self {
+        self.base = self.base.auction_length(auction_length);
+        self
+    }
+
+    pub fn market_address(mut self, market_address: Address) -> Self {
+        self.base = self.base.market_address(market_address);
+        self
+    }
+
+    pub fn nonce(mut self, nonce: U256) -> Self {
+        self.base = self.base.nonce(nonce);
+        self
+    }
+
+    pub fn reward_token_address(mut self, token_address: Address) -> Self {
+        self.base = self.base.reward_token_address(token_address);
+        self
+    }
+
+    pub fn start_auction_timestamp(mut self, timestamp: u64) -> Self {
+        self.base = self.base.start_auction_timestamp(timestamp);
+        self
+    }
+
+    pub fn end_auction_timestamp(mut self, timestamp: u64) -> Self {
+        self.base = self.base.end_auction_timestamp(timestamp);
+        self
+    }
+
+    pub fn proving_time(mut self, seconds_to_prove: u32) -> Self {
+        self.base = self.base.proving_time(seconds_to_prove);
+        self
+    }
+
+    pub fn extra_data(mut self, extra_data: Bytes) -> Self {
+        self.base = self.base.extra_data(extra_data);
+        self
+    }
+
+    pub fn system(mut self, info: Value) -> Self {
+        self.base = self.base.system(info);
+        self
+    }
+
+    pub fn system_id(mut self, system_id: SystemId) -> Self {
+        self.base = self.base.system_id(system_id);
+        self
+    }
+
+    pub fn inputs(mut self, inputs: Vec<u8>) -> Self {
+        self.base = self.base.inputs(inputs);
+        self
     }
 
     /// return the builder with added reward/stake parameters
