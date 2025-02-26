@@ -84,7 +84,7 @@ impl ApiClient {
             .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
 
         brotli_encoder
-            .write_all(&payload.as_bytes())
+            .write_all(payload.as_bytes())
             .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
 
         Ok(brotli_encoder.into_inner())

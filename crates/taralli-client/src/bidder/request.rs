@@ -142,8 +142,6 @@ where
     }
 }
 
-/// Helper methods
-
 fn calculate_current_reward(
     current_timestamp: u64,
     start_timestamp: u64,

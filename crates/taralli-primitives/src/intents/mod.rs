@@ -7,7 +7,6 @@ pub mod offer;
 pub mod request;
 
 /// Compute Intent types
-
 /// Trait representing common behavior for compute intents
 pub trait ComputeIntent: Validate + Serialize + for<'de> Deserialize<'de> + Send + Sync {
     type System: System;

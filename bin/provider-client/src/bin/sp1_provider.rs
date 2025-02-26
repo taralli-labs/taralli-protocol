@@ -10,8 +10,8 @@ use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
-use taralli_worker::sp1::Sp1Worker;
 use taralli_worker::sp1::local::Sp1LocalProver;
+use taralli_worker::sp1::Sp1Worker;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -59,10 +59,7 @@ async fn main() -> Result<()> {
         market_address,
         validation_config,
     )
-    .with_worker(
-        SystemId::Sp1,
-        Sp1Worker::new(sp1_prover),
-    )?;
+    .with_worker(SystemId::Sp1, Sp1Worker::new(sp1_prover))?;
 
     //// run provider client
     // Subscribes to the server and receives back an SSE stream or fails.
