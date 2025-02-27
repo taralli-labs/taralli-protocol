@@ -66,11 +66,17 @@ where
         // Create base config
         let config = ProviderConfig::new(rpc_provider.clone(), market_address, server_url.clone());
 
+        let subscribed_to = supported_systems
+            .iter()
+            .map(|id| id.as_bit())
+            .fold(0, |acc, x| acc | x);
+
         // Create component configs and instances
         let api = ProviderApi::new(ApiConfig {
             server_url,
             request_timeout: 30,
             max_retries: 3,
+            subscribed_to,
         });
 
         let analyzer = RequestAnalyzer::new(
