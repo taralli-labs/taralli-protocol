@@ -1,10 +1,9 @@
 use std::sync::Arc;
-
+use serde::Deserialize;
 use alloy::{providers::Provider, transports::Transport};
 use axum::{
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        State,
+        ws::{Message, WebSocket, WebSocketUpgrade}, Query, State
     },
     response::IntoResponse,
 };
@@ -12,6 +11,11 @@ use futures::{stream::StreamExt, SinkExt};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::app_state::AppState;
+
+#[derive(Debug, Deserialize)]
+pub struct SubscribeArgs {
+    pub subscribed_to: Option<u8>,
+}
 
 /// WebSocket subscription handler that upgrades the connection to a WebSocket session.
 ///
@@ -31,8 +35,9 @@ pub async fn websocket_subscribe_handler<
 >(
     ws: WebSocketUpgrade,
     State(app_state): State<AppState<T, P>>,
+    Query(args): Query<SubscribeArgs>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state)))
+    ws.on_upgrade(move |socket| websocket_subscribe(socket, Arc::new(app_state), args.subscribed_to))
 }
 
 /// Handles an active WebSocket session, streaming messages from the subscription system.
@@ -47,6 +52,7 @@ pub async fn websocket_subscribe_handler<
 async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
     app_state: Arc<AppState<T, P>>,
+    subscribed_to: Option<u8>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
     let subscription = app_state.subscription_manager().add_subscription();
@@ -54,6 +60,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
         "Subscription added, active subscriptions: {}",
         app_state.subscription_manager().active_subscriptions()
     );
+    tracing::info!("Proving systems: {:?}", subscribed_to);
 
     // Create a broadcast stream from the subscription receiver.
     let mut broadcast_stream = BroadcastStream::new(subscription);
@@ -66,7 +73,14 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
             // Outbound: messages from broadcast_stream => client
             maybe_broadcast = broadcast_stream.next() => {
                 match maybe_broadcast {
-                    Some(Ok(bytes)) => {
+                    Some(Ok(message)) => {
+                        let bytes = message.content;
+                        let message_proving_system_id = message.subscribed_to;
+                        // Check if the message is for the subscribed proving system
+                        // If no proving system is specified, default to 1, client is subscribed to all proving systems.
+                        if message_proving_system_id & subscribed_to.unwrap_or(1) == 0 {
+                            continue;
+                        }
                         // Try sending a binary message to the client
                         if let Err(e) = ws_sender.send(Message::Binary(bytes)).await {
                             tracing::error!("Failed to send WebSocket message: {:?}", e);

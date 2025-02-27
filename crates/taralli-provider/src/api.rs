@@ -26,6 +26,7 @@ use crate::{
 pub struct ProviderApi {
     api_key: String,
     server_url: Url,
+    subscribed_to: u8,
 }
 
 // type alias for WebSocket stream returned by the protocol server
@@ -42,6 +43,7 @@ impl ProviderApi {
         Self {
             api_key,
             server_url: config.server_url,
+            subscribed_to: config.subscribed_to,
         }
     }
 
@@ -172,7 +174,7 @@ impl ProviderApi {
     pub async fn subscribe_to_markets(&self) -> Result<RequestStream> {
         let mut url = self
             .server_url
-            .join("/subscribe")
+            .join(format!("/subscribe?subscribed_to={}", self.subscribed_to).as_str())
             .map_err(|e| ProviderError::ServerSubscriptionError(e.to_string()))?;
 
         let scheme = url.scheme().to_string();

@@ -67,6 +67,7 @@ pub struct ApiConfig {
     pub server_url: Url,
     pub request_timeout: u64,
     pub max_retries: u32,
+    pub subscribed_to: u8,
 }
 
 impl Default for ApiConfig {
@@ -75,6 +76,7 @@ impl Default for ApiConfig {
             server_url: Url::parse("http://localhost:8000").unwrap(),
             request_timeout: 30,
             max_retries: 3,
+            subscribed_to: 0xFF, // All bits set to 1, so all proving systems are subscribed to.
         }
     }
 }

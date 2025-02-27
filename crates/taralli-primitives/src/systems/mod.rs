@@ -169,3 +169,26 @@ proving_systems! {
     (Risc0, Risc0ProofParams, "risc0"),
     (Sp1, Sp1ProofParams, "sp1")
 }
+
+impl ProvingSystemId {
+    pub fn as_bit(&self) -> u8 {
+        match self {
+            Self::AlignedLayer => 0x01,
+            Self::Arkworks => 0x02,
+            Self::Gnark => 0x04,
+            Self::Risc0 => 0x08,
+            Self::Sp1 => 0x10,
+        }
+    }
+
+    pub fn from_bit(bit: u8) -> Option<Self> {
+        match bit {
+            0x01 => Some(Self::AlignedLayer),
+            0x02 => Some(Self::Arkworks),
+            0x04 => Some(Self::Gnark),
+            0x08 => Some(Self::Risc0),
+            0x10 => Some(Self::Sp1),
+            _ => None,
+        }
+    }
+}

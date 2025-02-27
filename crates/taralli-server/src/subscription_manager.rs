@@ -2,9 +2,15 @@ use tokio::sync::broadcast::{self, Receiver};
 
 use crate::error::{Result, ServerError};
 
+#[derive(Clone)]
+pub struct BroadcastedMessage {
+    pub content: Vec<u8>,
+    pub subscribed_to: u8,
+}
+
 // Generic over a Message type M
 // Todo: Remove generic and use only Vec<u8> when removing propagation of Request<ProvingSystemParams> through SSE.
-pub struct SubscriptionManager<M = Vec<u8>>
+pub struct SubscriptionManager<M = BroadcastedMessage>
 where
     M: Clone,
 {
