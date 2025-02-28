@@ -24,6 +24,8 @@ jobs:
 
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run fmt
       run: cargo +nightly fmt -- --check
@@ -48,6 +50,8 @@ jobs:
 
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Build Docker image
       uses: docker/build-push-action@v6
