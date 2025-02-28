@@ -47,12 +47,7 @@ jobs:
 
     - name: Setup Rust (nightly)
       uses: dtolnay/rust-toolchain@nightly
-
-    - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
-      with:
-        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
+      
     - name: Build Docker image
       uses: docker/build-push-action@v6
       with:
@@ -61,15 +56,20 @@ jobs:
         platforms: linux/amd64
         push: false
         tags: taralli-server:latest 
-
+        
     - name: Install Docker Compose
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
-    
-    - name: Start services with Docker Compose
-      run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
-    
+        
+        - name: Start services with Docker Compose
+        run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
+        
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
     - name: Run tests
       run: cargo test --locked --verbose
 
