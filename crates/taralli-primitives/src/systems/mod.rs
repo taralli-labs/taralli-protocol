@@ -14,6 +14,12 @@ pub mod gnark;
 pub mod risc0;
 pub mod sp1;
 
+/// Mask for the supported proving systems.
+/// The bit position of the system in the mask is the same as the bit position of the system in the
+/// `ProvingSystemId` enum.
+/// If we add more than 8 proving systems, we need to change this to u16 or bigger.
+pub type ProvingSystemMask = u8;
+
 #[derive(Debug, Default)]
 pub struct VerifierConstraints {
     pub verifier: Option<Address>,
@@ -44,7 +50,7 @@ pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
 }
 
 macro_rules! proving_systems {
-    ($(($variant:ident, $params:ty, $str:literal)),* $(,)?) => {
+    ($(($variant:ident, $params:ty, $str:literal, $bit:expr)),* $(,)?) => {
         // Generate ProvingSystemId enum
         #[allow(non_upper_case_globals)]
         #[allow(non_snake_case)]
@@ -70,6 +76,19 @@ macro_rules! proving_systems {
             pub fn as_str(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $str),*
+                }
+            }
+
+            pub fn as_bit(&self) -> ProvingSystemMask {
+                match self {
+                    $(Self::$variant => $bit),*
+                }
+            }
+
+            pub fn from_bit(bit: ProvingSystemMask) -> Option<Self> {
+                match bit {
+                    $($bit => Some(Self::$variant),)*
+                    _ => None,
                 }
             }
         }
@@ -163,9 +182,9 @@ macro_rules! proving_systems {
 }
 
 proving_systems! {
-    (AlignedLayer, AlignedLayerProofParams, "aligned-layer"),
-    (Arkworks, ArkworksProofParams, "arkworks"),
-    (Gnark, GnarkProofParams, "gnark"),
-    (Risc0, Risc0ProofParams, "risc0"),
-    (Sp1, Sp1ProofParams, "sp1")
+    (AlignedLayer, AlignedLayerProofParams, "aligned-layer", 0x01),
+    (Arkworks, ArkworksProofParams, "arkworks", 0x02),
+    (Gnark, GnarkProofParams, "gnark", 0x04),
+    (Risc0, Risc0ProofParams, "risc0", 0x08),
+    (Sp1, Sp1ProofParams, "sp1", 0x10),
 }

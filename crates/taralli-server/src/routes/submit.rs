@@ -1,4 +1,5 @@
 use crate::extracted_request::ExtractedRequest;
+use crate::subscription_manager::BroadcastedMessage;
 use crate::{app_state::AppState, error::ServerError, validation::validate_proof_request};
 use alloy::{providers::*, transports::Transport};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
@@ -31,9 +32,13 @@ pub async fn submit_handler<T: Transport + Clone, P: Provider<T> + Clone>(
                     })),
                 )
             })?;
+            let message_to_broadcast = BroadcastedMessage {
+                content: request_serialized,
+                subscribed_to: partial_request.proving_system_id.as_bit(),
+            };
             match app_state
                 .subscription_manager()
-                .broadcast(request_serialized)
+                .broadcast(message_to_broadcast)
             {
                 Ok(recv_count) => {
                     tracing::info!(
