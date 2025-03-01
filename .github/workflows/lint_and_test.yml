@@ -62,8 +62,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y docker-compose
         
-        - name: Start services with Docker Compose
-        run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
+    - name: Start services with Docker Compose
+      run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
         
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2

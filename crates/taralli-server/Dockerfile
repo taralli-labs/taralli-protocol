@@ -13,9 +13,9 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --profile ci --recipe-path recipe.json
 COPY . .
-RUN cargo build --release --locked --features ci-test --package taralli-server
+RUN cargo build --profile ci --locked --features ci-test --package taralli-server
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,6 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY example_server_config.json /app/config.json
-COPY --from=builder /app/target/release/server /usr/bin
+COPY --from=builder /app/target/ci/server /usr/bin
 EXPOSE 8000
 ENTRYPOINT ["server"]

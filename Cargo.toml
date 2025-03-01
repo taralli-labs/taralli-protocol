@@ -6,6 +6,15 @@ members = [
     "crates/taralli-server",
 ]
 
+[profile.ci]
+inherits = "dev"
+debug = 0
+strip = "debuginfo"
+opt-level = 0           
+codegen-units = 16      
+panic = "abort"         
+debug-assertions = false
+
 [workspace.lints.rust]
 missing-debug-implementations = "warn"
 missing-docs = "warn"
