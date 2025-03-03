@@ -6,14 +6,21 @@ members = [
     "crates/taralli-server",
 ]
 
+[profile.stripped]
+inherits = "release"
+debug = 0
+strip = "debuginfo"
+lto = "thin"
+
+# This profile is used for CI testing, hence why we remove any overhead from debug compiling.
 [profile.ci]
 inherits = "dev"
 debug = 0
-strip = "debuginfo"
-opt-level = 0           
-codegen-units = 16      
+strip = "symbols"
+opt-level = 0  
 panic = "abort"         
 debug-assertions = false
+incremental = false
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"

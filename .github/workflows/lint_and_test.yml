@@ -48,6 +48,7 @@ jobs:
     - name: Setup Rust (nightly)
       uses: dtolnay/rust-toolchain@nightly
       
+    # We use a dummy configuration file as we don't need anything useful for testing.
     - name: Build Docker image
       uses: docker/build-push-action@v6
       with:
@@ -55,7 +56,11 @@ jobs:
         file: crates/taralli-server/Dockerfile
         platforms: linux/amd64
         push: false
-        tags: taralli-server:latest 
+        tags: taralli-server:latest
+        build-args: |
+          PROFILE=ci
+          CONFIG=example_server_config.json
+          FEATURES=ci-test
         
     - name: Install Docker Compose
       run: |
