@@ -20,14 +20,14 @@ use taralli_primitives::{
 
 use url::Url;
 
-use crate::client::BaseClient;
 use crate::error::{ClientError, Result};
 use crate::{
-    analyzer::{ComputeRequestAnalyzer, IntentAnalyzer},
+    analyzer::{request::ComputeRequestAnalyzer, IntentAnalyzer},
     bidder::{request::ComputeRequestBidParams, request::ComputeRequestBidder, IntentBidder},
     resolver::{request::ComputeRequestResolver, IntentResolver},
     worker::{ComputeWorker, WorkResult, WorkerManager},
 };
+use crate::{api::subscribe::SubscribeApiClient, client::BaseClient};
 
 pub struct ProviderStreamingClient<T, P, N, S>
 where
@@ -36,6 +36,7 @@ where
     N: Network + Clone,
 {
     base: BaseClient<T, P, N, S>,
+    api: SubscribeApiClient,
     analyzer: ComputeRequestAnalyzer<T, P, N, ComputeRequest<SystemParams>>,
     bidder: ComputeRequestBidder<T, P, N>,
     worker_manager: WorkerManager<ComputeRequest<SystemParams>>,
@@ -57,12 +58,8 @@ where
         validation_config: RequestValidationConfig,
     ) -> Self {
         Self {
-            base: BaseClient::new(
-                server_url,
-                rpc_provider.clone(),
-                signer.clone(),
-                market_address,
-            ),
+            base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
+            api: SubscribeApiClient::new(server_url.clone()),
             analyzer: ComputeRequestAnalyzer::new(
                 rpc_provider.clone(),
                 market_address,
@@ -92,8 +89,7 @@ where
 
         // subscribe to all markets the client
         let mut stream = self
-            .base
-            .api_client
+            .api
             .subscribe_to_markets(&system_ids)
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;

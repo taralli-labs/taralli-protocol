@@ -12,6 +12,7 @@ use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::Validate;
 use url::Url;
 
+use crate::api::submit::SubmitApiClient;
 use crate::error::{ClientError, Result};
 use crate::tracker::{IntentAuctionTracker, IntentResolveTracker};
 use crate::{intent_builder::request::ComputeRequestBuilder, tracker::ComputeRequestTracker};
@@ -25,6 +26,7 @@ where
     N: Network + Clone,
 {
     pub base: BaseClient<T, P, N, S>,
+    pub api: SubmitApiClient,
     pub builder: ComputeRequestBuilder<T, P, N>,
     pub tracker: ComputeRequestTracker<T, P, N>,
 }
@@ -45,12 +47,8 @@ where
         validation_config: RequestValidationConfig,
     ) -> Self {
         Self {
-            base: BaseClient::new(
-                server_url,
-                rpc_provider.clone(),
-                signer.clone(),
-                market_address,
-            ),
+            base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
+            api: SubmitApiClient::new(server_url),
             builder: ComputeRequestBuilder::new(
                 rpc_provider.clone(),
                 signer.address(),
@@ -84,13 +82,12 @@ where
             .tracker
             .track_resolve(request_id, Duration::from_secs(resolve_deadline));
 
-        tracing::info!("tracking started for request ID: {}", request_id);
+        tracing::info!("tracking setup for request ID: {}", request_id);
         tracing::info!("submitting request to server");
 
         // submit signed request to server
         let response = self
-            .base
-            .api_client
+            .api
             .submit_intent(request)
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
@@ -133,8 +130,11 @@ where
     ) -> Result<ComputeRequest<SystemParams>> {
         // compute witness
         let witness = compute_request_witness(&request.proof_request);
+        println!("SIGNING: witness {}", witness);
         // build permit2 digest
         let permit2_digest = compute_request_permit2_digest(&request.proof_request, witness);
+        println!("SIGNING: permit2 digest {}", permit2_digest);
+
         // sign permit2 digest
         let signature = self
             .base

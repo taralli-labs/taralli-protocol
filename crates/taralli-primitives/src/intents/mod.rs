@@ -12,6 +12,7 @@ pub trait ComputeIntent: Validate + Serialize + for<'de> Deserialize<'de> + Send
     type System: System;
     type ProofCommitment;
 
+    fn type_string(&self) -> String;
     fn compute_id(&self) -> B256;
     fn system_params(&self) -> Option<&SystemParams> {
         self.system().system_params()

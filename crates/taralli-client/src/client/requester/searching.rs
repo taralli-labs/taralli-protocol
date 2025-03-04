@@ -14,11 +14,12 @@ use taralli_primitives::utils::compute_offer_id;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use url::Url;
 
-use crate::analyzer::{ComputeOfferAnalyzer, IntentAnalyzer};
+use crate::analyzer::{offer::ComputeOfferAnalyzer, IntentAnalyzer};
+use crate::api::submit::SubmitApiClient;
 use crate::bidder::offer::{ComputeOfferBidParams, ComputeOfferBidder};
 use crate::bidder::IntentBidder;
 use crate::error::{ClientError, Result};
-use crate::searcher::{ComputeOfferSearcher, IntentSearcher};
+use crate::searcher::{offer::ComputeOfferSearcher, IntentSearcher};
 use crate::tracker::{ComputeOfferTracker, IntentResolveTracker};
 
 use crate::client::BaseClient;
@@ -30,6 +31,7 @@ where
     N: Network + Clone,
 {
     pub base: BaseClient<T, P, N, S>,
+    pub api: SubmitApiClient,
     pub searcher: ComputeOfferSearcher,
     pub analyzer: ComputeOfferAnalyzer<T, P, N, I>,
     pub bidder: ComputeOfferBidder<T, P, N>,
@@ -53,12 +55,8 @@ where
         validation_config: OfferValidationConfig,
     ) -> Self {
         Self {
-            base: BaseClient::new(
-                server_url.clone(),
-                rpc_provider.clone(),
-                signer.clone(),
-                market_address,
-            ),
+            base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
+            api: SubmitApiClient::new(server_url.clone()),
             searcher: ComputeOfferSearcher::new(server_url, system_id, market_address),
             analyzer: ComputeOfferAnalyzer::new(
                 rpc_provider.clone(),

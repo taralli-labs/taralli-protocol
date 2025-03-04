@@ -28,8 +28,20 @@ where
     let validation_timeout_seconds = state.validation_timeout_seconds();
     let config = I::get_config(state.validation_configs());
 
+    // Determine which market address to use based on intent type
+    let market_address = match intent.type_string().as_str() {
+        "request" => &state.universal_bombetta_address(),
+        "offer" => &state.universal_porchetta_address(),
+        _ => {
+            return Err(ServerError::ValidationError(format!(
+                "invalid intent type: {}",
+                intent.type_string()
+            )))
+        }
+    };
+
     timeout(validation_timeout_seconds, async {
-        intent.validate(latest_timestamp, &state.market_address(), config)
+        intent.validate(latest_timestamp, market_address, config)
     })
     .await
     .map_err(|_| ServerError::ValidationTimeout(validation_timeout_seconds.as_secs()))?

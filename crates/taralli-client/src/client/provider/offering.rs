@@ -12,6 +12,7 @@ use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::Validate;
 use url::Url;
 
+use crate::api::submit::SubmitApiClient;
 use crate::client::BaseClient;
 use crate::error::{ClientError, Result};
 use crate::resolver::IntentResolver;
@@ -29,6 +30,7 @@ where
     N: Network + Clone,
 {
     base: BaseClient<T, P, N, S>,
+    api: SubmitApiClient,
     builder: ComputeOfferBuilder<T, P, N>,
     tracker: ComputeOfferTracker<T, P, N>,
     worker: Arc<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
@@ -52,12 +54,8 @@ where
         validation_config: OfferValidationConfig,
     ) -> Self {
         Self {
-            base: BaseClient::new(
-                server_url,
-                rpc_provider.clone(),
-                signer.clone(),
-                market_address,
-            ),
+            base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
+            api: SubmitApiClient::new(server_url.clone()),
             builder: ComputeOfferBuilder::new(
                 rpc_provider.clone(),
                 signer.address(),
@@ -95,8 +93,7 @@ where
 
         // submit signed request to server
         let response = self
-            .base
-            .api_client
+            .api
             .submit_intent(offer.clone())
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;

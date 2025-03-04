@@ -4,7 +4,7 @@ use taralli_primitives::alloy::{
     network::Ethereum, primitives::Address, providers::Provider, transports::Transport,
 };
 
-use crate::config::ServerValidationConfigs;
+use crate::config::{Markets, ServerValidationConfigs};
 
 pub mod offer;
 pub mod request;
@@ -13,7 +13,7 @@ pub mod request;
 #[derive(Clone)]
 pub struct BaseState<T, P> {
     rpc_provider: P,
-    market_address: Address,
+    markets: Markets,
     validation_timeout_seconds: Duration,
     validation_configs: ServerValidationConfigs,
     phantom: PhantomData<T>,
@@ -26,13 +26,13 @@ where
 {
     pub fn new(
         rpc_provider: P,
-        market_address: Address,
+        markets: Markets,
         validation_timeout_seconds: Duration,
         validation_configs: ServerValidationConfigs,
     ) -> Self {
         Self {
             rpc_provider,
-            market_address,
+            markets,
             validation_timeout_seconds,
             validation_configs,
             phantom: PhantomData,
@@ -43,8 +43,12 @@ where
         self.rpc_provider.clone()
     }
 
-    pub fn market_address(&self) -> Address {
-        self.market_address
+    pub fn universal_bombetta_address(&self) -> Address {
+        self.markets.universal_bombetta
+    }
+
+    pub fn universal_porchetta_address(&self) -> Address {
+        self.markets.universal_porchetta
     }
 
     pub fn validation_timeout_seconds(&self) -> Duration {

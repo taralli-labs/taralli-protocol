@@ -10,7 +10,12 @@ use alloy::signers::Signature;
 use alloy::sol_types::SolValue;
 use lazy_static::lazy_static;
 
-/// type strings
+// type strings
+// string public constant FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB =
+//   "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address token,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+// string public constant FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB =
+//   "ProofOffer witness)TokenPermissions(address token,uint256 amount)ProofOffer(address signer,address market,uint256 nonce,address rewardToken,uint256 rewardAmount,address stakeToken,uint256 stakeAmount,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
+
 // bombetta
 pub const FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB: &str =
     "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address rewardToken,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
@@ -65,6 +70,7 @@ pub fn compute_request_id(proof_request: &ProofRequest, signature: &Signature) -
 
     // Encode OnChainProofRequest + Signature
     let values = DynSolValue::Tuple(vec![
+        DynSolValue::Address(proof_request.signer),
         DynSolValue::Address(proof_request.market),
         DynSolValue::Uint(proof_request.nonce, 256),
         DynSolValue::Address(proof_request.rewardToken),
@@ -87,6 +93,9 @@ pub fn compute_request_id(proof_request: &ProofRequest, signature: &Signature) -
 pub fn compute_request_witness(proof_request: &ProofRequest) -> FixedBytes<32> {
     // encode witness data
     let extra_data_hash = keccak256(&proof_request.extraData);
+    //println!("COMPUTE REQUEST WITNESS: extra data pre image: {}", proof_request.extraData);
+    //println!("COMPUTE REQUEST WITNESS: extra data hash: {}", keccak256(&proof_request.extraData));
+
     let request_witness_values = DynSolValue::Tuple(vec![
         DynSolValue::FixedBytes(*PROOF_REQUEST_WITNESS_TYPE_HASH, 32),
         DynSolValue::Address(proof_request.signer),
@@ -103,6 +112,9 @@ pub fn compute_request_witness(proof_request: &ProofRequest) -> FixedBytes<32> {
         DynSolValue::FixedBytes(extra_data_hash, 32),
     ]);
 
+    //println!("COMPUTE REQUEST WITNESS: request witness pre image: {:?}", request_witness_values.abi_encode());
+    //println!("COMPUTE REQUEST WITNESS: request witness hash: {:?}", keccak256(request_witness_values.abi_encode()));
+
     // hash encoded witness
     keccak256(request_witness_values.abi_encode())
 }
@@ -114,14 +126,20 @@ pub fn compute_request_permit2_digest(proof_request: &ProofRequest, witness: B25
         amount: proof_request.maxRewardAmount,
     };
     let token_permissions_bytes = token_permissions.abi_encode();
+    //println!("token_permissions_bytes: {:?}", token_permissions_bytes);
+
     let token_permissions_hash_preimage = [
         TOKEN_PERMISSIONS_TYPE_HASH.abi_encode(),
         token_permissions_bytes,
     ]
     .concat();
 
+    //println!("COMPUTE REQUEST PERMIT2 DIGEST: token permissions pre image: {:?}", token_permissions_hash_preimage);
+    //println!("COMPUTE REQUEST PERMIT2 DIGEST: token permissions hash: {:?}", keccak256(&token_permissions_hash_preimage));
+
     // hash token permissions encoding
     let token_permissions_hash = keccak256(&token_permissions_hash_preimage);
+    println!("token_permissions_hash: {}", token_permissions_hash);
 
     // encode data hash preimage
     let data_hash_preimage = DynSolValue::Tuple(vec![
@@ -133,6 +151,12 @@ pub fn compute_request_permit2_digest(proof_request: &ProofRequest, witness: B25
         DynSolValue::FixedBytes(witness, 32),
     ])
     .abi_encode();
+
+    //println!("COMPUTE REQUEST PERMIT2 DIGEST: data hash pre image: {:?}", data_hash_preimage);
+    println!(
+        "COMPUTE REQUEST PERMIT2 DIGEST: data hash: {:?}",
+        keccak256(&data_hash_preimage)
+    );
 
     // hash data hash encoding
     let data_hash = keccak256(&data_hash_preimage);
@@ -231,6 +255,13 @@ fn hash_typed_data(domain_separator: B256, data_hash: B256) -> B256 {
         data_hash.abi_encode(),
     ]
     .concat();
+
+    //println!("HASH TYPED DATA: final hash pre image: {:?}", final_hash_preimage);
+    println!(
+        "HASH TYPED DATA: final hash: {:?}",
+        keccak256(&final_hash_preimage)
+    );
+
     keccak256(final_hash_preimage)
 }
 
@@ -289,19 +320,17 @@ mod tests {
     // Mock setup function to generate sample OnChainProofRequest and other inputs
     fn get_mock_proof_request() -> ProofRequest {
         ProofRequest {
-            signer: address!("0000000000000000000000000000000000000003"),
-            market: address!("0000000000000000000000000000000000000003"),
+            signer: address!("0000000000000000000000000000000000000001"),
+            market: address!("0000000000000000000000000000000000000001"),
             nonce: U256::ZERO,
-            rewardToken: address!("0000000000000000000000000000000000000003"),
+            rewardToken: address!("0000000000000000000000000000000000000001"),
             maxRewardAmount: U256::ZERO,
             minRewardAmount: U256::ZERO,
             minimumStake: 0,
             startAuctionTimestamp: 0,
             endAuctionTimestamp: 0,
             provingTime: 0,
-            inputsCommitment: b256!(
-                "0000000000000000000000000000000000000000000000000000000000000000"
-            ),
+            inputsCommitment: B256::ZERO,
             extraData: Bytes::from(""),
         }
     }

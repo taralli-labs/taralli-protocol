@@ -11,6 +11,12 @@ use thiserror::Error;
 use tracing::Level;
 use url::Url;
 
+#[derive(Clone, Debug, Deserialize)]
+pub struct Markets {
+    pub universal_bombetta: Address,
+    pub universal_porchetta: Address,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct RawValidationConfig {
     pub base_validation_config: BaseValidationConfig,
@@ -58,7 +64,7 @@ pub struct Config {
     pub rpc_url: String,
     pub log_level: String,
     pub validation_timeout_seconds: u32,
-    pub market_address: Address,
+    pub markets: Markets,
     pub base_validation_config: BaseValidationConfig,
     pub request_validation_config: RawRequestConfig,
     pub offer_validation_config: RawOfferConfig,

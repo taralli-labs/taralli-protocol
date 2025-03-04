@@ -1,41 +1,31 @@
-use async_compression::tokio::bufread::BrotliDecoder;
-use futures::{Stream, StreamExt};
-use reqwest::{
-    header::{HeaderMap, HeaderValue},
-    Client,
-};
-use std::io::Write;
 use std::pin::Pin;
-use taralli_primitives::intents::ComputeIntent;
+
+use futures::{Stream, StreamExt};
 use taralli_primitives::{
     env::Environment,
     intents::request::ComputeRequest,
     systems::{SystemId, SystemParams},
 };
-use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
-use tungstenite::handshake::client::generate_key;
-use tungstenite::Message;
+use tungstenite::{handshake::client::generate_key, Message};
 use url::Url;
 
-use crate::error::{ClientError, Result};
-
-pub struct ApiClient {
-    api_key: String,
-    client: Client,
-    server_url: Url,
-}
+use crate::{
+    api::compression::decompress_intent,
+    error::{ClientError, Result},
+};
 
 // type alias for stream of compute requests returned by the protocol server
 pub type RequestStream = Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
 
-impl ApiClient {
-    pub fn new(server_url: Url) -> Self {
-        let mut headers = HeaderMap::new();
-        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-        headers.insert("Content-Encoding", HeaderValue::from_static("br"));
+pub struct SubscribeApiClient {
+    server_url: Url,
+    api_key: String,
+}
 
+impl SubscribeApiClient {
+    pub fn new(server_url: Url) -> Self {
         let mut api_key = String::new();
         if Environment::from_env_var() == Environment::Production {
             api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
@@ -43,84 +33,8 @@ impl ApiClient {
 
         Self {
             api_key,
-            client: Client::builder()
-                .default_headers(headers)
-                .build()
-                .expect("Failed to build reqwest client"),
             server_url,
         }
-    }
-
-    /// Compresses the intent payload using Brotli compression
-    /// and returns the compressed payload as a byte vector
-    /// # Arguments
-    /// * `request` - The intent to be compressed
-    /// # Returns
-    /// * A byte vector containing the compressed payload
-    /// # Details
-    /// The compression level, buffer size, and window size are configurable
-    /// via the environment variables.
-    /// Furthermore, we chose to instantiate a new compressor for each intent
-    /// if the need to submit multiple intent concurrently arises.
-    fn compress_intent<I: ComputeIntent>(&self, intent: I) -> Result<Vec<u8>> {
-        // We opt for some default values that may be reasonable for the general use case.
-        let mut brotli_encoder = brotli::CompressorWriter::new(
-            Vec::new(),
-            std::env::var("BROTLI_BUFFER_SIZE")
-                .unwrap_or_else(|_| "0".to_string())
-                .parse::<usize>()
-                .unwrap_or(0),
-            std::env::var("BROTLI_COMPRESSION_LEVEL")
-                .unwrap_or_else(|_| "7".to_string())
-                .parse::<u32>()
-                .unwrap_or(7),
-            std::env::var("BROTLI_WINDOW_SIZE")
-                .unwrap_or_else(|_| "24".to_string())
-                .parse::<u32>()
-                .unwrap_or(24),
-        );
-
-        let payload = serde_json::to_string(&intent)
-            .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
-
-        brotli_encoder
-            .write_all(payload.as_bytes())
-            .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
-
-        Ok(brotli_encoder.into_inner())
-    }
-
-    /// Decompress a Brotli-compressed byte vector
-    /// # Arguments
-    /// * `compressed_bytes` - The Brotli-compressed byte vector
-    /// # Returns
-    /// * A byte vector containing the decompressed data
-    async fn decompress_intent(compressed_bytes: Vec<u8>) -> Result<Vec<u8>> {
-        let mut decoder = BrotliDecoder::new(tokio::io::BufReader::new(&compressed_bytes[..]));
-        let mut decompressed = Vec::new();
-        decoder
-            .read_to_end(&mut decompressed)
-            .await
-            .map_err(|e| ClientError::IntentDecompressionFailed(e.to_string()))?;
-        Ok(decompressed)
-    }
-
-    pub async fn submit_intent<I: ComputeIntent>(&self, intent: I) -> Result<reqwest::Response> {
-        let url = self
-            .server_url
-            .join("/submit")
-            .map_err(|e| ClientError::ServerUrlParsingError(e.to_string()))?;
-
-        let compressed_payload = self.compress_intent(intent)?;
-
-        let response = self
-            .client
-            .post(url)
-            .body(compressed_payload)
-            .send()
-            .await
-            .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
-        Ok(response)
     }
 
     pub async fn subscribe_to_markets(&self, system_ids: &[SystemId]) -> Result<RequestStream> {
@@ -181,22 +95,6 @@ impl ApiClient {
         Self::get_intent_stream(ws_stream).await
     }
 
-    pub async fn query_market_offers(&self, system_id: SystemId) -> Result<reqwest::Response> {
-        let url = self
-            .server_url
-            .join(&format!("/query/{}", system_id.as_str()))
-            .map_err(|e| ClientError::ServerUrlParsingError(e.to_string()))?;
-
-        let response = self
-            .client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
-
-        Ok(response)
-    }
-
     /// Parse a WebSocket stream into a stream of requests
     /// # Arguments
     /// * `stream` - The WebSocket stream
@@ -221,7 +119,7 @@ impl ApiClient {
 
                     // First we need to decompress the bytes.
                     let decompressed_bytes =
-                        match ApiClient::decompress_intent(compressed_bytes.to_vec()).await {
+                        match decompress_intent(compressed_bytes.to_vec()).await {
                             Ok(decompressed) => decompressed,
                             Err(e) => {
                                 tracing::error!("Failed to decompress WebSocket data: {:?}", e);

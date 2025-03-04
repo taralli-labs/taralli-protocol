@@ -26,6 +26,10 @@ impl<S: System> ComputeIntent for ComputeOffer<S> {
     type System = S;
     type ProofCommitment = UniversalPorchetta::ProofOffer;
 
+    fn type_string(&self) -> String {
+        "offer".to_string()
+    }
+
     fn compute_id(&self) -> B256 {
         // encode + hash `extraData` and `signature`
         let extra_data_hash = keccak256(self.proof_offer.extraData.abi_encode());

@@ -5,7 +5,10 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use color_eyre::{eyre::Context, Result};
+use color_eyre::{
+    eyre::{Context, ContextCompat},
+    Result,
+};
 use serde_json::json;
 use std::time::Duration;
 use taralli_primitives::systems::SYSTEMS;
@@ -30,6 +33,11 @@ async fn main() -> Result<()> {
     color_eyre::install()?;
 
     // Load configuration
+    let exe_path = std::env::current_exe().context("Failed to get executable path")?;
+    let exe_dir = exe_path
+        .parent()
+        .context("Failed to get executable directory")?;
+    println!("exe dir: {:?}", exe_dir);
     let config = Config::from_file("config.json").context("Failed to load config")?;
 
     // Get the validation configs from the config
@@ -56,7 +64,7 @@ async fn main() -> Result<()> {
     tracing::info!("Setting up state");
     let base_state = BaseState::new(
         rpc_provider.clone(),
-        config.market_address,
+        config.markets,
         Duration::from_secs(config.validation_timeout_seconds as u64),
         validation_configs,
     );

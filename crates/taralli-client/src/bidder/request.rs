@@ -17,8 +17,6 @@ use super::IntentBidder;
 pub struct ComputeRequestBidder<T, P, N> {
     rpc_provider: P,
     market_address: Address,
-    // min_bid_delay: u64,
-    // _max_bid_attempts: u32,
     phantom_data: PhantomData<(T, N)>,
 }
 
@@ -78,14 +76,18 @@ where
 
         tracing::info!("bidder: check timestamps done");
 
-        // auction is active, calculate target timestamp from target_amount (amount of
-        // reward tokens)
+        // auction is active, calculate target timestamp from target_amount
         let current_estimated_amount = calculate_current_reward(
             latest_ts,
             intent_proof_commitment.startAuctionTimestamp,
             intent_proof_commitment.endAuctionTimestamp,
             intent_proof_commitment.minRewardAmount,
             intent_proof_commitment.maxRewardAmount,
+        );
+
+        tracing::info!(
+            "bidder: current_estimated_amount: {}",
+            current_estimated_amount
         );
 
         if current_estimated_amount < bid_params.target_amount {
@@ -98,6 +100,7 @@ where
                 intent_proof_commitment.maxRewardAmount,
             )?;
             let wait_time = target_timestamp - latest_ts;
+            tracing::info!("bidder: waiting {} seconds for ideal amount", wait_time);
             // Wait for `wait_time` seconds
             sleep(Duration::from_secs(wait_time)).await;
         }
@@ -106,6 +109,9 @@ where
 
         // check the proof request does not already have a bid
         let request_id = compute_request_id(&intent_proof_commitment, &signature);
+
+        tracing::info!("bidder: latest_ts: {:?}", latest_ts);
+        tracing::info!("bidder: request id computed: {}", request_id);
 
         let active_request_return = market_contract
             .activeProofRequestData(request_id)
@@ -120,10 +126,6 @@ where
         }
 
         tracing::info!("bidder: check status of auction again to make sure no bid is submitted");
-        tracing::info!(
-            "bidder: requester address = {}",
-            active_request_return.requester
-        );
 
         let receipt = market_contract
             .bid(
@@ -138,6 +140,8 @@ where
             .await
             .map_err(|e| ClientError::TransactionFailure(e.to_string()))?;
 
+        tracing::info!("bid txs receipt: {:?}", receipt);
+
         Ok(receipt)
     }
 }
@@ -149,14 +153,20 @@ fn calculate_current_reward(
     min_reward: U256,
     max_reward: U256,
 ) -> U256 {
+    if current_timestamp == start_timestamp {
+        return max_reward; // At auction start, return maxRewardAmount
+    }
+    if current_timestamp == end_timestamp {
+        return min_reward; // At auction end, return minRewardAmount
+    }
+
+    // calculate factor to decrease by to get estimated current amount
     let elapsed_time = U256::from(current_timestamp - start_timestamp);
     let total_duration = U256::from(end_timestamp - start_timestamp);
-    // increase factor
-    let increase_factor = elapsed_time * U256::from(1e18) / total_duration;
-    // Calculate the increased amount
-    let increase_amount = increase_factor * (max_reward - min_reward) / U256::from(1e18);
-    // calculate current reward amount
-    min_reward + increase_amount
+    let reward_range = max_reward - min_reward;
+    let decrease_amount = (elapsed_time * reward_range) / total_duration;
+
+    max_reward - decrease_amount
 }
 
 fn calculate_target_timestamp(

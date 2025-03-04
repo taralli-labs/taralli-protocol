@@ -26,6 +26,10 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
     type System = S;
     type ProofCommitment = UniversalBombetta::ProofRequest;
 
+    fn type_string(&self) -> String {
+        "request".to_string()
+    }
+
     fn compute_id(&self) -> B256 {
         // encode + hash `extraData` and `signature`
         let extra_data_hash = keccak256(self.proof_request.extraData.abi_encode());

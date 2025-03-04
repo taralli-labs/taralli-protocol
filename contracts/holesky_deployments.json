@@ -3,5 +3,6 @@
   "gnark_verifier": "0x6bE05b2634182f99b859f9F616426DbF7A413041",
   "risc0_verifier": "0x31766974fb795dF3f7d0c010a3D5c55e4bd8113e",
   "test_token": "0x89fF1B147026815cf497AA45D4FDc2DF51Ed7f00",
-  "universal_bombetta": "0xe05e737478E4f0b886981aD85CF9a59D55413e8b"
+  "universal_bombetta": "0x561D39042B6FC0D5fA78DaE730468e2C339B5eD3",
+  "universal_porchetta": "0x554D0292CD1E740123b360DD6D10037De00a0Bd7"
 }

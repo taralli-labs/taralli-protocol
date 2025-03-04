@@ -25,7 +25,7 @@ use bytes::Bytes;
 use futures::stream::MapOk;
 use serde_json::Value;
 use taralli_server::{
-    config::{Config, RawOfferConfig, RawRequestConfig},
+    config::{Config, Markets, RawOfferConfig, RawRequestConfig},
     state::BaseState,
     subscription_manager::SubscriptionManager,
 };
@@ -240,7 +240,10 @@ pub async fn setup_app(size: Option<usize>) -> Router {
         rpc_url: "http://localhost:8545".to_owned(),
         log_level: "DEBUG".to_owned(),
         validation_timeout_seconds: 1,
-        market_address: Address::default(),
+        markets: Markets {
+            universal_bombetta: Address::default(),
+            universal_porchetta: Address::default(),
+        },
         base_validation_config: BaseValidationConfig {
             minimum_proving_time: 10,
             maximum_start_delay: 10,
@@ -265,7 +268,7 @@ pub async fn setup_app(size: Option<usize>) -> Router {
 
     let base_state = BaseState::new(
         rpc_provider,
-        config.market_address,
+        config.markets,
         Duration::from_secs(config.validation_timeout_seconds as u64),
         validation_configs,
     );
