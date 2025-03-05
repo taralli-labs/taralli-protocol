@@ -4,10 +4,8 @@ use alloy::{network::Network, providers::Provider, transports::Transport};
 use std::sync::Arc;
 use std::time::Duration;
 use taralli_primitives::intents::offer::ComputeOffer;
+use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::utils::{
-    compute_offer_id, compute_offer_permit2_digest, compute_offer_witness,
-};
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::Validate;
 use url::Url;
@@ -77,7 +75,7 @@ where
         auction_time_length: u64,
     ) -> Result<()> {
         // compute id
-        let offer_id = compute_offer_id(&offer.proof_offer, &offer.signature);
+        let offer_id = offer.compute_id();
 
         // compute resolve deadline timestamp
         let _resolve_deadline =
@@ -143,10 +141,8 @@ where
         &self,
         mut offer: ComputeOffer<SystemParams>,
     ) -> Result<ComputeOffer<SystemParams>> {
-        // compute witness
-        let witness = compute_offer_witness(&offer.proof_offer);
         // build permit2 digest
-        let permit2_digest = compute_offer_permit2_digest(&offer.proof_offer, witness);
+        let permit2_digest = offer.compute_permit2_digest();
         // sign permit2 digest
         let signature = self
             .base

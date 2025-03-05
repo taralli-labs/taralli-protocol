@@ -12,9 +12,8 @@ use alloy::{
 };
 use futures_util::StreamExt;
 use taralli_primitives::{
-    intents::request::ComputeRequest,
+    intents::{request::ComputeRequest, ComputeIntent},
     systems::{SystemId, SystemParams},
-    utils::compute_request_id,
     validation::request::RequestValidationConfig,
 };
 
@@ -97,7 +96,7 @@ where
         while let Some(result) = stream.next().await {
             match result {
                 Ok(request) => {
-                    let request_id = compute_request_id(&request.proof_request, &request.signature);
+                    let request_id = request.compute_id();
                     tracing::info!(
                         "Incoming request - proving system id: {:?}, proof request: {:?}, request ID: {:?}",
                         request.system_id,
@@ -151,6 +150,7 @@ where
         self.bidder
             .submit_bid(
                 current_ts,
+                request_id,
                 bid_params,
                 request.proof_request.clone(),
                 request.signature,

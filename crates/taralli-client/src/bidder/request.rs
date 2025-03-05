@@ -1,4 +1,5 @@
 use crate::error::{ClientError, Result};
+use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 use taralli_primitives::abi::universal_bombetta::UniversalBombetta::{
@@ -8,7 +9,6 @@ use taralli_primitives::alloy::network::Network;
 use taralli_primitives::alloy::primitives::{Address, Bytes, PrimitiveSignature, U256};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;
-use taralli_primitives::utils::compute_request_id;
 use tokio::time::{sleep, Duration};
 
 use super::IntentBidder;
@@ -53,6 +53,7 @@ where
     async fn submit_bid(
         &self,
         latest_ts: u64,
+        intent_id: FixedBytes<32>,
         bid_params: Self::BidParameters,
         intent_proof_commitment: Self::IntentProofCommitment,
         signature: PrimitiveSignature,
@@ -107,14 +108,11 @@ where
 
         tracing::info!("bidder: calculate target ts for target amount");
 
-        // check the proof request does not already have a bid
-        let request_id = compute_request_id(&intent_proof_commitment, &signature);
-
         tracing::info!("bidder: latest_ts: {:?}", latest_ts);
-        tracing::info!("bidder: request id computed: {}", request_id);
+        tracing::info!("bidder: request id computed: {}", intent_id);
 
         let active_request_return = market_contract
-            .activeProofRequestData(request_id)
+            .activeProofRequestData(intent_id)
             .call()
             .await
             .map_err(|e| ClientError::TransactionSetupError(e.to_string()))?;
@@ -125,7 +123,15 @@ where
             ));
         }
 
-        tracing::info!("bidder: check status of auction again to make sure no bid is submitted");
+        let gas_estimate = market_contract
+            .bid(intent_proof_commitment.clone(), Bytes::from(signature.as_bytes()))
+            .value(U256::from(intent_proof_commitment.minimumStake))
+            .estimate_gas()
+            .await
+            .map_err(|e| ClientError::TransactionSetupError(format!("Gas estimation failed: {}", e)))?;
+
+        tracing::info!("Estimated gas for bid: {}", gas_estimate);
+        tracing::info!("msg.value for bid: {}", U256::from(intent_proof_commitment.minimumStake));
 
         let receipt = market_contract
             .bid(

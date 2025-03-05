@@ -4,12 +4,12 @@ use serde::{Deserialize, Serialize};
 
 use super::{BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate};
 use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use crate::intents::ComputeIntent;
 use crate::Result;
 use crate::{
     abi::universal_porchetta::UniversalPorchetta::ProofOffer,
     intents::offer::ComputeOffer,
     systems::{System, SystemId},
-    utils::{compute_offer_permit2_digest, compute_offer_witness},
     PrimitivesError,
 };
 
@@ -121,10 +121,8 @@ pub fn validate_offer_verifier_details<S: System>(offer: &ComputeOffer<S>) -> Re
 }
 
 pub fn validate_signature<S: System>(offer: &ComputeOffer<S>) -> Result<()> {
-    // compute witness
-    let witness = compute_offer_witness(&offer.proof_offer);
     // compute permit digest
-    let computed_digest = compute_offer_permit2_digest(&offer.proof_offer, witness);
+    let computed_digest = offer.compute_permit2_digest();
     // ec recover signing public key
     let computed_verifying_key = offer
         .signature

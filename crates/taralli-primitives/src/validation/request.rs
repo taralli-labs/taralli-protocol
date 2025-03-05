@@ -3,12 +3,12 @@ use alloy::sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 
 use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
+use crate::intents::ComputeIntent;
 use crate::Result;
 use crate::{
     abi::universal_bombetta::UniversalBombetta::ProofRequest,
     intents::request::ComputeRequest,
     systems::{System, SystemId},
-    utils::{compute_request_permit2_digest, compute_request_witness},
     PrimitivesError,
 };
 
@@ -119,10 +119,8 @@ pub fn validate_request_verifier_details<S: System>(request: &ComputeRequest<S>)
 }
 
 pub fn validate_signature<S: System>(request: &ComputeRequest<S>) -> Result<()> {
-    // compute witness
-    let witness = compute_request_witness(&request.proof_request);
     // compute permit digest
-    let computed_digest = compute_request_permit2_digest(&request.proof_request, witness);
+    let computed_digest = request.compute_permit2_digest();
     // ec recover signing public key
     let computed_verifying_key = request
         .signature

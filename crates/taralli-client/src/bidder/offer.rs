@@ -1,4 +1,5 @@
 use crate::error::{ClientError, Result};
+use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 use taralli_primitives::abi::universal_porchetta::UniversalPorchetta::{
@@ -8,7 +9,6 @@ use taralli_primitives::alloy::network::Network;
 use taralli_primitives::alloy::primitives::{Address, Bytes, PrimitiveSignature};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;
-use taralli_primitives::utils::compute_offer_id;
 
 use super::IntentBidder;
 
@@ -49,6 +49,7 @@ where
     async fn submit_bid(
         &self,
         latest_ts: u64,
+        intent_id: FixedBytes<32>,
         _bid_params: Self::BidParameters,
         intent_proof_commitment: Self::IntentProofCommitment,
         signature: PrimitiveSignature,
@@ -72,25 +73,21 @@ where
 
         tracing::info!("bidder: check timestamps done");
 
-        // check the proof request does not already have a bid
-        let request_id = compute_offer_id(&intent_proof_commitment, &signature);
-
-        let active_job_return = market_contract
-            .activeProofOfferData(request_id)
+        let active_offer_return = market_contract
+            .activeProofOfferData(intent_id)
             .call()
             .await
             .map_err(|e| ClientError::TransactionSetupError(e.to_string()))?;
 
-        if active_job_return.requester != Address::ZERO {
+        if active_offer_return.provider != Address::ZERO {
             return Err(ClientError::TransactionSetupError(
                 "Another Bid has already submitted for this Auction".into(),
             ));
         }
 
-        tracing::info!("bidder: check status of auction again to make sure no bid is submitted");
         tracing::info!(
             "bidder: requester address = {}",
-            active_job_return.requester
+            active_offer_return.requester
         );
 
         let receipt = market_contract

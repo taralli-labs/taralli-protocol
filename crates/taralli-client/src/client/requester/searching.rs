@@ -10,7 +10,6 @@ use alloy::signers::Signer;
 use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::utils::compute_offer_id;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use url::Url;
 
@@ -73,7 +72,7 @@ where
         // search for a compute offer
         let offer = self.searcher.search().await?;
         // compute id
-        let offer_id = compute_offer_id(&offer.proof_offer, &offer.signature);
+        let offer_id = offer.compute_id();
 
         tracing::info!("searching execution finished, analyzing offer");
 
@@ -104,6 +103,7 @@ where
         self.bidder
             .submit_bid(
                 current_ts,
+                offer_id,
                 ComputeOfferBidParams {},
                 offer.proof_offer.clone(),
                 offer.signature,

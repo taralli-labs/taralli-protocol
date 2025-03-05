@@ -4,10 +4,8 @@ use alloy::primitives::Address;
 use alloy::signers::Signer;
 use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::request::ComputeRequest;
+use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::utils::{
-    compute_request_id, compute_request_permit2_digest, compute_request_witness,
-};
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::Validate;
 use url::Url;
@@ -68,7 +66,7 @@ where
         auction_time_length: u64,
     ) -> Result<()> {
         // compute request id
-        let request_id = compute_request_id(&request.proof_request, &request.signature);
+        let request_id = request.compute_id();
 
         // compute resolve deadline timestamp
         let resolve_deadline =
@@ -128,11 +126,8 @@ where
         &self,
         mut request: ComputeRequest<SystemParams>,
     ) -> Result<ComputeRequest<SystemParams>> {
-        // compute witness
-        let witness = compute_request_witness(&request.proof_request);
-        println!("SIGNING: witness {}", witness);
         // build permit2 digest
-        let permit2_digest = compute_request_permit2_digest(&request.proof_request, witness);
+        let permit2_digest = request.compute_permit2_digest();
         println!("SIGNING: permit2 digest {}", permit2_digest);
 
         // sign permit2 digest

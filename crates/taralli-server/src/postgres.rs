@@ -4,9 +4,8 @@ use chrono::{DateTime, Utc};
 use deadpool_postgres::{Manager, Pool};
 use serde::Serialize;
 use taralli_primitives::{
-    intents::offer::ComputeOffer,
+    intents::{offer::ComputeOffer, ComputeIntent},
     systems::{System, SystemId},
-    utils::compute_offer_id,
 };
 use tokio_postgres::{Config, NoTls, Row};
 
@@ -99,7 +98,7 @@ impl TryFrom<Row> for StoredIntent {
 impl Db {
     /// Store a submitted ComputeOffer within the database
     pub async fn store_offer<S: System>(&self, offer: &ComputeOffer<S>) -> Result<StoredIntent> {
-        let offer_id = compute_offer_id(&offer.proof_offer, &offer.signature);
+        let offer_id = offer.compute_id();
         let proving_system_bytes = serde_json::to_vec(&offer.system)
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
         let proof_offer_bytes = serde_json::to_vec(&offer.proof_offer)
