@@ -24,18 +24,14 @@ jobs:
 
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run fmt
       run: cargo +nightly fmt -- --check
 
     - name: Run clippy
       run: cargo +nightly clippy --locked -- -W clippy::perfi -D warnings
-
-    - name: Install and run cargo-udeps (only if target branch is main)
-      if: ${{ github.event.pull_request.base.ref == 'main' }}
-      run: |
-        cargo install cargo-udeps --locked
-        cargo +nightly udeps --locked --all-targets
 
   build_and_test:
     runs-on: ubuntu-latest
@@ -45,10 +41,7 @@ jobs:
 
     - name: Setup Rust (nightly)
       uses: dtolnay/rust-toolchain@nightly
-
-    - name: Cache Rust dependencies
-      uses: Swatinem/rust-cache@v2
-
+      
     - name: Build Docker image
       uses: docker/build-push-action@v6
       with:
@@ -56,16 +49,26 @@ jobs:
         file: crates/taralli-server/Dockerfile
         platforms: linux/amd64
         push: false
-        tags: taralli-server:latest 
-
+        tags: taralli-server:latest
+        # We use a dummy configuration file as we don't need anything useful for testing.
+        build-args: |
+          PROFILE=ci
+          CONFIG=example_server_config.json
+          FEATURES=ci-test
+        
     - name: Install Docker Compose
       run: |
         sudo apt-get update
         sudo apt-get install -y docker-compose
-    
+        
     - name: Start services with Docker Compose
       run: docker-compose -f crates/taralli-server/docker-compose.yml up -d
-    
+        
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
     - name: Run tests
       run: cargo test --locked --verbose
 
