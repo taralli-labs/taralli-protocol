@@ -32,7 +32,8 @@ use taralli_server::{
 use tower_http::trace::TraceLayer;
 
 use futures_util::stream::{StreamExt, TryStreamExt};
-use std::sync::Arc;
+use url::Url;
+use std::{str::FromStr, sync::Arc};
 use std::time::Duration;
 use tower::util::ServiceExt;
 
@@ -237,7 +238,6 @@ pub async fn setup_app(size: Option<usize>) -> Router {
 
     let config = Config {
         server_port: 8080,
-        rpc_url: "http://localhost:8545".to_owned(),
         log_level: "DEBUG".to_owned(),
         validation_timeout_seconds: 1,
         markets: Markets {
@@ -258,9 +258,11 @@ pub async fn setup_app(size: Option<usize>) -> Router {
         },
     };
 
+    let rpc_url = Url::from_str("http://localhost:8545").unwrap();
+
     let validation_configs = config.get_validation_configs();
 
-    let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url().unwrap());
+    let rpc_provider = ProviderBuilder::new().on_http(rpc_url);
     let subscription_manager: SubscriptionManager<Value> =
         SubscriptionManager::new(size.unwrap_or(1));
 

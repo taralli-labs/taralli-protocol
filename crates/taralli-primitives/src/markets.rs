@@ -2,7 +2,7 @@ use alloy::primitives::{address, Address};
 
 /// Holesky
 pub const UNIVERSAL_BOMBETTA_ADDRESS: Address =
-    address!("561D39042B6FC0D5fA78DaE730468e2C339B5eD3");
+    address!("4bE2653870EBCAda3C99D03C63e265fD57882e3b");
 
 pub const UNIVERSAL_PORCHETTA_ADDRESS: Address =
-    address!("554D0292CD1E740123b360DD6D10037De00a0Bd7");
+    address!("5Ac1172921d0CdfFF58B59E23f8DeAE86bDca565");

@@ -10,7 +10,8 @@ use color_eyre::{
     Result,
 };
 use serde_json::json;
-use std::time::Duration;
+use url::Url;
+use std::{str::FromStr, time::Duration};
 use taralli_primitives::systems::SYSTEMS;
 use taralli_server::{
     config::Config,
@@ -27,6 +28,8 @@ use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use dotenv::dotenv;
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -37,8 +40,10 @@ async fn main() -> Result<()> {
     let exe_dir = exe_path
         .parent()
         .context("Failed to get executable directory")?;
-    println!("exe dir: {:?}", exe_dir);
     let config = Config::from_file("config.json").context("Failed to load config")?;
+
+    dotenv().ok();
+    let rpc_url = Url::from_str(&std::env::var("RPC_URL").expect("rpc url from env failed"));
 
     // Get the validation configs from the config
     let validation_configs = config.get_validation_configs();
@@ -50,7 +55,7 @@ async fn main() -> Result<()> {
         .init();
 
     tracing::info!("Setting up RPC provider");
-    let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url()?);
+    let rpc_provider = ProviderBuilder::new().on_http(rpc_url?);
 
     // setup subscription manager
     tracing::info!("Setting up subscription manager");

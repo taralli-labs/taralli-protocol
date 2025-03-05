@@ -8953,6 +8953,7 @@ dependencies = [
  "chrono",
  "color-eyre",
  "deadpool-postgres",
+ "dotenv",
  "futures",
  "futures-util",
  "hex",

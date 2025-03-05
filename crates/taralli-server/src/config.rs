@@ -9,7 +9,6 @@ use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::{BaseValidationConfig, Validate};
 use thiserror::Error;
 use tracing::Level;
-use url::Url;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Markets {
@@ -61,7 +60,6 @@ impl<S: System> ServerValidationConfigProvider for ComputeOffer<S> {
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub server_port: u16,
-    pub rpc_url: String,
     pub log_level: String,
     pub validation_timeout_seconds: u32,
     pub markets: Markets,
@@ -89,10 +87,6 @@ impl Config {
         let data = fs::read_to_string(path)?;
         let config: Config = serde_json::from_str(&data)?;
         Ok(config)
-    }
-
-    pub fn rpc_url(&self) -> Result<Url, ConfigError> {
-        Url::parse(&self.rpc_url).map_err(ConfigError::from)
     }
 
     pub fn log_level(&self) -> Result<Level, ConfigError> {

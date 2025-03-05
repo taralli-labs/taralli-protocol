@@ -1,0 +1,8 @@
+{
+  "groth16_verifier": "0x558D8D2f90c085A8Ed704084716F2797AAB26cC6",
+  "object": "object",
+  "risc0_verifier": "0x9c44aCe6a6734170639409979cef199C67354359",
+  "test_token": "0xb54061f59AcF94f86ee414C9a220aFFE8BbE6B35",
+  "universal_bombetta": "0x4bE2653870EBCAda3C99D03C63e265fD57882e3b",
+  "universal_porchetta": "0x5Ac1172921d0CdfFF58B59E23f8DeAE86bDca565"
+}

@@ -1,4 +1,5 @@
 use crate::error::{ClientError, Result};
+use alloy::network::ReceiptResponse;
 use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use std::marker::PhantomData;
@@ -147,6 +148,13 @@ where
             .map_err(|e| ClientError::TransactionFailure(e.to_string()))?;
 
         tracing::info!("bid txs receipt: {:?}", receipt);
+
+        // Check if the transaction was reverted
+        if !receipt.status() {
+            return Err(ClientError::TransactionFailure(
+                "Transaction reverted on-chain".into(),
+            ));
+        }
 
         Ok(receipt)
     }

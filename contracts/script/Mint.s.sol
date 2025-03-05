@@ -7,9 +7,9 @@ import "test/mocks/ERC20Mock.sol";
 
 contract Mint is Script, Test {
     // local anvil instance must fork from ethereum main-net for permit2
-    string RPC_URL = vm.envString("ETH_HOLESKY_RPC_URL");
+    string RPC_URL = vm.envString("ETH_SEPOLIA_RPC_URL");
     // test reward token contract
-    ERC20Mock public immutable rewardToken = ERC20Mock(0x89fF1B147026815cf497AA45D4FDc2DF51Ed7f00);
+    ERC20Mock public immutable rewardToken = ERC20Mock(0xb54061f59AcF94f86ee414C9a220aFFE8BbE6B35);
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("REQUESTER_PRIVATE_KEY");

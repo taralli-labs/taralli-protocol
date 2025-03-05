@@ -36,6 +36,5 @@ deadpool-postgres = { version = "0.14.0", features = ["rt_tokio_1"] }
 hyper = "1.6.0"
 http-body-util = "0.1.2"
 brotli = { workspace = true }
-
-[dev-dependencies]
 tower = { version = "0.5.1", features = ["util"] }
+dotenv = "0.15.0"
