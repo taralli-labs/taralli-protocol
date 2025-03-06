@@ -266,16 +266,17 @@ contract BaseTest is Test {
 
     function _logProofRequest(string memory note, ProofRequest memory request, bytes memory signature) public {
         emit log_string(note);
+        emit log_named_address("signer", request.signer);
         emit log_named_address("market", request.market);
         emit log_named_uint("nonce", request.nonce);
-        emit log_named_address("token", request.rewardToken);
-        emit log_named_uint("amount", request.maxRewardAmount);
-        emit log_named_uint("minReward", request.minRewardAmount);
+        emit log_named_address("rewardToken", request.rewardToken);
+        emit log_named_uint("maxRewardAmount", request.maxRewardAmount);
+        emit log_named_uint("minRewardAmount", request.minRewardAmount);
         emit log_named_uint("minimumStake", request.minimumStake);
         emit log_named_uint("startAuctionTimestamp", request.startAuctionTimestamp);
         emit log_named_uint("endAuctionTimestamp", request.endAuctionTimestamp);
         emit log_named_uint("provingTime", request.provingTime);
-        emit log_named_bytes32("publicInputsCommitment", request.inputsCommitment);
+        emit log_named_bytes32("inputsCommitment", request.inputsCommitment);
         emit log_named_bytes("extraData", request.extraData);
         emit log_named_bytes("signature", signature);
     }

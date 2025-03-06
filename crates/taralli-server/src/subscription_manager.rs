@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::broadcast::{channel, Receiver, Sender};
 
-use taralli_primitives::systems::ProvingSystemId;
+use taralli_primitives::systems::SystemId;
 use tokio::sync::RwLock;
 
 use crate::error::{Result, ServerError};
@@ -12,7 +12,7 @@ pub struct SubscriptionManager<M = Vec<u8>>
 where
     M: Clone,
 {
-    pub channels: Arc<RwLock<HashMap<ProvingSystemId, Sender<M>>>>,
+    pub channels: Arc<RwLock<HashMap<SystemId, Sender<M>>>>,
     pub capacity: usize,
 }
 
@@ -28,7 +28,7 @@ where
     }
 
     /// avoids needing a write lock for first time use of a system
-    pub async fn init_channels(&self, ids: &[ProvingSystemId]) {
+    pub async fn init_channels(&self, ids: &[SystemId]) {
         let mut map = self.channels.write().await;
         for &id in ids {
             map.entry(id).or_insert_with(|| channel(self.capacity).0);
@@ -36,7 +36,7 @@ where
     }
 
     /// Retrieve (or create) the channel sender for a given ID.
-    pub async fn get_or_create_sender(&self, id: ProvingSystemId) -> Sender<M> {
+    pub async fn get_or_create_sender(&self, id: SystemId) -> Sender<M> {
         let mut map = self.channels.write().await;
         map.entry(id)
             .or_insert_with(|| channel(self.capacity).0)
@@ -44,13 +44,13 @@ where
     }
 
     /// Subscribe to the channel for a given ID (read only).
-    pub async fn subscribe_to_id(&self, id: ProvingSystemId) -> Receiver<M> {
+    pub async fn subscribe_to_id(&self, id: SystemId) -> Receiver<M> {
         let sender = self.get_or_create_sender(id).await;
         sender.subscribe()
     }
 
     /// Get multiple Receivers if you want multi-ID SSE.
-    pub async fn subscribe_to_ids(&self, ids: &[ProvingSystemId]) -> Vec<Receiver<M>> {
+    pub async fn subscribe_to_ids(&self, ids: &[SystemId]) -> Vec<Receiver<M>> {
         let mut receivers = Vec::with_capacity(ids.len());
         for &id in ids {
             receivers.push(self.subscribe_to_id(id).await);
@@ -59,7 +59,7 @@ where
     }
 
     /// Broadcast an event for a single ID
-    pub async fn broadcast(&self, id: ProvingSystemId, event: M) -> Result<usize> {
+    pub async fn broadcast(&self, id: SystemId, event: M) -> Result<usize> {
         let map = self.channels.read().await;
         let sender = match map.get(&id) {
             Some(sender) => sender.clone(),

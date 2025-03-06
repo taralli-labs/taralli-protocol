@@ -380,20 +380,20 @@ contract UniversalBombettaTest is BaseTest {
         emit log_named_bytes32("witness hash:", witness);
     }
 
-    function testComputePermitDigest() public {
+    function testComputeRequestSigning() public {
         // make request
         ProofRequest memory request = ProofRequest({
-            signer: alice,
-            provingTime: 1 days,
+            signer: address(0x0000000000000000000000000000000000000001),
+            market: address(0x0000000000000000000000000000000000000001),
             nonce: 0,
-            rewardToken: address(testToken),
-            maxRewardAmount: 1000 ether, // 1000 tokens
+            rewardToken: address(0x0000000000000000000000000000000000000001),
+            maxRewardAmount: 0,
             minRewardAmount: 0,
-            market: address(universalBombetta),
-            startAuctionTimestamp: uint64(block.timestamp),
-            minimumStake: 1 ether,
-            endAuctionTimestamp: uint64(block.timestamp + 1000),
-            inputsCommitment: keccak256(abi.encode(33)),
+            minimumStake: 0,
+            startAuctionTimestamp: uint64(0),
+            endAuctionTimestamp: uint64(0),
+            provingTime: 0,
+            inputsCommitment: bytes32(0),
             extraData: bytes("")
         });
 
@@ -409,16 +409,6 @@ contract UniversalBombettaTest is BaseTest {
             nonce: request.nonce,
             deadline: request.endAuctionTimestamp
         });
-
-        bytes32 typeHash = keccak256(
-            abi.encodePacked(
-                universalBombetta.PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB(),
-                universalBombetta.FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB()
-            )
-        );
-        emit log_named_bytes32("typeHash", typeHash);
-
-        emit log_named_address("universalBombetta address", address(universalBombetta));
 
         bytes32 digest = universalBombetta.computePermitDigest(permit, witness);
         emit log_named_bytes32("permit digest:", digest);

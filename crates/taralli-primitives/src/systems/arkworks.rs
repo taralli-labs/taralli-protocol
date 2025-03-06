@@ -1,10 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
 use crate::error::Result;
-use crate::systems::{ProvingSystem, SystemConfig, VerifierConstraints};
+use crate::systems::{System, SystemConfig};
 
 use super::system_id::Arkworks;
 use super::SystemInputs;
@@ -16,25 +14,13 @@ pub struct ArkworksProofParams {
     pub inputs: Value, // Circuit input JSON
 }
 
-impl SystemConfig for ArkworksProofParams {
-    fn verifier_constraints(&self) -> VerifierConstraints {
-        VerifierConstraints::default()
-    }
+impl SystemConfig for ArkworksProofParams {}
 
-    fn validate_request(&self, _details: &ProofRequestVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-
-    fn validate_offer(&self, _details: &ProofOfferVerifierDetails) -> Result<()> {
-        Ok(())
-    }
-}
-
-impl ProvingSystem for ArkworksProofParams {
+impl System for ArkworksProofParams {
     type Config = Self;
     type Inputs = Value;
 
-    fn system_id(&self) -> super::ProvingSystemId {
+    fn system_id(&self) -> super::SystemId {
         Arkworks
     }
 

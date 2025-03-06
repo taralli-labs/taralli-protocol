@@ -1,0 +1,41 @@
+[package]
+name = "taralli-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+taralli-primitives = { workspace = true }
+alloy = { workspace = true }
+serde = {workspace = true}
+serde_json = {workspace = true}
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+reqwest = { workspace = true }
+futures-util = { workspace = true }
+futures = { workspace = true }
+url = { workspace = true }
+lazy_static = { workspace = true }
+async-trait = { workspace = true }
+brotli = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sha3 = { workspace = true }
+async-compression = { version = "0.4.18", features = ["tokio", "brotli"]}
+bytemuck = "1.21.0"
+hex = "0.4.3"
+config = "0.14.0"
+bincode = "1.1.3"
+tokio-stream = "0.1.17"
+tempfile = "3.14.0"
+num-bigint = "0.4.6"
+tungstenite = "0.26.1"
+tokio-tungstenite = "0.26.1"
+rand = "0.8.5"
+
+[dev-dependencies]
+color-eyre = { workspace = true }
+dotenv = { workspace = true }
+anyhow = "1.0.86"
+k256 = "0.13.4"
