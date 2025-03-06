@@ -15,12 +15,11 @@ contract CheckBalanceAndApproval is Script, Test {
     // porchetta contract
     address public immutable porchetta = address(0x5Ac1172921d0CdfFF58B59E23f8DeAE86bDca565);
     // bombetta contract
-    address public immutable bombetta = address(0x4bE2653870EBCAda3C99D03C63e265fD57882e3b);
+    address public immutable bombetta = address(0x6209431B6C8F38471dc65564Be2Fd08298705BBD);
     // address of requester
     address public immutable requester = address(0xC342071B52566FcD2a8D47a0b18A5884c4a0627f);
     // address of provider
     address public immutable provider = address(0x4070Af7fc9090Ec323330dDed79159E8740b5158);
-
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("LOCAL_PRIVATE_KEY");

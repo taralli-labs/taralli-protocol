@@ -5,18 +5,12 @@ use alloy::primitives::{address, b256, keccak256, Address, B256};
 use alloy::sol_types::SolValue;
 use lazy_static::lazy_static;
 
-// type strings
-// string public constant FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB =
-//   "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address token,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
-// string public constant FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB =
-//   "ProofOffer witness)TokenPermissions(address token,uint256 amount)ProofOffer(address signer,address market,uint256 nonce,address rewardToken,uint256 rewardAmount,address stakeToken,uint256 stakeAmount,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
-
 // permit2
 pub const PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB: &str =
     "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
 pub const TOKEN_PERMISSIONS_TYPE_STRING: &str = "TokenPermissions(address token,uint256 amount)";
 pub const PERMIT2_DOMAIN_SEPARATOR: B256 =
-    b256!("2be86a484194028b8e9b1ac40deffff8868bf4ae32fd0a7db12030c6a18227e1");
+    b256!("94c1dec87927751697bfc9ebf6fc4ca506bed30308b518f0e9d6c5f74bbafdb8");
 pub const PERMIT2_ADDRESS: Address = address!("000000000022D473030F116dDEE9F6B43aC78BA3");
 
 lazy_static! {

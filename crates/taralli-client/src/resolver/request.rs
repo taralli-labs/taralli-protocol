@@ -57,7 +57,7 @@ where
             UniversalBombettaInstance::new(self.market_address, self.rpc_provider.clone());
 
         let call_return = market_contract
-            .resolve(intent_id, opaque_submission, FixedBytes::from(B256::ZERO))
+            .resolve(intent_id, opaque_submission, B256::ZERO)
             .send()
             .await
             .map_err(|e| ClientError::TransactionError(e.to_string()))?;

@@ -13,7 +13,7 @@ contract Approvals is Script, Test {
     // permit2 contract
     address public immutable PERMIT2 = address(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     // bombetta contract
-    address public immutable bombetta = address(0x4bE2653870EBCAda3C99D03C63e265fD57882e3b);
+    address public immutable bombetta = address(0x6209431B6C8F38471dc65564Be2Fd08298705BBD);
     // porchetta contract
     address public immutable porchetta = address(0x5Ac1172921d0CdfFF58B59E23f8DeAE86bDca565);
 

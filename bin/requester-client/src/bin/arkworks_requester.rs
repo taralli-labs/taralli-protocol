@@ -16,7 +16,7 @@ use std::str::FromStr;
 use taralli_client::client::requester::requesting::RequesterRequestingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
@@ -36,8 +36,8 @@ async fn main() -> Result<()> {
     // Load environment variables from the `.env` file
     dotenv().ok();
     let server_url = Url::parse(&env::var("SERVER_URL")?)?; // local server instance
-    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // Holesky testnet
-    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
+    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // testnet
+    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // private key
 
     // proving system information data
     let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
@@ -57,14 +57,13 @@ async fn main() -> Result<()> {
     let inputs = serde_json::from_reader(inputs_reader)?;
 
     // on chain proof request data
-    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
     let reward_token_address = address!("b54061f59AcF94f86ee414C9a220aFFE8BbE6B35");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
     let min_reward_amount = U256::from(10); // 10 wei of tokens
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
-    let auction_length = 45u32; // 3 min
+    let auction_length = 45u32; // 45 sec
     let verifier_address = address!("558D8D2f90c085A8Ed704084716F2797AAB26cC6");
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("43753b4d");
     let inputs_offset = U256::from(256);
@@ -94,7 +93,7 @@ async fn main() -> Result<()> {
         server_url,
         rpc_provider,
         signer,
-        market_address,
+        SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         SystemId::Arkworks,
         validation_config,
     );

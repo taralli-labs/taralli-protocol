@@ -125,14 +125,22 @@ where
         }
 
         let gas_estimate = market_contract
-            .bid(intent_proof_commitment.clone(), Bytes::from(signature.as_bytes()))
+            .bid(
+                intent_proof_commitment.clone(),
+                Bytes::from(signature.as_bytes()),
+            )
             .value(U256::from(intent_proof_commitment.minimumStake))
             .estimate_gas()
             .await
-            .map_err(|e| ClientError::TransactionSetupError(format!("Gas estimation failed: {}", e)))?;
+            .map_err(|e| {
+                ClientError::TransactionSetupError(format!("Gas estimation failed: {}", e))
+            })?;
 
         tracing::info!("Estimated gas for bid: {}", gas_estimate);
-        tracing::info!("msg.value for bid: {}", U256::from(intent_proof_commitment.minimumStake));
+        tracing::info!(
+            "msg.value for bid: {}",
+            U256::from(intent_proof_commitment.minimumStake)
+        );
 
         let receipt = market_contract
             .bid(

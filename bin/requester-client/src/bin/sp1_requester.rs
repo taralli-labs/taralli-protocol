@@ -13,7 +13,7 @@ use std::str::FromStr;
 use taralli_client::client::requester::requesting::RequesterRequestingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::sp1::{Sp1Config, Sp1Mode, Sp1ProofParams};
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
@@ -46,7 +46,6 @@ async fn main() -> Result<()> {
     let elf = std::fs::read(sp1_program_path)?;
 
     // on chain proof request data
-    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
     let reward_token_address = address!("89fF1B147026815cf497AA45D4FDc2DF51Ed7f00");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
@@ -83,7 +82,7 @@ async fn main() -> Result<()> {
         server_url,
         rpc_provider,
         signer,
-        market_address,
+        SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         SystemId::Sp1,
         validation_config,
     );

@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use std::env;
 use std::str::FromStr;
 use taralli_client::client::provider::streaming::ProviderStreamingClient;
-use taralli_primitives::markets::UNIVERSAL_BOMBETTA_ADDRESS;
+use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
@@ -39,9 +39,6 @@ async fn main() -> Result<()> {
         .wallet(wallet)
         .on_http(rpc_url);
 
-    // market contract
-    let market_address = UNIVERSAL_BOMBETTA_ADDRESS;
-
     // validation config
     let validation_config = RequestValidationConfig {
         base: BaseValidationConfig::default(),
@@ -53,7 +50,7 @@ async fn main() -> Result<()> {
         server_url,
         rpc_provider,
         signer.clone(),
-        market_address,
+        SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         validation_config,
     )
     .with_worker(SystemId::Arkworks, ArkworksWorker::new())?;

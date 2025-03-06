@@ -32,10 +32,10 @@ use taralli_server::{
 use tower_http::trace::TraceLayer;
 
 use futures_util::stream::{StreamExt, TryStreamExt};
-use url::Url;
-use std::{str::FromStr, sync::Arc};
 use std::time::Duration;
+use std::{str::FromStr, sync::Arc};
 use tower::util::ServiceExt;
+use url::Url;
 
 pub const MAX_BODY_SIZE: usize = 1024 * 1024; // 1 MB limit
 

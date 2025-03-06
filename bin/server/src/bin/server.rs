@@ -5,12 +5,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use color_eyre::{
-    eyre::{Context, ContextCompat},
-    Result,
-};
+use color_eyre::{eyre::Context, Result};
+use dotenv::dotenv;
 use serde_json::json;
-use url::Url;
 use std::{str::FromStr, time::Duration};
 use taralli_primitives::systems::SYSTEMS;
 use taralli_server::{
@@ -28,18 +25,13 @@ use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use dotenv::dotenv;
-
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
 
     // Load configuration
-    let exe_path = std::env::current_exe().context("Failed to get executable path")?;
-    let exe_dir = exe_path
-        .parent()
-        .context("Failed to get executable directory")?;
     let config = Config::from_file("config.json").context("Failed to load config")?;
 
     dotenv().ok();

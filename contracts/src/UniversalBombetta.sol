@@ -310,11 +310,12 @@ contract UniversalBombetta is Bombetta {
         return success;
     }
 
-    /// @dev hashes the proof request and signature for use as the request ID in mapping `activeJobData`
+    /// @dev hashes the proof request and signature for use as the request ID in mapping `activeProofRequestData`
     /// request ID = keccak256(request + signature)
     function computeRequestId(ProofRequest calldata request, bytes calldata signature) public pure returns (bytes32) {
         return keccak256(
             abi.encode(
+                request.signer,
                 request.market,
                 request.nonce,
                 request.rewardToken,
