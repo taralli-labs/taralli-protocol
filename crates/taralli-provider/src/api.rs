@@ -83,91 +83,83 @@ impl ProviderApi {
         // Start a `stream::unfold`, which keeps passing listener and shutdown_receiver to next iterations,
         // whilst yielding `Request<ProvingSystemParams>` at the end of each iteration.
         let parsed_stream = futures::stream::unfold(
-        (listener, shutdown_receiver),
-        |(mut listener, mut shutdown_receiver)| async move {
-            // We will asynchronously wait for a websocket message or a shutdown signal. 
-            tokio::select! {
-                // Wait for next WebSocket message
-                maybe_message = listener.next() => {
-                    match maybe_message {
-                        // This is the only case that yields action from us.
-                        // We expect the server to send us serialized, Brotli-compressed, binary messages.
-                        Some(Ok(Message::Binary(bytes))) => {
-                            // First we deserialize the data sent via the WebSocket.
-                            let request_compressed: RequestCompressed = match bincode::deserialize(&bytes) {
-                                Ok(rc) => rc,
-                                Err(e) => {
-                                    let err = Err(crate::ProviderError::RequestParsingError(
-                                        format!("Failed to deserialize WebSocket data: {:?}", e)
-                                    ));
-                                    // Yield an error item but continue the stream
-                                    return Some((err, (listener, shutdown_receiver)));
+            (listener, shutdown_receiver),
+            |(mut listener, mut shutdown_receiver)| async move {
+                loop {
+                    // We will asynchronously wait for a websocket message or a shutdown signal.
+                    tokio::select! {
+                        // Wait for next WebSocket message
+                        maybe_message = listener.next() => {
+                            match maybe_message {
+                                // This is the only case that yields action from us.
+                                // We expect the server to send us serialized, Brotli-compressed, binary messages.
+                                Some(Ok(Message::Binary(bytes))) => {
+                                    // First we deserialize the data sent via the WebSocket.
+                                    let request_compressed: RequestCompressed = match bincode::deserialize(&bytes) {
+                                        Ok(rc) => rc,
+                                        Err(e) => {
+                                            let err = Err(crate::ProviderError::RequestParsingError(
+                                                format!("Failed to deserialize WebSocket data: {:?}", e)
+                                            ));
+                                            // Yield an error item but continue the stream
+                                            return Some((err, (listener, shutdown_receiver)));
+                                        }
+                                    };
+
+                                    // Then, we need to decompress the proving system information.
+                                    let proving_system_information = match super::ProviderApi::decompress_brotli(
+                                        request_compressed.proving_system_information
+                                    ).await {
+                                        Ok(decompressed) => decompressed,
+                                        Err(e) => {
+                                            let err = Err(crate::ProviderError::RequestParsingError(
+                                                format!("Failed to decompress proving system data: {e}")
+                                            ));
+                                            return Some((err, (listener, shutdown_receiver)));
+                                        }
+                                    };
+
+                                    // Create the final Request object
+                                    let request = crate::Request::<ProvingSystemParams> {
+                                        proving_system_id: request_compressed.proving_system_id,
+                                        proving_system_information,
+                                        onchain_proof_request: request_compressed.onchain_proof_request,
+                                        signature: request_compressed.signature,
+                                    };
+
+                                    // Yield a successful `Ok(...)` item, continuing the stream
+                                    return Some((Ok(request), (listener, shutdown_receiver)));
                                 }
-                            };
-
-                            // Then, we need to decompress the proving system information.
-                            let proving_system_information = match super::ProviderApi::decompress_brotli(
-                                request_compressed.proving_system_information
-                            ).await {
-                                Ok(decompressed) => decompressed,
-                                Err(e) => {
-                                    let err = Err(crate::ProviderError::RequestParsingError(
-                                        format!("Failed to decompress proving system data: {e}")
-                                    ));
-                                    return Some((err, (listener, shutdown_receiver)));
+                                Some(Ok(Message::Close(cf))) => {
+                                    tracing::info!("WebSocket closed by server: {:?}", cf);
+                                    return None;
                                 }
-                            };
-
-                            // Create the final Request object
-                            let request = crate::Request::<ProvingSystemParams> {
-                                proving_system_id: request_compressed.proving_system_id,
-                                proving_system_information,
-                                onchain_proof_request: request_compressed.onchain_proof_request,
-                                signature: request_compressed.signature,
-                            };
-
-                            // Yield a successful `Ok(...)` item, continuing the stream
-                            Some((Ok(request), (listener, shutdown_receiver)))
-                        }
-                        // If the server sends a Close frame, or a ping/pong/frame/text,
-                        // we either log or yield an Err. For brevity, we skip or return `None`.
-                        Some(Ok(Message::Close(cf))) => {
-                            tracing::info!("WebSocket closed by server: {:?}", cf);
-                            None // End the stream
-                        }
-                        Some(Ok(_other)) => {
-                            tracing::info!("Ignoring unexpected message type.");
-                            // We continue by yielding an error upstream.
-                            let err = Err(crate::ProviderError::RequestParsingError(
-                                "Ignoring unexpected message type".to_string()
-                            ));
-                            Some((err, (listener, shutdown_receiver)))
-                        }
-                        // If an actual error occurs, end the stream
-                        Some(Err(e)) => {
-                            tracing::error!("WebSocket error: {:?}", e);
-                            None
-                        }
-                        // The underlying stream ended
-                        None => {
-                            tracing::info!("WebSocket stream ended (None).");
-                            None
+                                // We skip this message since this isn't relevant to the subscriber.
+                                Some(Ok(_other)) => {
+                                    tracing::info!("Ignoring unexpected message type.");
+                                    continue;
+                                }
+                                // If an actual error occurs, end the stream
+                                Some(Err(e)) => {
+                                    tracing::error!("WebSocket error: {:?}", e);
+                                    return None;
+                                }
+                                // The underlying stream ended
+                                None => {
+                                    tracing::info!("WebSocket stream ended (None).");
+                                    return None;
+                                }
+                            }
+                        },
+                        // Handle shutdown signal from oneshot
+                        _ = &mut shutdown_receiver => {
+                            tracing::info!("Request stream shutting down due to signal.");
+                            return None; // end the stream
                         }
                     }
-                },
-                // Handle shutdown signal from oneshot
-                _ = &mut shutdown_receiver => {
-                    tracing::info!("Request stream shutting down due to signal.");
-                    None // end the stream
                 }
-            }
-        }
-    )
-    // `unfold` yields `Some((Item, State))`, but we want only the `Item`.
-    .filter_map(|item| async move {
-        // item is `(Result<Request<ProvingSystemParams>>)`
-        Some(item)
-    });
+            },
+        );
 
         Ok(Box::pin(parsed_stream))
     }
@@ -270,7 +262,6 @@ impl ProviderApi {
 
         // Send a Close frame before exiting
         tracing::info!("Closing WebSocket connection cleanly...");
-
         let close_frame = CloseFrame {
             code: CloseCode::Normal,
             reason: "Client shutting down".into(),
