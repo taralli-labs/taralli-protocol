@@ -10,6 +10,7 @@ use url::Url;
 
 use crate::error::{RequesterError, Result};
 
+#[derive(Clone)]
 pub struct RequesterApi {
     client: Client,
     server_url: Url,
