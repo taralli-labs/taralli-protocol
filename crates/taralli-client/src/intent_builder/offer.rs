@@ -128,6 +128,11 @@ where
         self
     }
 
+    pub fn reward_token_decimals(mut self, token_decimals: u8) -> Self {
+        self.base.reward_token_decimals = token_decimals;
+        self
+    }
+
     pub fn start_auction_timestamp(mut self, timestamp: u64) -> Self {
         self.base = self.base.start_auction_timestamp(timestamp);
         self

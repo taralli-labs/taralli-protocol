@@ -22,36 +22,36 @@ contract Deploy is Script, Test {
         vm.startBroadcast(deployerPrivateKey);
 
         // deloy groth16 verifier for simple circuit
-        SimpleGroth16Verifier groth16Verifier = new SimpleGroth16Verifier();
+        //SimpleGroth16Verifier groth16Verifier = new SimpleGroth16Verifier();
         // deploy risc0 verifier for risc0 proof requests with corresponding control root & id
-        string memory proofDataJson = vm.readFile("./test-proof-data/risc0/even-number-proof.json");
-        bytes32 controlRoot = vm.parseJsonBytes32(proofDataJson, "$.control_root");
-        bytes32 bn254ControlId = vm.parseJsonBytes32(proofDataJson, "$.bn254_control_id");
-        RiscZeroGroth16Verifier risc0Verifier = new RiscZeroGroth16Verifier(controlRoot, bn254ControlId);
+        //string memory proofDataJson = vm.readFile("./test-proof-data/risc0/even-number-proof.json");
+        //bytes32 controlRoot = vm.parseJsonBytes32(proofDataJson, "$.control_root");
+        //bytes32 bn254ControlId = vm.parseJsonBytes32(proofDataJson, "$.bn254_control_id");
+        //RiscZeroGroth16Verifier risc0Verifier = new RiscZeroGroth16Verifier(controlRoot, bn254ControlId);
 
         // deploy bombetta
-        UniversalBombetta universalBombetta = new UniversalBombetta(PERMIT2);
-        emit log_named_address("Universal Bombetta Address", address(universalBombetta));
+        //UniversalBombetta universalBombetta = new UniversalBombetta(PERMIT2);
+        //emit log_named_address("Universal Bombetta Address", address(universalBombetta));
 
         // deploy porchetta market
-        UniversalPorchetta universalPorchetta = new UniversalPorchetta(PERMIT2);
-        emit log_named_address("Universal Porchetta Address", address(universalPorchetta));
+        //UniversalPorchetta universalPorchetta = new UniversalPorchetta(PERMIT2);
+        //emit log_named_address("Universal Porchetta Address", address(universalPorchetta));
 
         // deploy test token
-        ERC20Mock testToken = new ERC20Mock("Test Token", "TEST", 18);
-        emit log_named_address("Reward Token Address", address(testToken));
+        //ERC20Mock testToken = new ERC20Mock("Test Token", "TEST", 18);
+        //emit log_named_address("Token Address", address(testToken));
 
         vm.stopBroadcast();
 
         // Start with an empty JSON object
         string memory deploymentAddresses = "deployments";
         // Serialize addresses to the JSON object
-        vm.serializeAddress(deploymentAddresses, "universal_bombetta", address(universalBombetta));
-        vm.serializeAddress(deploymentAddresses, "universal_porchetta", address(universalPorchetta));
-        vm.serializeAddress(deploymentAddresses, "test_token", address(testToken));
-        vm.serializeAddress(deploymentAddresses, "risc0_verifier", address(risc0Verifier));
-        vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
-        vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
+        //vm.serializeAddress(deploymentAddresses, "universal_bombetta", address(universalBombetta));
+        //vm.serializeAddress(deploymentAddresses, "universal_porchetta", address(universalPorchetta));
+        //vm.serializeAddress(deploymentAddresses, "test_token", address(testToken));
+        //vm.serializeAddress(deploymentAddresses, "risc0_verifier", address(risc0Verifier));
+        //vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
+        //vm.serializeAddress(deploymentAddresses, "groth16_verifier", address(groth16Verifier));
 
         string memory jsonOutput = vm.serializeString(deploymentAddresses, "object", "object");
 

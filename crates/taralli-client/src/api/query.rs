@@ -3,6 +3,7 @@ use reqwest::{
     Client,
 };
 use taralli_primitives::env::Environment;
+use taralli_primitives::server_utils::StoredIntent;
 use taralli_primitives::{
     intents::offer::ComputeOffer,
     systems::{SystemId, SystemParams},
@@ -54,6 +55,14 @@ impl QueryApiClient {
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
 
+        // Check if the response is successful
+        if !response.status().is_success() {
+            return Err(ClientError::ServerRequestError(format!(
+                "Server returned error status: {}",
+                response.status()
+            )));
+        }
+
         // Parse response into JSON and extract intents array
         let json = response
             .json::<serde_json::Value>()
@@ -62,13 +71,25 @@ impl QueryApiClient {
 
         let offers = json
             .get("intents")
-            .and_then(|v| v.as_array())
             .ok_or_else(|| ClientError::ServerRequestError("Invalid response format".into()))?;
 
+        // Now modify your code to first deserialize to StoredIntent, then convert to ComputeOffer
+        let stored_intents: Vec<StoredIntent> =
+            serde_json::from_value(offers.clone()).map_err(|e| {
+                ClientError::ServerRequestError(format!("Failed to parse stored intents: {}", e))
+            })?;
+
+        if stored_intents.is_empty() {
+            return Err(ClientError::NoOffersAvailable(format!(
+                "No offers available for system: {:?}",
+                system_id
+            )));
+        }
+
         // Convert stored intents into ComputeOffers
-        let offers = offers
-            .iter()
-            .map(|stored| serde_json::from_value::<ComputeOffer<SystemParams>>(stored.clone()))
+        let offers = stored_intents
+            .into_iter()
+            .map(|stored| ComputeOffer::<SystemParams>::try_from(stored.clone()))
             .collect::<std::result::Result<Vec<_>, _>>()
             .map_err(|e| {
                 ClientError::ServerRequestError(format!("Failed to parse offers: {}", e))

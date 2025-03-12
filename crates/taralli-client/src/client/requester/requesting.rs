@@ -60,7 +60,7 @@ where
 
     /// sign the inputted proof request and submit it to the taralli server.
     /// then start tracking the request auction and resolution on-chain.
-    pub async fn submit_and_track_request(
+    pub async fn submit_and_track(
         &self,
         request: ComputeRequest<SystemParams>,
         auction_time_length: u64,

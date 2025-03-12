@@ -8805,7 +8805,110 @@ dependencies = [
 ]
 
 [[package]]
-name = "taralli-client-bin"
+name = "taralli-primitives"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "chrono",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-postgres",
+]
+
+[[package]]
+name = "taralli-provider-offering-client-bin"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "async-compression",
+ "async-trait",
+ "bincode",
+ "brotli",
+ "bytemuck",
+ "chrono",
+ "color-eyre",
+ "config",
+ "dotenv",
+ "ethers",
+ "futures",
+ "futures-util",
+ "hex",
+ "lazy_static",
+ "num-bigint 0.4.6",
+ "rand 0.8.5",
+ "reqwest 0.12.12",
+ "risc0-zkvm",
+ "serde",
+ "serde_json",
+ "sha3",
+ "taralli-client",
+ "taralli-primitives",
+ "taralli-worker",
+ "tempfile",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite 0.26.1",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber 0.3.19",
+ "tungstenite 0.26.1",
+ "url",
+ "wasmer",
+]
+
+[[package]]
+name = "taralli-provider-streaming-client-bin"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "anyhow",
+ "async-compression",
+ "async-trait",
+ "bincode",
+ "brotli",
+ "bytemuck",
+ "chrono",
+ "color-eyre",
+ "config",
+ "dotenv",
+ "ethers",
+ "futures",
+ "futures-util",
+ "hex",
+ "k256",
+ "lazy_static",
+ "num-bigint 0.4.6",
+ "rand 0.8.5",
+ "reqwest 0.12.12",
+ "risc0-zkvm",
+ "serde",
+ "serde_json",
+ "sha3",
+ "sp1-sdk",
+ "taralli-client",
+ "taralli-primitives",
+ "taralli-worker",
+ "tempfile",
+ "thiserror 2.0.11",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite 0.26.1",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber 0.3.19",
+ "tungstenite 0.26.1",
+ "url",
+ "wasmer",
+]
+
+[[package]]
+name = "taralli-requester-requesting-client-bin"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -8847,20 +8950,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "taralli-primitives"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "lazy_static",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
- "tokio",
-]
-
-[[package]]
-name = "taralli-provider-client-bin"
+name = "taralli-requester-searching-client-bin"
 version = "0.1.0"
 dependencies = [
  "alloy",

@@ -63,6 +63,7 @@ impl<S: System> ComputeIntent for ComputeOffer<S> {
 
         // Encode ProofRequest + Signature
         let values = DynSolValue::Tuple(vec![
+            DynSolValue::Address(self.proof_offer.signer),
             DynSolValue::Address(self.proof_offer.market),
             DynSolValue::Uint(self.proof_offer.nonce, 256),
             DynSolValue::Address(self.proof_offer.rewardToken),

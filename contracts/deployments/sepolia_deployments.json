@@ -3,6 +3,7 @@
   "object": "object",
   "risc0_verifier": "0x9c44aCe6a6734170639409979cef199C67354359",
   "test_token": "0xb54061f59AcF94f86ee414C9a220aFFE8BbE6B35",
+  "test_stake_token": "0x3D48eB902f38fCF16C2fD9F42cb088d301D16c94",
   "universal_bombetta": "0x6209431B6C8F38471dc65564Be2Fd08298705BBD",
-  "universal_porchetta": "0x5Ac1172921d0CdfFF58B59E23f8DeAE86bDca565"
+  "universal_porchetta": "0x67445680c74Fb82C46421374554e402e72E9e5d1"
 }

@@ -10,6 +10,8 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 lazy_static = { workspace = true }
 async-trait = { workspace = true }
+chrono = { workspace = true }
+tokio-postgres = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

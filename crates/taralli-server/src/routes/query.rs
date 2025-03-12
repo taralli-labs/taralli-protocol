@@ -18,10 +18,20 @@ pub async fn get_active_intents_by_id_handler<T: Transport + Clone, P: Provider<
     let system_id = SystemId::try_from(system_id.as_str())
         .map_err(|e| ServerError::QueryError(e.to_string()))?;
 
-    let intents = app_state
+    let intents = match app_state
         .intent_db()
         .get_active_intents_by_id(system_id)
-        .await?;
+        .await
+    {
+        Ok(intents) => intents,
+        Err(e) => {
+            tracing::error!("Database error when querying intents: {}", e);
+            return Err(ServerError::DatabaseError(format!(
+                "Failed to query intents: {}",
+                e
+            )));
+        }
+    };
 
     Ok((StatusCode::OK, Json(json!({ "intents": intents }))))
 }

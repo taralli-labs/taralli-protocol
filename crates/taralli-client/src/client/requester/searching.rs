@@ -74,7 +74,10 @@ where
         // compute id
         let offer_id = offer.compute_id();
 
-        tracing::info!("searching execution finished, analyzing offer");
+        tracing::info!(
+            "searching execution finished, analyzing offer: {:?}",
+            offer.proof_offer
+        );
 
         // Fetch latest block timestamp
         // TODO: remove this call from the request processing work flow, instead passing it in as input from another external process
@@ -87,6 +90,8 @@ where
             .ok_or_else(|| ClientError::RpcRequestError("Block header not found".to_string()))?
             .header()
             .timestamp();
+
+        tracing::info!("current ts: {}", current_ts);
 
         // compute resolve deadline timestamp
         let resolve_deadline_ts =

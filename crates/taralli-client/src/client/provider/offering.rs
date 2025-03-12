@@ -27,12 +27,12 @@ where
     P: Provider<T, N> + Clone,
     N: Network + Clone,
 {
-    base: BaseClient<T, P, N, S>,
-    api: SubmitApiClient,
-    builder: ComputeOfferBuilder<T, P, N>,
-    tracker: ComputeOfferTracker<T, P, N>,
-    worker: Arc<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
-    resolver: ComputeOfferResolver<T, P, N>,
+    pub base: BaseClient<T, P, N, S>,
+    pub api: SubmitApiClient,
+    pub builder: ComputeOfferBuilder<T, P, N>,
+    pub tracker: ComputeOfferTracker<T, P, N>,
+    pub worker: Arc<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
+    pub resolver: ComputeOfferResolver<T, P, N>,
 }
 
 impl<T, P, N, S> ProviderOfferingClient<T, P, N, S>
@@ -109,7 +109,7 @@ where
             )));
         }
 
-        tracing::info!("Request submitted successfully, waiting for auction result");
+        tracing::info!("Offer submitted successfully, waiting for auction result");
 
         // Wait for auction result
         let _auction_result = auction_tracker

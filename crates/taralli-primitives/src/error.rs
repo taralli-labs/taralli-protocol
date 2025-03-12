@@ -22,6 +22,10 @@ pub enum PrimitivesError {
     InvalidSystem(String),
     #[error("Intent serialization error: {0}")]
     SerializationError(String),
+    #[error("DB serialization error: {0}")]
+    DbSerializeError(String),
+    #[error("DB serialization error: {0}")]
+    DbDeserializeError(String),
 }
 
 pub type Result<T> = core::result::Result<T, PrimitivesError>;

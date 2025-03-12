@@ -131,7 +131,6 @@ pub trait Validate: Sized + Clone {
         )?;
         self.validate_nonce()?;
 
-        println!("PRIMITIVES: validate specific starting");
         // Run type-specific validation
         self.validate_specific(config)
     }

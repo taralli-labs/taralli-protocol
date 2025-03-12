@@ -201,7 +201,7 @@ where
     type Intent = ComputeOffer<SystemParams>;
     type BidEvent = UniversalPorchetta::Bid;
 
-    /// Start tracking auction events for a request
+    /// Start tracking auction events for an offer
     async fn track_auction(
         &self,
         intent_id: B256,

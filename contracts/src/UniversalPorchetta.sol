@@ -96,7 +96,7 @@ contract UniversalPorchetta is Porchetta {
         if (block.timestamp < offer.startAuctionTimestamp) revert InvalidOffer();
         if (block.timestamp > offer.endAuctionTimestamp) revert InvalidOffer();
         // compute offer ID
-        bytes32 offerId = computeOfferId(offer);
+        bytes32 offerId = computeOfferId(offer, signature);
         // assert that only 1 bid can be placed for a given offer
         if (activeProofOfferData[offerId].requester != address(0)) revert AuctionEnded();
 
@@ -248,7 +248,7 @@ contract UniversalPorchetta is Porchetta {
     }
 
     /// @dev hashes the proof offer for use as the offer ID in mapping `activeProofOfferData`
-    function computeOfferId(ProofOffer calldata offer) public pure returns (bytes32) {
+    function computeOfferId(ProofOffer calldata offer, bytes calldata signature) public pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 offer.signer,
@@ -262,7 +262,8 @@ contract UniversalPorchetta is Porchetta {
                 offer.endAuctionTimestamp,
                 offer.provingTime,
                 offer.inputsCommitment,
-                offer.extraData
+                keccak256(abi.encode(offer.extraData)),
+                keccak256(abi.encode(signature))
             )
         );
     }

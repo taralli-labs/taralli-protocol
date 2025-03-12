@@ -1,7 +1,7 @@
 use alloy::primitives::Address;
 use async_trait::async_trait;
 use taralli_primitives::{
-    intents::offer::ComputeOffer,
+    intents::{offer::ComputeOffer, ComputeIntent},
     systems::{SystemId, SystemParams},
 };
 use url::Url;
@@ -34,10 +34,16 @@ impl IntentSearcher for ComputeOfferSearcher {
     async fn search(&self) -> Result<Self::Intent> {
         // Query the server for active offers matching system_id
         let offers = self.api_client.query_market_offers(self.system_id).await?;
+        tracing::info!("SEARCHER: offers found from query");
 
         let first_offer = offers
-            .first()
+            .last()
             .ok_or_else(|| ClientError::ServerRequestError("No offers available".into()))?;
+
+        tracing::info!(
+            "SEARCHER: offer selected with offer ID: {}",
+            first_offer.compute_id()
+        );
 
         Ok(first_offer.clone())
     }

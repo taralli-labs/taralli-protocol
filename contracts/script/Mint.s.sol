@@ -10,13 +10,15 @@ contract Mint is Script, Test {
     string RPC_URL = vm.envString("ETH_SEPOLIA_RPC_URL");
     // test reward token contract
     ERC20Mock public immutable rewardToken = ERC20Mock(0xb54061f59AcF94f86ee414C9a220aFFE8BbE6B35);
+    ERC20Mock public immutable stakeToken = ERC20Mock(0x3D48eB902f38fCF16C2fD9F42cb088d301D16c94);
 
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("REQUESTER_PRIVATE_KEY");
         vm.createSelectFork(RPC_URL);
         vm.startBroadcast(deployerPrivateKey);
 
-        // mint 10 mil tokens
-        rewardToken.mint(address(0x4070Af7fc9090Ec323330dDed79159E8740b5158), 10000000 ether);
+        // mint 10 mil tokens to a given account
+        //rewardToken.mint(address(0x4070Af7fc9090Ec323330dDed79159E8740b5158), 10000000 ether);
+        stakeToken.mint(address(0x4070Af7fc9090Ec323330dDed79159E8740b5158), 10000000 ether);
     }
 }

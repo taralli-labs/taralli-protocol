@@ -15,12 +15,16 @@ pub enum ClientError {
     ServerSubscriptionError(String),
     #[error("Failed intent analysis: {0}")]
     IntentAnalysisError(String),
+    #[error("Failed deserialization: {0}")]
+    DeserializationError(String),
     #[error("Worker failed with error: {0}")]
     WorkerError(String),
     #[error("Client builder error: {0}")]
     BuilderError(String),
     #[error("Failed to submit intent: {0}")]
     IntentSubmissionFailed(String),
+    #[error("Query failed, no offers available for system: {0}")]
+    NoOffersAvailable(String),
     #[error("Failed to decompress intent: {0}")]
     IntentDecompressionFailed(String),
     #[error("Error when tracking intent: {0}")]

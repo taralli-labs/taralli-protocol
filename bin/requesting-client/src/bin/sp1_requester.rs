@@ -6,18 +6,15 @@ use alloy::signers::local::PrivateKeySigner;
 use alloy::sol_types::SolValue;
 use color_eyre::Result;
 use dotenv::dotenv;
-use serde_json::Value;
 use sha3::Digest;
 use std::env;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::Path;
 use std::str::FromStr;
 use taralli_client::client::requester::requesting::RequesterRequestingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::arkworks::ArkworksProofParams;
+use taralli_primitives::systems::sp1::{Sp1Config, Sp1Mode, Sp1ProofParams};
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
@@ -36,39 +33,31 @@ async fn main() -> Result<()> {
     // Load environment variables from the `.env` file
     dotenv().ok();
     let server_url = Url::parse(&env::var("SERVER_URL")?)?; // local server instance
-    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // testnet
-    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // private key
+    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // Holesky testnet
+    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
 
     // proving system information data
-    let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
-    let proof_inputs_file =
-        File::open("./contracts/test-proof-data/groth16/multiplier2_js/input.json")?;
-    let proof_public_inputs_file = File::open("./contracts/test-proof-data/groth16/public.json")?;
-    let wasm_path =
-        Path::new("./contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
-    // buf readers
-    let public_inputs_reader = BufReader::new(proof_public_inputs_file);
-    let inputs_reader = BufReader::new(proof_inputs_file);
+    let sp1_program_path = Path::new("./contracts/test-proof-data/sp1/fibonacci-program");
 
-    // decode proof input data
-    let r1cs = std::fs::read(r1cs_data_path)?;
-    let public_inputs: Value = serde_json::from_reader(public_inputs_reader)?;
-    let wasm: Vec<u8> = std::fs::read(wasm_path)?;
-    let inputs = serde_json::from_reader(inputs_reader)?;
+    // proof input(s)
+    let inputs = 1000u32;
+
+    // load elf binary
+    let elf = std::fs::read(sp1_program_path)?;
 
     // on chain proof request data
-    let reward_token_address = address!("b54061f59AcF94f86ee414C9a220aFFE8BbE6B35");
+    let reward_token_address = address!("89fF1B147026815cf497AA45D4FDc2DF51Ed7f00");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
     let min_reward_amount = U256::from(10); // 10 wei of tokens
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
-    let auction_length = 45u32; // 45 sec
-    let verifier_address = address!("558D8D2f90c085A8Ed704084716F2797AAB26cC6");
-    let verify_function_selector: FixedBytes<4> = fixed_bytes!("43753b4d");
-    let inputs_offset = U256::from(256);
-    let inputs_length = U256::from(32);
-    let is_sha_commitment = false;
+    let auction_length = 60u32; // 1 min
+    let verifier_address = address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1");
+    let verify_function_selector: FixedBytes<4> = fixed_bytes!("41493c60");
+    let inputs_offset = U256::from(0);
+    let inputs_length = U256::from(64);
+    let is_sha_commitment = true;
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
     let submitted_partial_commitment_result_length = U256::from(0);
@@ -94,7 +83,7 @@ async fn main() -> Result<()> {
         rpc_provider,
         signer,
         SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
-        SystemId::Arkworks,
+        SystemId::Sp1,
         validation_config,
     );
 
@@ -109,19 +98,18 @@ async fn main() -> Result<()> {
     // builder that extends from default builder
     let builder = builder_default.clone();
 
-    // craft proving system information json here
-    let proof_info = serde_json::to_value(ArkworksProofParams { r1cs, wasm, inputs })?;
+    // proving system information
+    let proof_info = serde_json::to_value(Sp1ProofParams {
+        elf,
+        inputs: inputs.to_le_bytes().to_vec(),
+        config: Sp1Config {
+            mode: Sp1Mode::Groth16,
+        },
+    })?;
 
     // load verification commitments
-    // abi encode public input number
-    // Extract the number directly from the JSON array
-    let public_input_str = public_inputs[0]
-        .as_str()
-        .unwrap_or("failed to grab number from public.json");
-    let u256_public_input = U256::from_str(public_input_str)?;
     let public_inputs_commitment_preimage =
-        DynSolValue::Tuple(vec![DynSolValue::Uint(u256_public_input, 256)]);
-    // sha256(abi.encode(imageId, proofInputHash))
+        DynSolValue::Tuple(vec![DynSolValue::Bytes(inputs.to_le_bytes().to_vec())]);
     let public_inputs_commitment_digest =
         Sha256::digest(public_inputs_commitment_preimage.abi_encode());
     let public_inputs_commitment = B256::from_slice(public_inputs_commitment_digest.as_slice());
@@ -159,14 +147,10 @@ async fn main() -> Result<()> {
     // validate before submitting
     requester.validate_request(&signed_request)?;
 
-    println!(
-        "signed request proof commitment: {:?}",
-        signed_request.proof_request
-    );
-
     // TODO: Add a retry policy
     requester
-        .submit_and_track_request(signed_request, auction_length as u64)
+        .submit_and_track(signed_request, auction_length as u64)
         .await?;
+
     Ok(())
 }
