@@ -27,24 +27,29 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
+/// Taralli protocol server
+/// Handles:
+/// - submission of compute intents
+/// - subscriptions thorugh websocket streams of compute intents across a given set of system IDs.
+/// - storage of compute intents
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-
-    // Load configuration
-    let config = Config::from_file("config.json").context("Failed to load config")?;
-
     dotenv().ok();
+
+    // Load configuration json
+    let config = Config::from_file("config.json").context("Failed to load config")?;
+    // Load rpc url used by the server's rpc provider (sepolia currently)
     let rpc_url = Url::from_str(&std::env::var("RPC_URL").expect("rpc url from env failed"));
 
-    // Get the validation configs from the config
-    let validation_configs = config.get_validation_configs();
-
-    // tracing
+    // setup tracing
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(config.log_level()?)
         .init();
+
+    // Get the validation configs from the server config
+    let validation_configs = config.get_validation_configs();
 
     tracing::info!("Setting up RPC provider");
     let rpc_provider = ProviderBuilder::new().on_http(rpc_url?);
@@ -65,19 +70,15 @@ async fn main() -> Result<()> {
         Duration::from_secs(config.validation_timeout_seconds as u64),
         validation_configs,
     );
-
-    tracing::info!("Setting up routers");
     let request_state = RequestState::new(base_state.clone(), subscription_manager);
-    tracing::info!("Setting up offer state");
     let offer_state = OfferState::new(base_state, intent_db);
 
-    tracing::info!("Setting up routes");
+    tracing::info!("Setting up routers");
     // Create separate routers for each intent type
     let request_routes = Router::new()
         .route("/submit/request", post(submit_request_handler))
         .route("/subscribe", get(subscribe_handler))
         .with_state(request_state);
-
     let offer_routes = Router::new()
         .route("/submit/offer", post(submit_offer_handler))
         .route("/query/:system_id", get(get_active_intents_by_id_handler))

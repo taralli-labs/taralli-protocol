@@ -39,7 +39,7 @@ async fn main() -> Result<()> {
     let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // testnet
     let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // private key
 
-    // proving system information data
+    // system workload data
     let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
     let proof_inputs_file =
         File::open("./contracts/test-proof-data/groth16/multiplier2_js/input.json")?;
@@ -50,13 +50,13 @@ async fn main() -> Result<()> {
     let public_inputs_reader = BufReader::new(proof_public_inputs_file);
     let inputs_reader = BufReader::new(proof_inputs_file);
 
-    // decode proof input data
+    // input data
     let r1cs = std::fs::read(r1cs_data_path)?;
     let public_inputs: Value = serde_json::from_reader(public_inputs_reader)?;
     let wasm: Vec<u8> = std::fs::read(wasm_path)?;
     let inputs = serde_json::from_reader(inputs_reader)?;
 
-    // on chain proof request data
+    // proof commitment data
     let reward_token_address = address!("b54061f59AcF94f86ee414C9a220aFFE8BbE6B35");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
@@ -64,11 +64,16 @@ async fn main() -> Result<()> {
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
     let auction_length = 45u32; // 45 sec
+                                // existing groth16 verifier deployment for this test circuit
     let verifier_address = address!("558D8D2f90c085A8Ed704084716F2797AAB26cC6");
+    // verifyProof(uint256[2] calldata _pA,uint256[2][2] calldata _pB,uint256[2] calldata _pC,uint256[1] calldata _pubSignals)
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("43753b4d");
+    // offset and length to extract inputs field
     let inputs_offset = U256::from(256);
     let inputs_length = U256::from(32);
+    // uses keccak
     let is_sha_commitment = false;
+    // no partial commitments used
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
     let submitted_partial_commitment_result_length = U256::from(0);
@@ -78,17 +83,18 @@ async fn main() -> Result<()> {
     // signer
     let signer = PrivateKeySigner::from_str(priv_key)?;
 
-    // build provider
+    // build rpc provider
     let rpc_provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .on_http(rpc_url);
 
+    // validation config to check requests are correct
     let validation_config = RequestValidationConfig {
         base: BaseValidationConfig::default(),
         maximum_allowed_stake: 10000000000000000000, // 10 ether
     };
 
-    // instantiate requester client
+    // instantiate requester requesting client
     let requester = RequesterRequestingClient::new(
         server_url,
         rpc_provider,
@@ -98,7 +104,7 @@ async fn main() -> Result<()> {
         validation_config,
     );
 
-    // set builder defaults
+    // set intent builder defaults
     let builder_default = requester
         .builder
         .clone()
@@ -106,15 +112,13 @@ async fn main() -> Result<()> {
         .reward_token_address(reward_token_address)
         .reward_token_decimals(reward_token_decimals);
 
-    // builder that extends from default builder
+    // intent builder that extends from default builder
     let builder = builder_default.clone();
 
-    // craft proving system information json here
+    // system inputs
     let proof_info = serde_json::to_value(ArkworksProofParams { r1cs, wasm, inputs })?;
 
     // load verification commitments
-    // abi encode public input number
-    // Extract the number directly from the JSON array
     let public_input_str = public_inputs[0]
         .as_str()
         .unwrap_or("failed to grab number from public.json");
@@ -126,7 +130,7 @@ async fn main() -> Result<()> {
         Sha256::digest(public_inputs_commitment_preimage.abi_encode());
     let public_inputs_commitment = B256::from_slice(public_inputs_commitment_digest.as_slice());
 
-    // build verifier details using external tool
+    // build proof commitment's verifier details
     let verifier_details = VerifierDetails {
         verifier: verifier_address,
         selector: verify_function_selector,
@@ -141,7 +145,7 @@ async fn main() -> Result<()> {
     // set extra_data = abi encoded verifier details
     let extra_data = Bytes::from(VerifierDetails::abi_encode(&verifier_details));
 
-    // finish building proof request
+    // finish building compute request
     let compute_request = builder
         .set_new_nonce()
         .await?
@@ -153,18 +157,18 @@ async fn main() -> Result<()> {
         .await?
         .build()?; // convert ComputeRequestBuilder into ComputeRequest
 
-    // sign built request
+    // sign built compute request
     let signed_request = requester.sign(compute_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request)?;
+    requester.validate_request(&signed_request, &Default::default())?;
 
-    println!(
+    tracing::info!(
         "signed request proof commitment: {:?}",
         signed_request.proof_request
     );
 
-    // TODO: Add a retry policy
+    // submit and track ComputeRequest
     requester
         .submit_and_track(signed_request, auction_length as u64)
         .await?;

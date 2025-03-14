@@ -1,3 +1,5 @@
+//! This module contains database utilities used by the protocol server and clients making queries to search for intents within the server
+
 use alloy::primitives::{PrimitiveSignature, B256};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -9,6 +11,7 @@ use crate::{
     PrimitivesError, Result,
 };
 
+/// Opaque compute intent structure stored within the protocol server's database.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StoredIntent {
     pub intent_id: B256,
@@ -21,6 +24,7 @@ pub struct StoredIntent {
     pub expired_at: Option<DateTime<Utc>>,
 }
 
+/// Convert a postgres row returned from a query into the stored intent
 impl TryFrom<Row> for StoredIntent {
     type Error = PrimitivesError;
     fn try_from(row: Row) -> Result<Self> {
@@ -118,6 +122,7 @@ impl TryFrom<Row> for StoredIntent {
     }
 }
 
+/// Convert a StoredIntent into a ComputeOffer
 impl<S: System> TryFrom<StoredIntent> for ComputeOffer<S>
 where
     S: for<'de> serde::Deserialize<'de>,

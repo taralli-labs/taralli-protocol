@@ -4,6 +4,7 @@ use crate::postgres::Db;
 
 use super::BaseState;
 
+/// ComputeOffer specific state
 #[derive(Clone)]
 pub struct OfferState<T, P> {
     base: BaseState<T, P>,

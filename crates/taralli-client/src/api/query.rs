@@ -12,6 +12,7 @@ use url::Url;
 
 use crate::error::{ClientError, Result};
 
+/// Query ComputeOffers stored within the protocol server's intent db
 pub struct QueryApiClient {
     _api_key: String,
     client: Client,

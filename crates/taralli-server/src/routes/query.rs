@@ -11,6 +11,7 @@ use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
 use taralli_primitives::systems::SystemId;
 
+/// query compute intents of a given system id from the server's intent database
 pub async fn get_active_intents_by_id_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(app_state): State<OfferState<T, P>>,
     Path(system_id): Path<String>,

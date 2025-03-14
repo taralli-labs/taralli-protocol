@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 
 use super::ComputeIntent;
 
-// bombetta
+/// bombetta signature constants
 pub const FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB: &str =
     "ProofRequest witness)TokenPermissions(address token,uint256 amount)ProofRequest(address signer,address market,uint256 nonce,address rewardToken,uint256 maxRewardAmount,uint256 minRewardAmount,uint128 minimumStake,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
 pub const PROOF_REQUEST_WITNESS_TYPE_STRING: &str =
@@ -48,6 +48,7 @@ pub struct ComputeRequest<S: System> {
     pub signature: PrimitiveSignature,
 }
 
+/// generic compute request implementation
 impl<S: System> ComputeIntent for ComputeRequest<S> {
     type System = S;
     type ProofCommitment = UniversalBombetta::ProofRequest;
@@ -61,7 +62,7 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
         let extra_data_hash = keccak256(self.proof_request.extraData.abi_encode());
         let signature_hash = keccak256(self.signature.as_bytes().abi_encode());
 
-        // Encode OnChainProofRequest + Signature
+        // Encode ProofRequest + Signature
         let values = DynSolValue::Tuple(vec![
             DynSolValue::Address(self.proof_request.signer),
             DynSolValue::Address(self.proof_request.market),
@@ -79,7 +80,7 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
         ]);
         let preimage = values.abi_encode();
 
-        // hash encoded preimage to get request id
+        // hash encoded preimage to get intent id
         keccak256(&preimage)
     }
 
@@ -107,13 +108,11 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
         let witness = keccak256(request_witness_values.abi_encode());
 
         // compute permit2 digest
-        // encode token permissions data
         let token_permissions = TokenPermissions {
             token: self.proof_request.rewardToken,
             amount: self.proof_request.maxRewardAmount,
         };
         let token_permissions_bytes = token_permissions.abi_encode();
-        //println!("token_permissions_bytes: {:?}", token_permissions_bytes);
 
         let token_permissions_hash_preimage = [
             TOKEN_PERMISSIONS_TYPE_HASH.abi_encode(),
@@ -121,12 +120,8 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
         ]
         .concat();
 
-        //println!("COMPUTE REQUEST PERMIT2 DIGEST: token permissions pre image: {:?}", token_permissions_hash_preimage);
-        //println!("COMPUTE REQUEST PERMIT2 DIGEST: token permissions hash: {:?}", keccak256(&token_permissions_hash_preimage));
-
         // hash token permissions encoding
         let token_permissions_hash = keccak256(&token_permissions_hash_preimage);
-        println!("token_permissions_hash: {}", token_permissions_hash);
 
         // encode data hash preimage
         let data_hash_preimage = DynSolValue::Tuple(vec![
@@ -138,12 +133,6 @@ impl<S: System> ComputeIntent for ComputeRequest<S> {
             DynSolValue::FixedBytes(witness, 32),
         ])
         .abi_encode();
-
-        //println!("COMPUTE REQUEST PERMIT2 DIGEST: data hash pre image: {:?}", data_hash_preimage);
-        //println!(
-        //    "COMPUTE REQUEST PERMIT2 DIGEST: data hash: {:?}",
-        //    keccak256(&data_hash_preimage)
-        //);
 
         // hash data hash encoding
         let data_hash = keccak256(&data_hash_preimage);

@@ -8,6 +8,7 @@ use url::Url;
 use crate::api::compression::compress_intent;
 use crate::error::{ClientError, Result};
 
+/// Submit compute intents to the server
 pub struct SubmitApiClient {
     _api_key: String,
     client: Client,

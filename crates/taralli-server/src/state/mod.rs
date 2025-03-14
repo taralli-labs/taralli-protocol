@@ -9,7 +9,7 @@ use crate::config::{Markets, ServerValidationConfigs};
 pub mod offer;
 pub mod request;
 
-// Common base state with shared fields
+/// Common base state with shared fields between compute intent types
 #[derive(Clone)]
 pub struct BaseState<T, P> {
     rpc_provider: P,

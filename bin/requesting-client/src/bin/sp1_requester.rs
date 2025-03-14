@@ -33,31 +33,34 @@ async fn main() -> Result<()> {
     // Load environment variables from the `.env` file
     dotenv().ok();
     let server_url = Url::parse(&env::var("SERVER_URL")?)?; // local server instance
-    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // Holesky testnet
-    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // Holesky private key
+    let rpc_url = Url::parse(&env::var("RPC_URL")?)?; // testnet
+    let priv_key = &env::var("REQUESTER_PRIVATE_KEY")?; // private key
 
-    // proving system information data
+    // system workload data
     let sp1_program_path = Path::new("./contracts/test-proof-data/sp1/fibonacci-program");
-
     // proof input(s)
     let inputs = 1000u32;
-
     // load elf binary
     let elf = std::fs::read(sp1_program_path)?;
 
-    // on chain proof request data
-    let reward_token_address = address!("89fF1B147026815cf497AA45D4FDc2DF51Ed7f00");
+    // proof commitment data
+    let reward_token_address = address!("b54061f59AcF94f86ee414C9a220aFFE8BbE6B35");
     let reward_token_decimals = 18u8;
     let max_reward_amount = U256::from(100e18); // 100 tokens
     let min_reward_amount = U256::from(10); // 10 wei of tokens
     let minimum_stake = 1; // 1 wei, for testing
     let proving_time = 60u32; // 1 min
     let auction_length = 60u32; // 1 min
+                                // SP1 sepolia groth16 verifier
     let verifier_address = address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1");
+    // verifyProof(bytes32 programVKey,bytes calldata publicValues,bytes calldata proofBytes)
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("41493c60");
+    // offset and length to extract inputs field
     let inputs_offset = U256::from(0);
     let inputs_length = U256::from(64);
+    // uses sha
     let is_sha_commitment = true;
+    // no partial commitments used
     let has_partial_commitment_result_check = false;
     let submitted_partial_commitment_result_offset = U256::from(0);
     let submitted_partial_commitment_result_length = U256::from(0);
@@ -67,17 +70,18 @@ async fn main() -> Result<()> {
     // signer
     let signer = PrivateKeySigner::from_str(priv_key)?;
 
-    // build provider
+    // build rpc provider
     let rpc_provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .on_http(rpc_url);
 
+    // validation config to check requests are correct
     let validation_config = RequestValidationConfig {
         base: BaseValidationConfig::default(),
         maximum_allowed_stake: 10000000000000000000, // 10 ether
     };
 
-    // instantiate requester client
+    // instantiate requester requesting client
     let requester = RequesterRequestingClient::new(
         server_url,
         rpc_provider,
@@ -87,7 +91,7 @@ async fn main() -> Result<()> {
         validation_config,
     );
 
-    // set builder defaults
+    // set intent builder defaults
     let builder_default = requester
         .builder
         .clone()
@@ -95,10 +99,10 @@ async fn main() -> Result<()> {
         .reward_token_address(reward_token_address)
         .reward_token_decimals(reward_token_decimals);
 
-    // builder that extends from default builder
+    // intent builder that extends from default builder
     let builder = builder_default.clone();
 
-    // proving system information
+    // system inputs
     let proof_info = serde_json::to_value(Sp1ProofParams {
         elf,
         inputs: inputs.to_le_bytes().to_vec(),
@@ -114,7 +118,7 @@ async fn main() -> Result<()> {
         Sha256::digest(public_inputs_commitment_preimage.abi_encode());
     let public_inputs_commitment = B256::from_slice(public_inputs_commitment_digest.as_slice());
 
-    // build verifier details using external tool
+    // build proof commitment's verifier details
     let verifier_details = VerifierDetails {
         verifier: verifier_address,
         selector: verify_function_selector,
@@ -129,7 +133,7 @@ async fn main() -> Result<()> {
     // set extra_data = abi encoded verifier details
     let extra_data = Bytes::from(VerifierDetails::abi_encode(&verifier_details));
 
-    // finish building proof request
+    // finish building compute request
     let compute_request = builder
         .set_new_nonce()
         .await?
@@ -141,13 +145,13 @@ async fn main() -> Result<()> {
         .await?
         .build()?; // convert ComputeRequestBuilder into ComputeRequest
 
-    // sign built request
+    // sign built compute request
     let signed_request = requester.sign(compute_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request)?;
+    requester.validate_request(&signed_request, &Default::default())?;
 
-    // TODO: Add a retry policy
+    // submit and track ComputeRequest
     requester
         .submit_and_track(signed_request, auction_length as u64)
         .await?;

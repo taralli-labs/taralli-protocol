@@ -4,7 +4,7 @@ use crate::error::Result;
 
 pub mod offer;
 
-/// core searcher trait
+/// core searcher trait used across all compute intent markets
 #[async_trait]
 pub trait IntentSearcher {
     type Intent;

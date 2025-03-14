@@ -6,6 +6,7 @@ use crate::systems::{System, SystemConfig};
 use super::system_id::Risc0;
 use super::SystemInputs;
 
+/// System proof parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Risc0ProofParams {
     pub elf: Vec<u8>,
@@ -14,6 +15,7 @@ pub struct Risc0ProofParams {
 
 impl SystemConfig for Risc0ProofParams {}
 
+/// System implementation
 impl System for Risc0ProofParams {
     type Config = Self;
     type Inputs = Vec<u8>;

@@ -6,6 +6,7 @@ use crate::subscription_manager::SubscriptionManager;
 
 use super::BaseState;
 
+/// ComputeRequest specific state
 #[derive(Clone)]
 pub struct RequestState<T, P> {
     base: BaseState<T, P>,

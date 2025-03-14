@@ -1,11 +1,8 @@
-use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
-use crate::systems::VerifierConstraints;
 use alloy::primitives::{address, b256, keccak256, Address, B256};
 use alloy::sol_types::SolValue;
 use lazy_static::lazy_static;
 
-// permit2
+/// permit2 utilities needed for compute intent signing
 pub const PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB: &str =
     "PermitWitnessTransferFrom(TokenPermissions permitted,address spender,uint256 nonce,uint256 deadline,";
 pub const TOKEN_PERMISSIONS_TYPE_STRING: &str = "TokenPermissions(address token,uint256 amount)";
@@ -27,42 +24,4 @@ pub fn hash_typed_data(domain_separator: B256, data_hash: B256) -> B256 {
     .concat();
 
     keccak256(final_hash_preimage)
-}
-
-impl PartialEq<ProofRequestVerifierDetails> for VerifierConstraints {
-    fn eq(&self, details: &ProofRequestVerifierDetails) -> bool {
-        // Check each constraint only if it's specified
-        self.verifier.is_none_or(|v| v == details.verifier)
-            && self.selector.is_none_or(|s| s == details.selector)
-            && self
-                .is_sha_commitment
-                .is_none_or(|sha| sha == details.isShaCommitment)
-            && self.inputs_offset.is_none_or(|o| o == details.inputsOffset)
-            && self.inputs_length.is_none_or(|l| l == details.inputsLength)
-            && self
-                .has_partial_commitment_result_check
-                .is_none_or(|c| c == details.hasPartialCommitmentResultCheck)
-            && self
-                .submitted_partial_commitment_result_offset
-                .is_none_or(|o| o == details.submittedPartialCommitmentResultOffset)
-            && self
-                .submitted_partial_commitment_result_length
-                .is_none_or(|l| l == details.submittedPartialCommitmentResultLength)
-            && self
-                .predetermined_partial_commitment
-                .is_none_or(|p| p == details.predeterminedPartialCommitment)
-    }
-}
-
-impl PartialEq<ProofOfferVerifierDetails> for VerifierConstraints {
-    fn eq(&self, details: &ProofOfferVerifierDetails) -> bool {
-        // Check each constraint only if it's specified
-        self.verifier.is_none_or(|v| v == details.verifier)
-            && self.selector.is_none_or(|s| s == details.selector)
-            && self
-                .is_sha_commitment
-                .is_none_or(|sha| sha == details.isShaCommitment)
-            && self.inputs_offset.is_none_or(|o| o == details.inputsOffset)
-            && self.inputs_length.is_none_or(|l| l == details.inputsLength)
-    }
 }

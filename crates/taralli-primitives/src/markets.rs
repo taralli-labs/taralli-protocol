@@ -1,6 +1,6 @@
 use alloy::primitives::{address, Address};
 
-/// Sepolia
+/// Sepolia market addresses
 pub const SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS: Address =
     address!("6209431B6C8F38471dc65564Be2Fd08298705BBD");
 

@@ -1,5 +1,6 @@
 use std::env;
 
+/// configuration for clients/server to use api key auth or not
 #[derive(Debug, PartialEq, Eq)]
 pub enum Environment {
     Development,

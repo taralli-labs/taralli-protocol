@@ -32,6 +32,7 @@ impl MultiModeSystem for GnarkConfig {
     }
 }
 
+/// System proof parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GnarkProofParams {
     pub config: GnarkConfig,
@@ -40,6 +41,7 @@ pub struct GnarkProofParams {
     pub public_inputs: Value, // Public inputs in JSON format
 }
 
+/// System implementation
 impl System for GnarkProofParams {
     type Config = GnarkConfig;
     type Inputs = Value;

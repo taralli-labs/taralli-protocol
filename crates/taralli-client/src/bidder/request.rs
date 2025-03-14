@@ -14,6 +14,7 @@ use tokio::time::{sleep, Duration};
 
 use super::IntentBidder;
 
+/// Bid on a ComputeRequest
 #[derive(Clone)]
 pub struct ComputeRequestBidder<T, P, N> {
     rpc_provider: P,

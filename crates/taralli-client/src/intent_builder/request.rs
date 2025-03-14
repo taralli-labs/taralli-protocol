@@ -15,6 +15,7 @@ use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
 use crate::nonce_manager::Permit2NonceManager;
 
+/// Intent builder for ComputeRequests
 #[derive(Clone)]
 pub struct ComputeRequestBuilder<T, P, N>
 where

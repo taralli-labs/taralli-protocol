@@ -19,6 +19,8 @@ use crate::{
 // type alias for stream of compute requests returned by the protocol server
 pub type RequestStream = Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
 
+/// Subscribe over websocket stream to broadcasts as new ComputeRequest's are submitted to
+/// the protocol server
 pub struct SubscribeApiClient {
     server_url: Url,
     api_key: String,

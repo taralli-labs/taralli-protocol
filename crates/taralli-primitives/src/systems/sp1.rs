@@ -30,6 +30,7 @@ impl MultiModeSystem for Sp1Config {
     }
 }
 
+/// System proof parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Sp1ProofParams {
     pub config: Sp1Config,
@@ -37,6 +38,7 @@ pub struct Sp1ProofParams {
     pub inputs: Vec<u8>, // Program inputs
 }
 
+/// System implementation
 impl System for Sp1ProofParams {
     type Config = Sp1Config;
     type Inputs = Vec<u8>;

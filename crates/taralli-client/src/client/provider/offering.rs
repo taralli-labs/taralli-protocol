@@ -6,7 +6,7 @@ use std::time::Duration;
 use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::validation::offer::OfferValidationConfig;
+use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
 use taralli_primitives::validation::Validate;
 use url::Url;
 
@@ -18,9 +18,12 @@ use crate::tracker::IntentAuctionTracker;
 use crate::worker::{ComputeWorker, WorkResult};
 use crate::{
     intent_builder::offer::ComputeOfferBuilder, resolver::offer::ComputeOfferResolver,
-    tracker::ComputeOfferTracker,
+    tracker::offer::ComputeOfferTracker,
 };
 
+/// Client that submits signed compute offerings to the protocol server, tracks their auction status,
+/// compute's the offered compute workload assuming it is bid upon, and then resolves the compute offer
+/// within the market contract.
 pub struct ProviderOfferingClient<T, P, N, S>
 where
     T: Transport + Clone,
@@ -155,12 +158,17 @@ where
         Ok(offer)
     }
 
-    pub fn validate_offer(&self, offer: &ComputeOffer<SystemParams>) -> Result<()> {
+    pub fn validate_offer(
+        &self,
+        offer: &ComputeOffer<SystemParams>,
+        verifier_constraints: &OfferVerifierConstraints,
+    ) -> Result<()> {
         // validate an offer built by the client
         offer.validate(
             offer.proof_offer.startAuctionTimestamp,
             &self.base.market_address,
             &self.builder.validation_config,
+            verifier_constraints,
         )?;
         Ok(())
     }

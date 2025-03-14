@@ -14,7 +14,7 @@ use futures_util::StreamExt;
 use taralli_primitives::{
     intents::{request::ComputeRequest, ComputeIntent},
     systems::{SystemId, SystemParams},
-    validation::request::RequestValidationConfig,
+    validation::request::{RequestValidationConfig, RequestVerifierConstraints},
 };
 
 use url::Url;
@@ -28,6 +28,10 @@ use crate::{
 };
 use crate::{api::subscribe::SubscribeApiClient, client::BaseClient};
 
+/// Client that fulfills ComputeRequests by subscribing to the protocol server over websocket
+/// stream to receive newly submitted ComputeRequests at the given system IDs they subscribed to.
+/// It then processes the incoming compute requests, bids upon them, compute's the requested compute
+/// workload and then resolves the compute request within the market contract.
 pub struct ProviderStreamingClient<T, P, N, S>
 where
     T: Transport + Clone,
@@ -55,6 +59,7 @@ where
         signer: S,
         market_address: Address,
         validation_config: RequestValidationConfig,
+        verifier_constraints: Option<HashMap<SystemId, RequestVerifierConstraints>>,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
@@ -63,6 +68,7 @@ where
                 rpc_provider.clone(),
                 market_address,
                 validation_config,
+                verifier_constraints,
             ),
             bidder: ComputeRequestBidder::new(rpc_provider.clone(), market_address),
             worker_manager: WorkerManager::new(HashMap::new()),
@@ -93,6 +99,7 @@ where
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
         tracing::info!("subscribed to markets, waiting for incoming requests");
+
         while let Some(result) = stream.next().await {
             match result {
                 Ok(request) => {

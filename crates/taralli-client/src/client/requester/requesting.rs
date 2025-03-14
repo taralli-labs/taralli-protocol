@@ -6,17 +6,23 @@ use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::request::ComputeRequest;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::validation::request::RequestValidationConfig;
+use taralli_primitives::validation::request::{
+    RequestValidationConfig, RequestVerifierConstraints,
+};
 use taralli_primitives::validation::Validate;
 use url::Url;
 
 use crate::api::submit::SubmitApiClient;
 use crate::error::{ClientError, Result};
 use crate::tracker::{IntentAuctionTracker, IntentResolveTracker};
-use crate::{intent_builder::request::ComputeRequestBuilder, tracker::ComputeRequestTracker};
+use crate::{
+    intent_builder::request::ComputeRequestBuilder, tracker::request::ComputeRequestTracker,
+};
 
 use crate::client::BaseClient;
 
+/// Client that submits signed ComputeRequest to the protocol server, tracks their auction status
+/// and then tracks their resolution status to see if the requested compute workload was fulfilled.
 pub struct RequesterRequestingClient<T, P, N, S>
 where
     T: Transport + Clone,
@@ -128,7 +134,6 @@ where
     ) -> Result<ComputeRequest<SystemParams>> {
         // build permit2 digest
         let permit2_digest = request.compute_permit2_digest();
-        println!("SIGNING: permit2 digest {}", permit2_digest);
 
         // sign permit2 digest
         let signature = self
@@ -142,12 +147,17 @@ where
         Ok(request)
     }
 
-    pub fn validate_request(&self, request: &ComputeRequest<SystemParams>) -> Result<()> {
+    pub fn validate_request(
+        &self,
+        request: &ComputeRequest<SystemParams>,
+        verifier_constraints: &RequestVerifierConstraints,
+    ) -> Result<()> {
         // validate a request built by the requester client
         request.validate(
             request.proof_request.startAuctionTimestamp,
             &self.base.market_address,
             &self.builder.validation_config,
+            verifier_constraints,
         )?;
         Ok(())
     }

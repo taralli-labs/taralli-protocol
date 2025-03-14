@@ -13,6 +13,16 @@ use crate::{
     PrimitivesError,
 };
 
+/// Verifier constraints specific to ProofOffer proof commitments within ComputeOffer intents
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct OfferVerifierConstraints {
+    pub verifier: Option<Address>,
+    pub selector: Option<[u8; 4]>,
+    pub is_sha_commitment: Option<bool>,
+    pub inputs_offset: Option<U256>,
+    pub inputs_length: Option<U256>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OfferValidationConfig {
     pub base: BaseValidationConfig,
@@ -55,10 +65,10 @@ impl ProofCommon for ProofOffer {
     }
 }
 
-// Implement for ComputeOffer
+// Implement Validate for ComputeOffer
 impl<S: System> Validate for ComputeOffer<S> {
     type Config = OfferValidationConfig;
-    type VerifierConstraints = ProofOfferVerifierDetails;
+    type VerifierConstraints = OfferVerifierConstraints;
 
     fn system_id(&self) -> SystemId {
         self.system_id
@@ -72,15 +82,21 @@ impl<S: System> Validate for ComputeOffer<S> {
         &self.proof_offer
     }
 
-    fn validate_specific(&self, config: &Self::Config) -> Result<()> {
+    fn validate_specific(
+        &self,
+        config: &Self::Config,
+        verifier_constraints: &Self::VerifierConstraints,
+    ) -> Result<()> {
         // ComputeOffer-specific validation
-        validate_offer(self, config)
+        validate_offer(self, config, verifier_constraints)
     }
 }
 
+/// ComputeOffer specific validation
 pub fn validate_offer<S: System>(
     offer: &ComputeOffer<S>,
     config: &OfferValidationConfig,
+    verifier_constraints: &OfferVerifierConstraints,
 ) -> Result<()> {
     // Offer-specific validation logic
     validate_signature(offer)?;
@@ -89,7 +105,7 @@ pub fn validate_offer<S: System>(
         config.maximum_allowed_reward,
         config.minimum_allowed_stake,
     )?;
-    validate_offer_verifier_details(offer)?;
+    validate_offer_verifier_details(offer, verifier_constraints)?;
     Ok(())
 }
 
@@ -111,12 +127,57 @@ pub fn validate_amount_constraints<S: System>(
     }
 }
 
-pub fn validate_offer_verifier_details<S: System>(offer: &ComputeOffer<S>) -> Result<()> {
-    // Decode and validate verifier details from the request
-    let _verifier_details =
+pub fn validate_offer_verifier_details<S: System>(
+    offer: &ComputeOffer<S>,
+    verifier_constraints: &OfferVerifierConstraints,
+) -> Result<()> {
+    // Decode and validate verifier details structure from the intent
+    let verifier_details =
         ProofOfferVerifierDetails::abi_decode(&offer.proof_offer.extraData, true).map_err(|e| {
             PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
         })?;
+
+    // Check each constraint only if it's set
+    if let Some(expected_verifier) = verifier_constraints.verifier {
+        if verifier_details.verifier != expected_verifier {
+            return Err(PrimitivesError::ValidationError(
+                "verifier address does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_selector) = verifier_constraints.selector {
+        if verifier_details.selector != expected_selector {
+            return Err(PrimitivesError::ValidationError(
+                "verifier selector does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_is_sha_commitment) = verifier_constraints.is_sha_commitment {
+        if verifier_details.isShaCommitment != expected_is_sha_commitment {
+            return Err(PrimitivesError::ValidationError(
+                "isShaCommitment flag does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_inputs_offset) = verifier_constraints.inputs_offset {
+        if verifier_details.inputsOffset != expected_inputs_offset {
+            return Err(PrimitivesError::ValidationError(
+                "inputs offset does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_inputs_length) = verifier_constraints.inputs_length {
+        if verifier_details.inputsLength != expected_inputs_length {
+            return Err(PrimitivesError::ValidationError(
+                "inputs length does not match constraints".to_string(),
+            ));
+        }
+    }
+
     Ok(())
 }
 

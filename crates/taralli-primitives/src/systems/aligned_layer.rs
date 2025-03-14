@@ -25,6 +25,7 @@ impl CompositeSystem for AlignedLayerConfig {
     }
 }
 
+/// System proof parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AlignedLayerProofParams {
     pub aligned_proving_system_id: String,
@@ -32,6 +33,7 @@ pub struct AlignedLayerProofParams {
     pub proving_system_aux_commitment: FixedBytes<32>,
 }
 
+/// System implementation
 impl System for AlignedLayerProofParams {
     type Config = AlignedLayerConfig;
     type Inputs = Value;

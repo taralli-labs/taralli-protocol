@@ -1,5 +1,15 @@
+[workspace.package]
+edition = "2024"
+license = "MIT"
+rust-version = "1.85"
+authors = ["N0xMare", "medittere"]
+homepage = "https://github.com/taralli-labs/taralli-protocol"
+repository = "https://github.com/taralli-labs/taralli-protocol"
+keywords = ["ethereum", "crypto"]
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+exclude = ["**/target"]
+
 [workspace]
-resolver = "2"
 members = [
     "bin/*",
     "crates/taralli-primitives/",
@@ -7,6 +17,8 @@ members = [
     "crates/taralli-server/",
     "crates/taralli-worker/",
 ]
+
+resolver = "2"
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"

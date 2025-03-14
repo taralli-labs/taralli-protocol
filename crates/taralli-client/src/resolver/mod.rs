@@ -7,7 +7,7 @@ use taralli_primitives::alloy::network::Network;
 pub mod offer;
 pub mod request;
 
-/// core resolver trait
+/// core resolver trait used across all compute intent markets
 #[async_trait]
 pub trait IntentResolver<N: Network> {
     type Intent;

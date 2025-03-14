@@ -17,7 +17,7 @@ use lazy_static::lazy_static;
 
 use super::ComputeIntent;
 
-// porchetta
+/// porchetta signature constants
 pub const FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB: &str =
     "ProofOffer witness)TokenPermissions(address token,uint256 amount)ProofOffer(address signer,address market,uint256 nonce,address rewardToken,uint256 rewardAmount,address stakeToken,uint256 stakeAmount,uint64 startAuctionTimestamp,uint64 endAuctionTimestamp,uint32 provingTime,bytes32 inputsCommitment,bytes extraData)";
 pub const PROOF_OFFER_WITNESS_TYPE_STRING: &str =
@@ -48,6 +48,7 @@ pub struct ComputeOffer<S: System> {
     pub signature: PrimitiveSignature,
 }
 
+/// Generic compute offer implementation
 impl<S: System> ComputeIntent for ComputeOffer<S> {
     type System = S;
     type ProofCommitment = UniversalPorchetta::ProofOffer;
@@ -61,7 +62,7 @@ impl<S: System> ComputeIntent for ComputeOffer<S> {
         let extra_data_hash = keccak256(self.proof_offer.extraData.abi_encode());
         let signature_hash = keccak256(self.signature.as_bytes().abi_encode());
 
-        // Encode ProofRequest + Signature
+        // Encode ProofOffer + Signature
         let values = DynSolValue::Tuple(vec![
             DynSolValue::Address(self.proof_offer.signer),
             DynSolValue::Address(self.proof_offer.market),
@@ -79,7 +80,7 @@ impl<S: System> ComputeIntent for ComputeOffer<S> {
         ]);
         let preimage = values.abi_encode();
 
-        // hash encoded preimage to get request id
+        // hash encoded preimage to get intent id
         keccak256(&preimage)
     }
 

@@ -15,6 +15,7 @@ use taralli_primitives::{
 };
 use tokio::time::timeout;
 
+/// Validate a submitted compute intent
 pub async fn validate_intent<T: Transport + Clone, P: Provider<T> + Clone, I>(
     intent: &I,
     state: &BaseState<T, P>,
@@ -40,8 +41,16 @@ where
         }
     };
 
+    // Create a default verifier constraints - server doesn't enforce these
+    let default_verifier_constraints = I::VerifierConstraints::default();
+
     timeout(validation_timeout_seconds, async {
-        intent.validate(latest_timestamp, market_address, config)
+        intent.validate(
+            latest_timestamp,
+            market_address,
+            config,
+            &default_verifier_constraints,
+        )
     })
     .await
     .map_err(|_| ServerError::ValidationTimeout(validation_timeout_seconds.as_secs()))?

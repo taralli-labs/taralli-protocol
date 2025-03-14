@@ -11,6 +11,7 @@ use crate::error::{ClientError, Result};
 
 use super::IntentSearcher;
 
+/// Searcher for ComputeOffers
 pub struct ComputeOfferSearcher {
     api_client: QueryApiClient,
     system_id: SystemId,

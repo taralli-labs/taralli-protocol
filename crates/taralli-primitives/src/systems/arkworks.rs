@@ -7,6 +7,7 @@ use crate::systems::{System, SystemConfig};
 use super::system_id::Arkworks;
 use super::SystemInputs;
 
+/// System proof parameters
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArkworksProofParams {
     pub r1cs: Vec<u8>, // .r1cs file bytes
@@ -16,6 +17,7 @@ pub struct ArkworksProofParams {
 
 impl SystemConfig for ArkworksProofParams {}
 
+/// System implementation
 impl System for ArkworksProofParams {
     type Config = Self;
     type Inputs = Value;

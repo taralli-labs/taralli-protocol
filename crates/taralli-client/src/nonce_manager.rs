@@ -13,6 +13,7 @@ use crate::error::{ClientError, Result};
 const U256_ONE: U256 = U256::from_limbs([1, 0, 0, 0]);
 const U256_256: U256 = U256::from_limbs([256, 0, 0, 0]);
 
+/// Permit2 nonce manager used by clients to manage signature nonces
 #[derive(Clone)]
 pub struct Permit2NonceManager<T, P, N> {
     provider: P,

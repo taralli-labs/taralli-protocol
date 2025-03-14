@@ -8846,6 +8846,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3",
+ "sp1-sdk",
  "taralli-client",
  "taralli-primitives",
  "taralli-worker",

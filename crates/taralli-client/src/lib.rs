@@ -1,3 +1,6 @@
+//! This crate contains components needed to compose/create taralli client binaries
+//! in order to provide/sell or request/buy compute workloads through the protocol.
+
 pub mod analyzer;
 pub mod api;
 pub mod bidder;

@@ -14,6 +14,7 @@ use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
 use crate::nonce_manager::Permit2NonceManager;
 
+/// Intent builder for ComputeOffers
 #[derive(Clone)]
 pub struct ComputeOfferBuilder<T, P, N>
 where
@@ -25,6 +26,7 @@ where
     // Compute offer specific params
     pub reward_amount: U256,
     pub stake_token_address: Address,
+    pub stake_token_decimals: u8,
     pub stake_amount: U256,
     // Compute offer validation config
     pub validation_config: OfferValidationConfig,
@@ -67,6 +69,7 @@ where
             base,
             reward_amount: U256::ZERO,
             stake_token_address: Address::ZERO,
+            stake_token_decimals: 0u8,
             stake_amount: U256::ZERO,
             validation_config,
         }
@@ -173,10 +176,12 @@ where
         mut self,
         reward_amount: U256,
         stake_token_address: Address,
+        stake_token_decimals: u8,
         stake_amount: U256,
     ) -> Self {
         self.reward_amount = reward_amount;
         self.stake_token_address = stake_token_address;
+        self.stake_token_decimals = stake_token_decimals;
         self.stake_amount = stake_amount;
         self
     }
@@ -188,6 +193,11 @@ where
 
     pub fn stake_token_address(mut self, stake_token_address: Address) -> Self {
         self.stake_token_address = stake_token_address;
+        self
+    }
+
+    pub fn stake_token_decimals(mut self, token_decimals: u8) -> Self {
+        self.stake_token_decimals = token_decimals;
         self
     }
 

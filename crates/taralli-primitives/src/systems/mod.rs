@@ -1,9 +1,10 @@
+//! This module contains the system trait and its implementations.
+
 use crate::error::Result;
 use crate::systems::{
     aligned_layer::AlignedLayerProofParams, arkworks::ArkworksProofParams, gnark::GnarkProofParams,
     risc0::Risc0ProofParams, sp1::Sp1ProofParams,
 };
-use alloy::primitives::{Address, FixedBytes, U256};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
@@ -13,37 +14,22 @@ pub mod gnark;
 pub mod risc0;
 pub mod sp1;
 
-// Core verifier constraints all systems must provide
-#[derive(Debug, Default)]
-pub struct VerifierConstraints {
-    pub verifier: Option<Address>,
-    pub selector: Option<FixedBytes<4>>,
-    pub is_sha_commitment: Option<bool>,
-    pub inputs_offset: Option<U256>,
-    pub inputs_length: Option<U256>,
-    pub has_partial_commitment_result_check: Option<bool>,
-    pub submitted_partial_commitment_result_offset: Option<U256>,
-    pub submitted_partial_commitment_result_length: Option<U256>,
-    pub predetermined_partial_commitment: Option<FixedBytes<32>>,
-}
+/// traits for system configuration
+pub trait SystemConfig: for<'de> Deserialize<'de> + Debug + Clone {}
 
-// Base trait for system configuration
-pub trait SystemConfig: for<'de> Deserialize<'de> + Debug + Clone {
-    // Common configuration methods all systems must implement
-}
-
-// Trait for systems that have multiple proving modes
+// system has multiple proving modes
 pub trait MultiModeSystem: SystemConfig {
     type Mode: Debug + Clone;
     fn mode(&self) -> &Self::Mode;
 }
 
-// Trait for systems that can use other systems
+// system can use other systems
 pub trait CompositeSystem: SystemConfig {
     type UnderlyingSystem: SystemConfig;
     fn underlying_system(&self) -> &Self::UnderlyingSystem;
 }
 
+/// inputs can be represented as raw bytes or json
 #[derive(Clone, Debug)]
 pub enum SystemInputs {
     Bytes(Vec<u8>),
@@ -70,7 +56,7 @@ macro_rules! count {
     ($head:tt $(,$tail:tt)*) => (1usize + count!($($tail),*));
 }
 
-// Macro for generating system IDs and basic infrastructure
+// Macro for generating system ID and system param utilities
 macro_rules! systems {
     (
         $(

@@ -40,7 +40,6 @@ pub struct ServerValidationConfigs {
     pub offer: OfferValidationConfig,
 }
 
-// derive type specific config from compute intent
 pub trait ServerValidationConfigProvider: Validate {
     fn get_config(configs: &ServerValidationConfigs) -> &Self::Config;
 }

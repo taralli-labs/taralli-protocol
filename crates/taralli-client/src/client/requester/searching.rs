@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::time::Duration;
 
 use alloy::consensus::BlockHeader;
@@ -10,7 +11,7 @@ use alloy::signers::Signer;
 use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::offer::OfferValidationConfig;
+use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
 use url::Url;
 
 use crate::analyzer::{offer::ComputeOfferAnalyzer, IntentAnalyzer};
@@ -19,10 +20,13 @@ use crate::bidder::offer::{ComputeOfferBidParams, ComputeOfferBidder};
 use crate::bidder::IntentBidder;
 use crate::error::{ClientError, Result};
 use crate::searcher::{offer::ComputeOfferSearcher, IntentSearcher};
-use crate::tracker::{ComputeOfferTracker, IntentResolveTracker};
+use crate::tracker::{offer::ComputeOfferTracker, IntentResolveTracker};
 
 use crate::client::BaseClient;
 
+/// Client that queries the server for a given system ID to search for a compute offering
+/// they want to bid upon. Once an offer has been found and analyzed, it is bid upon thereafter
+/// being tracked until resolution of the offered compute workload.
 pub struct RequesterSearchingClient<T, P, N, S, I>
 where
     T: Transport + Clone,
@@ -52,6 +56,7 @@ where
         market_address: Address,
         system_id: SystemId,
         validation_config: OfferValidationConfig,
+        verifier_constraints: Option<HashMap<SystemId, OfferVerifierConstraints>>,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
@@ -61,6 +66,7 @@ where
                 rpc_provider.clone(),
                 market_address,
                 validation_config,
+                verifier_constraints,
             ),
             bidder: ComputeOfferBidder::new(rpc_provider.clone(), market_address),
             tracker: ComputeOfferTracker::new(rpc_provider, market_address),

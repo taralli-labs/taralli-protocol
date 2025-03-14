@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub mod offer;
 pub mod request;
 
+/// Common validation values needed across all intent types
 pub trait CommonValidationConfig: Any {
     fn minimum_proving_time(&self) -> u32;
     fn maximum_start_delay(&self) -> u32;
@@ -33,7 +34,7 @@ impl Default for BaseValidationConfig {
     }
 }
 
-// Common trait for shared fields across all intent type's proof structures
+// Common trait for shared fields across all intent type's proof commitment structures
 pub trait ProofCommon {
     fn market(&self) -> &Address;
     fn nonce(&self) -> &U256;
@@ -43,10 +44,10 @@ pub trait ProofCommon {
     fn inputs_commitment(&self) -> FixedBytes<32>;
 }
 
-// Trait for intent types that can be validated
+// Trait describing how intents are validated
 pub trait Validate: Sized + Clone {
     type Config: CommonValidationConfig;
-    type VerifierConstraints;
+    type VerifierConstraints: Default;
 
     fn system_id(&self) -> SystemId;
     fn system(&self) -> &impl System;
@@ -112,7 +113,11 @@ pub trait Validate: Sized + Clone {
     }
 
     // Type-specific validation that must be implemented
-    fn validate_specific(&self, config: &Self::Config) -> Result<()>;
+    fn validate_specific(
+        &self,
+        config: &Self::Config,
+        verifier_constraints: &Self::VerifierConstraints,
+    ) -> Result<()>;
 
     /// High-level validation that performs all checks
     fn validate(
@@ -120,6 +125,7 @@ pub trait Validate: Sized + Clone {
         latest_timestamp: u64,
         market_address: &Address,
         config: &Self::Config,
+        verifier_constraints: &Self::VerifierConstraints,
     ) -> Result<()> {
         // Use individual validators
         self.validate_system(&config.supported_systems())?;
@@ -132,6 +138,6 @@ pub trait Validate: Sized + Clone {
         self.validate_nonce()?;
 
         // Run type-specific validation
-        self.validate_specific(config)
+        self.validate_specific(config, verifier_constraints)
     }
 }

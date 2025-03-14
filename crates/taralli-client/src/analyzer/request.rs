@@ -1,20 +1,21 @@
-use std::marker::PhantomData;
+use std::{collections::HashMap, marker::PhantomData};
 
 use alloy::{network::Network, primitives::Address, providers::Provider, transports::Transport};
 use async_trait::async_trait;
 use taralli_primitives::{
     intents::{request::ComputeRequest, ComputeIntent},
-    systems::SystemParams,
-    validation::{request::RequestValidationConfig, Validate},
+    systems::{SystemId, SystemParams},
+    validation::{
+        request::{RequestValidationConfig, RequestVerifierConstraints},
+        Validate,
+    },
 };
 
 use crate::error::Result;
 
 use super::IntentAnalyzer;
 
-// TODO: add in in economic logic for intents coming from server stream
-// decide wether or not the inbound intent is `safe` and `profitable` to bid upon.
-// uses the bidder to submit the bid with a given target price if all the checks pass
+/// Analyzes a ComputeRequest's validity and profitability
 pub struct ComputeRequestAnalyzer<T, P, N, I>
 where
     T: Transport + Clone + Send + Sync,
@@ -24,6 +25,7 @@ where
     _rpc_provider: P,
     pub market_address: Address,
     pub validation_config: RequestValidationConfig,
+    pub verifier_constraints: Option<HashMap<SystemId, RequestVerifierConstraints>>,
     phantom_data: PhantomData<(T, N, I)>,
 }
 
@@ -37,11 +39,13 @@ where
         rpc_provider: P,
         market_address: Address,
         validation_config: RequestValidationConfig,
+        verifier_constraints: Option<HashMap<SystemId, RequestVerifierConstraints>>,
     ) -> Self {
         Self {
             _rpc_provider: rpc_provider,
             market_address,
             validation_config,
+            verifier_constraints,
             phantom_data: PhantomData,
         }
     }
@@ -58,8 +62,24 @@ where
     type Intent = ComputeRequest<SystemParams>;
 
     async fn analyze(&self, latest_ts: u64, intent: &Self::Intent) -> Result<()> {
+        let system_id = intent.system_id();
+
+        let default_constraint = Default::default();
+
+        // Get the verifier constraints for this system ID if they exist
+        let verifier_constraint = self
+            .verifier_constraints
+            .as_ref()
+            .and_then(|constraints| constraints.get(&system_id))
+            .unwrap_or(&default_constraint);
+
         // general correctness checks
-        intent.validate(latest_ts, &self.market_address, &self.validation_config)?;
+        intent.validate(
+            latest_ts,
+            &self.market_address,
+            &self.validation_config,
+            verifier_constraint,
+        )?;
 
         //// TODO: economic checks
 

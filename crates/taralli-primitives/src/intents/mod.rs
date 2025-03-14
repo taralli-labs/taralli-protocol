@@ -1,3 +1,5 @@
+//! This module contains the ComputeIntent Implementations used by the protocol.
+
 use crate::systems::{System, SystemParams};
 use crate::validation::Validate;
 use alloy::primitives::FixedBytes;
@@ -6,7 +8,6 @@ use serde::{Deserialize, Serialize};
 pub mod offer;
 pub mod request;
 
-/// Compute Intent types
 /// Trait representing common behavior for compute intents
 pub trait ComputeIntent: Validate + Serialize + for<'de> Deserialize<'de> + Send + Sync {
     type System: System;

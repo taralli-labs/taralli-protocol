@@ -32,6 +32,7 @@ pub const MOCK_SIGNATURE_BYTES: [u8; 65] = [
     197, 182, 209, 0,
 ];
 
+/// Base Intent builder that all compute intent builder's extend from.
 #[derive(Clone)]
 pub struct BaseIntentBuilder<T, P, N>
 where

@@ -10,6 +10,7 @@ use crate::state::offer::OfferState;
 use crate::state::request::RequestState;
 use crate::validation::validate_intent;
 
+/// submit ComputeRequest
 pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(state): State<RequestState<T, P>>,
     BrotliFile {
@@ -48,6 +49,7 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
     }
 }
 
+/// submit ComputeOffer
 pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(state): State<OfferState<T, P>>,
     BrotliFile {

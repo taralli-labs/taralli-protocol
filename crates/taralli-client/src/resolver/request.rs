@@ -13,6 +13,7 @@ use crate::error::{ClientError, Result};
 
 use super::IntentResolver;
 
+/// Resolver for ComputeRequests
 pub struct ComputeRequestResolver<T, P, N>
 where
     T: Transport + Clone,
