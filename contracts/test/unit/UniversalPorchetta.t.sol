@@ -58,7 +58,7 @@ contract UniversalPorchettaTest is BaseTest {
         vm.warp(block.timestamp + 100);
 
         // encode opaque submission
-        bytes32 offerId = universalPorchetta.computeOfferId(offer);
+        bytes32 offerId = universalPorchetta.computeOfferId(offer, sig);
         bytes memory opaqueSubmission = _getGroth16ProofSubmission();
 
         uint256 prestateBobTokenBalance = testToken.balanceOf(bob);

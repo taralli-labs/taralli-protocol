@@ -2,22 +2,24 @@ use crate::brotli::BrotliFile;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::intents::{ComputeOffer, ComputeRequest};
-use taralli_primitives::systems::ProvingSystemParams;
+use taralli_primitives::intents::{offer::ComputeOffer, request::ComputeRequest};
+use taralli_primitives::systems::SystemParams;
 
 use crate::error::{Result, ServerError};
 use crate::state::offer::OfferState;
 use crate::state::request::RequestState;
 use crate::validation::validate_intent;
 
+/// submit ComputeRequest
 pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone>(
-    State(app_state): State<RequestState<T, P>>,
+    State(state): State<RequestState<T, P>>,
     BrotliFile {
         compressed,
         decompressed,
     }: BrotliFile,
 ) -> Result<impl IntoResponse> {
-    let request: ComputeRequest<ProvingSystemParams> = serde_json::from_slice(&decompressed)
+    tracing::info!("compute request submitted");
+    let request: ComputeRequest<SystemParams> = serde_json::from_slice(&decompressed)
         .map_err(|e| {
             tracing::warn!("Failed to parse JSON: {:?}", e);
             (
@@ -27,10 +29,13 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
         })
         .map_err(|e| ServerError::DeserializationError(format!("error: {:?}", e)))?;
 
-    validate_intent(&request, &app_state).await?;
-    match app_state
+    validate_intent(&request, &state).await?;
+
+    tracing::info!("compute request validated, broadcasting");
+
+    match state
         .subscription_manager()
-        .broadcast(request.proving_system_id, compressed)
+        .broadcast(request.system_id, compressed)
         .await
     {
         Ok(recv_count) => Ok((
@@ -44,14 +49,16 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
     }
 }
 
+/// submit ComputeOffer
 pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
-    State(app_state): State<OfferState<T, P>>,
+    State(state): State<OfferState<T, P>>,
     BrotliFile {
         compressed: _,
         decompressed,
     }: BrotliFile,
 ) -> Result<impl IntoResponse> {
-    let offer: ComputeOffer<ProvingSystemParams> = serde_json::from_slice(&decompressed)
+    tracing::info!("compute offer submitted");
+    let offer: ComputeOffer<SystemParams> = serde_json::from_slice(&decompressed)
         .map_err(|e| {
             tracing::warn!("Failed to parse JSON: {:?}", e);
             (
@@ -61,9 +68,11 @@ pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
         })
         .map_err(|e| ServerError::DeserializationError(format!("error: {:?}", e)))?;
 
-    validate_intent(&offer, &app_state).await?;
+    validate_intent(&offer, &state).await?;
 
-    match app_state.intent_db().store_offer(&offer).await {
+    tracing::info!("compute offer validated, storing");
+
+    match state.intent_db().store_offer(&offer).await {
         Ok(_) => Ok((
             StatusCode::CREATED,
             Json(json!({"message": "Offer stored successfully"})),

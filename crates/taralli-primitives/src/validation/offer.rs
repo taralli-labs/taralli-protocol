@@ -1,44 +1,46 @@
 use alloy::primitives::{Address, FixedBytes, U256};
+use alloy::sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 
-use super::{
-    CommonValidationConfig, FromMetaConfig, ProofCommon, Validate, ValidationConfig,
-    ValidationMetaConfig,
-};
+use super::{BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate};
+use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
+use crate::intents::ComputeIntent;
 use crate::Result;
 use crate::{
     abi::universal_porchetta::UniversalPorchetta::ProofOffer,
-    intents::ComputeOffer,
-    systems::{ProvingSystem, ProvingSystemId},
-    utils::{compute_offer_permit2_digest, compute_offer_witness},
+    intents::offer::ComputeOffer,
+    systems::{System, SystemId},
     PrimitivesError,
 };
 
-// Specific config for offers
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct OfferSpecificConfig {
-    pub maximum_allowed_reward: Option<U256>,
-    pub minimum_allowed_stake: Option<U256>,
+/// Verifier constraints specific to ProofOffer proof commitments within ComputeOffer intents
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct OfferVerifierConstraints {
+    pub verifier: Option<Address>,
+    pub selector: Option<[u8; 4]>,
+    pub is_sha_commitment: Option<bool>,
+    pub inputs_offset: Option<U256>,
+    pub inputs_length: Option<U256>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct OfferValidationConfig {
-    pub common: CommonValidationConfig,
-    pub specific: OfferSpecificConfig,
+    pub base: BaseValidationConfig,
+    pub maximum_allowed_reward: U256,
+    pub minimum_allowed_stake: U256,
 }
 
-impl ValidationConfig for OfferValidationConfig {
-    fn common(&self) -> &CommonValidationConfig {
-        &self.common
+impl CommonValidationConfig for OfferValidationConfig {
+    fn minimum_proving_time(&self) -> u32 {
+        self.base.minimum_proving_time
     }
-}
 
-impl FromMetaConfig for OfferValidationConfig {
-    fn from_meta(meta: &ValidationMetaConfig) -> Self {
-        Self {
-            common: meta.common.clone(),
-            specific: meta.offer.clone(),
-        }
+    fn maximum_start_delay(&self) -> u32 {
+        self.base.maximum_start_delay
+    }
+
+    fn supported_systems(&self) -> Vec<SystemId> {
+        self.base.supported_systems.clone()
     }
 }
 
@@ -63,49 +65,52 @@ impl ProofCommon for ProofOffer {
     }
 }
 
-// Implement for ComputeOffer
-impl<P: ProvingSystem> Validate for ComputeOffer<P> {
+// Implement Validate for ComputeOffer
+impl<S: System> Validate for ComputeOffer<S> {
     type Config = OfferValidationConfig;
+    type VerifierConstraints = OfferVerifierConstraints;
 
-    fn proving_system_id(&self) -> ProvingSystemId {
-        self.proving_system_id
+    fn system_id(&self) -> SystemId {
+        self.system_id
     }
 
-    fn proving_system(&self) -> &impl ProvingSystem {
-        &self.proving_system
+    fn system(&self) -> &impl System {
+        &self.system
     }
 
     fn proof_common(&self) -> &impl ProofCommon {
         &self.proof_offer
     }
 
-    fn validate_specific(&self, config: &Self::Config) -> Result<()> {
-        // Offer-specific validation
-        validate_offer(self, config)
+    fn validate_specific(
+        &self,
+        config: &Self::Config,
+        verifier_constraints: &Self::VerifierConstraints,
+    ) -> Result<()> {
+        // ComputeOffer-specific validation
+        validate_offer(self, config, verifier_constraints)
     }
 }
 
-pub fn validate_offer<P: ProvingSystem>(
-    offer: &ComputeOffer<P>,
+/// ComputeOffer specific validation
+pub fn validate_offer<S: System>(
+    offer: &ComputeOffer<S>,
     config: &OfferValidationConfig,
+    verifier_constraints: &OfferVerifierConstraints,
 ) -> Result<()> {
-    let maximum_allowed_reward = config.specific.maximum_allowed_reward.ok_or_else(|| {
-        PrimitivesError::ConfigError("maximum_allowed_reward must be configured".to_string())
-    })?;
-
-    let minimum_allowed_stake = config.specific.minimum_allowed_stake.ok_or_else(|| {
-        PrimitivesError::ConfigError("minimum_allowed_stake must be configured".to_string())
-    })?;
-
     // Offer-specific validation logic
     validate_signature(offer)?;
-    validate_amount_constraints(offer, maximum_allowed_reward, minimum_allowed_stake)?;
-    validate_verifier_details(offer)?;
+    validate_amount_constraints(
+        offer,
+        config.maximum_allowed_reward,
+        config.minimum_allowed_stake,
+    )?;
+    validate_offer_verifier_details(offer, verifier_constraints)?;
     Ok(())
 }
 
-pub fn validate_amount_constraints<P: ProvingSystem>(
-    offer: &ComputeOffer<P>,
+pub fn validate_amount_constraints<S: System>(
+    offer: &ComputeOffer<S>,
     maximum_allowed_reward: U256,
     minimum_allowed_stake: U256,
 ) -> Result<()> {
@@ -122,15 +127,63 @@ pub fn validate_amount_constraints<P: ProvingSystem>(
     }
 }
 
-pub fn validate_verifier_details<P: ProvingSystem>(_offer: &ComputeOffer<P>) -> Result<()> {
+pub fn validate_offer_verifier_details<S: System>(
+    offer: &ComputeOffer<S>,
+    verifier_constraints: &OfferVerifierConstraints,
+) -> Result<()> {
+    // Decode and validate verifier details structure from the intent
+    let verifier_details =
+        ProofOfferVerifierDetails::abi_decode(&offer.proof_offer.extraData, true).map_err(|e| {
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+        })?;
+
+    // Check each constraint only if it's set
+    if let Some(expected_verifier) = verifier_constraints.verifier {
+        if verifier_details.verifier != expected_verifier {
+            return Err(PrimitivesError::ValidationError(
+                "verifier address does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_selector) = verifier_constraints.selector {
+        if verifier_details.selector != expected_selector {
+            return Err(PrimitivesError::ValidationError(
+                "verifier selector does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_is_sha_commitment) = verifier_constraints.is_sha_commitment {
+        if verifier_details.isShaCommitment != expected_is_sha_commitment {
+            return Err(PrimitivesError::ValidationError(
+                "isShaCommitment flag does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_inputs_offset) = verifier_constraints.inputs_offset {
+        if verifier_details.inputsOffset != expected_inputs_offset {
+            return Err(PrimitivesError::ValidationError(
+                "inputs offset does not match constraints".to_string(),
+            ));
+        }
+    }
+
+    if let Some(expected_inputs_length) = verifier_constraints.inputs_length {
+        if verifier_details.inputsLength != expected_inputs_length {
+            return Err(PrimitivesError::ValidationError(
+                "inputs length does not match constraints".to_string(),
+            ));
+        }
+    }
+
     Ok(())
 }
 
-pub fn validate_signature<P: ProvingSystem>(offer: &ComputeOffer<P>) -> Result<()> {
-    // compute witness
-    let witness = compute_offer_witness(&offer.proof_offer);
+pub fn validate_signature<S: System>(offer: &ComputeOffer<S>) -> Result<()> {
     // compute permit digest
-    let computed_digest = compute_offer_permit2_digest(&offer.proof_offer, witness);
+    let computed_digest = offer.compute_permit2_digest();
     // ec recover signing public key
     let computed_verifying_key = offer
         .signature

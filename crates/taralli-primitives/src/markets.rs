@@ -1,5 +1,8 @@
 use alloy::primitives::{address, Address};
 
-/// All active market contract addresses
-pub const UNIVERSAL_BOMBETTA_ADDRESS: Address =
-    address!("e05e737478E4f0b886981aD85CF9a59D55413e8b");
+/// Sepolia market addresses
+pub const SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS: Address =
+    address!("6209431B6C8F38471dc65564Be2Fd08298705BBD");
+
+pub const SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS: Address =
+    address!("67445680c74Fb82C46421374554e402e72E9e5d1");

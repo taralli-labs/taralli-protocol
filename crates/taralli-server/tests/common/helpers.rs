@@ -16,24 +16,26 @@ use serde_json::json;
 
 use axum::response::sse::{Event, Sse};
 use taralli_primitives::{
-    systems::{ProvingSystemId, SYSTEMS},
-    validation::{
-        offer::OfferSpecificConfig, request::RequestSpecificConfig, CommonValidationConfig,
-        ValidationMetaConfig,
-    },
+    systems::{system_id::Arkworks, SystemId, SYSTEMS},
+    validation::BaseValidationConfig,
 };
 use tokio_stream::wrappers::BroadcastStream;
 
 use bytes::Bytes;
 use futures::stream::MapOk;
 use serde_json::Value;
-use taralli_server::{config::Config, state::BaseState, subscription_manager::SubscriptionManager};
+use taralli_server::{
+    config::{Config, Markets, RawOfferConfig, RawRequestConfig},
+    state::BaseState,
+    subscription_manager::SubscriptionManager,
+};
 use tower_http::trace::TraceLayer;
 
 use futures_util::stream::{StreamExt, TryStreamExt};
-use std::sync::Arc;
 use std::time::Duration;
+use std::{str::FromStr, sync::Arc};
 use tower::util::ServiceExt;
+use url::Url;
 
 pub const MAX_BODY_SIZE: usize = 1024 * 1024; // 1 MB limit
 
@@ -46,7 +48,7 @@ pub fn submit_request_body(input: String) -> Request<Body> {
         .unwrap()
 }
 
-pub fn subscribe_request_body(system_ids: &[ProvingSystemId]) -> Request<Body> {
+pub fn subscribe_request_body(system_ids: &[SystemId]) -> Request<Body> {
     // Convert system IDs to query string
     let query = system_ids
         .iter()
@@ -76,7 +78,7 @@ where
 {
     // Extract proving_system_id from the request
     let system_id = match request.get("proving_system_id").and_then(|v| v.as_str()) {
-        Some(id) => match ProvingSystemId::try_from(id) {
+        Some(id) => match SystemId::try_from(id) {
             Ok(id) => id,
             Err(_) => {
                 return (
@@ -138,7 +140,7 @@ where
     let mut invalid_ids = Vec::new();
     let mut valid_ids = Vec::new();
     for id_str in ids {
-        match ProvingSystemId::try_from(id_str) {
+        match SystemId::try_from(id_str) {
             Ok(id) => valid_ids.push(id),
             Err(_) => invalid_ids.push(id_str),
         }
@@ -172,7 +174,7 @@ pub async fn submit(app: Router, input: String) -> Response<Body> {
 
 pub async fn subscribe(
     app: Router,
-    system_ids: &[ProvingSystemId],
+    system_ids: &[SystemId],
 ) -> MapOk<BodyDataStream, impl FnMut(Bytes) -> String> {
     let subscribe_response = app
         .clone()
@@ -211,34 +213,66 @@ where
 }
 
 pub async fn setup_app(size: Option<usize>) -> Router {
+    //     "log_level": "INFO",
+    //     "validation_timeout_seconds": 30,
+    //     "market_address": "0xe05e737478E4f0b886981aD85CF9a59D55413e8b",
+    //     "base_validation_config": {
+    //         "minimum_proving_time": 10,
+    //         "maximum_start_delay": 300,
+    //         "supported_proving_systems": [
+    //             "Arkworks",
+    //             "Risc0",
+    //             "Sp1",
+    //             "AlignedLayer",
+    //             "Gnark"
+    //         ]
+    //     },
+    //     "request_validation_config": {
+    //         "maximum_allowed_stake": 1000000000000000000000
+    //     },
+    //     "offer_validation_config": {
+    //         "maximum_allowed_reward": "1000000000000000000000",
+    //         "minimum_allowed_stake": "100000000000000000000"
+    //     }
+    // }
+
     let config = Config {
         server_port: 8080,
-        rpc_url: "http://localhost:8545".to_owned(),
         log_level: "DEBUG".to_owned(),
         validation_timeout_seconds: 1,
-        market_address: Address::default(),
-        common_validation_config: CommonValidationConfig::default(),
-        request_validation_config: RequestSpecificConfig::default(),
-        offer_validation_config: OfferSpecificConfig::default(),
+        markets: Markets {
+            universal_bombetta: Address::default(),
+            universal_porchetta: Address::default(),
+        },
+        base_validation_config: BaseValidationConfig {
+            minimum_proving_time: 10,
+            maximum_start_delay: 10,
+            supported_systems: vec![Arkworks],
+        },
+        request_validation_config: RawRequestConfig {
+            maximum_allowed_stake: 1000000000000000000000,
+        },
+        offer_validation_config: RawOfferConfig {
+            maximum_allowed_reward: "1000000000000000000000".to_string(),
+            minimum_allowed_stake: "100000000000000000000".to_string(),
+        },
     };
 
-    let rpc_provider = ProviderBuilder::new().on_http(config.rpc_url().unwrap());
+    let rpc_url = Url::from_str("http://localhost:8545").unwrap();
+
+    let validation_configs = config.get_validation_configs();
+
+    let rpc_provider = ProviderBuilder::new().on_http(rpc_url);
     let subscription_manager: SubscriptionManager<Value> =
         SubscriptionManager::new(size.unwrap_or(1));
 
     subscription_manager.init_channels(&SYSTEMS).await;
 
-    let validation_meta_config = ValidationMetaConfig {
-        common: config.common_validation_config,
-        request: config.request_validation_config,
-        offer: config.offer_validation_config,
-    };
-
     let base_state = BaseState::new(
         rpc_provider,
-        config.market_address,
+        config.markets,
         Duration::from_secs(config.validation_timeout_seconds as u64),
-        validation_meta_config,
+        validation_configs,
     );
 
     let value_state = ValueState::new(base_state, subscription_manager);

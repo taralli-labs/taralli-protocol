@@ -1,34 +1,55 @@
 use crate::{
+    config::ServerValidationConfigProvider,
     error::{Result, ServerError},
     state::BaseState,
 };
-use taralli_primitives::alloy::{
-    eips::BlockId,
-    network::{BlockTransactionsKind, Ethereum},
-    providers::Provider,
-    transports::Transport,
+use taralli_primitives::{
+    alloy::{
+        eips::BlockId,
+        network::{BlockTransactionsKind, Ethereum},
+        providers::Provider,
+        transports::Transport,
+    },
+    intents::ComputeIntent,
+    validation::CommonValidationConfig,
 };
-use taralli_primitives::validation::{FromMetaConfig, Validate};
 use tokio::time::timeout;
 
+/// Validate a submitted compute intent
 pub async fn validate_intent<T: Transport + Clone, P: Provider<T> + Clone, I>(
     intent: &I,
-    app_state: &BaseState<T, P>,
+    state: &BaseState<T, P>,
 ) -> Result<()>
 where
-    I: Validate,
-    I::Config: FromMetaConfig,
+    I: ComputeIntent + ServerValidationConfigProvider,
+    I::Config: CommonValidationConfig,
 {
     // TODO: separate this timestamp fetch from the validation execution of the server
-    let latest_timestamp = get_latest_timestamp(app_state.rpc_provider()).await?;
-    let validation_timeout_seconds = app_state.validation_timeout_seconds();
-    let intent_validation_config = I::Config::from_meta(app_state.validation_config());
+    let latest_timestamp = get_latest_timestamp(state.rpc_provider()).await?;
+    let validation_timeout_seconds = state.validation_timeout_seconds();
+    let config = I::get_config(state.validation_configs());
+
+    // Determine which market address to use based on intent type
+    let market_address = match intent.type_string().as_str() {
+        "request" => &state.universal_bombetta_address(),
+        "offer" => &state.universal_porchetta_address(),
+        _ => {
+            return Err(ServerError::ValidationError(format!(
+                "invalid intent type: {}",
+                intent.type_string()
+            )))
+        }
+    };
+
+    // Create a default verifier constraints - server doesn't enforce these
+    let default_verifier_constraints = I::VerifierConstraints::default();
 
     timeout(validation_timeout_seconds, async {
         intent.validate(
             latest_timestamp,
-            &app_state.market_address(),
-            &intent_validation_config,
+            market_address,
+            config,
+            &default_verifier_constraints,
         )
     })
     .await

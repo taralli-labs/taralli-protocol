@@ -1,11 +1,24 @@
+[workspace.package]
+edition = "2024"
+license = "MIT"
+rust-version = "1.85"
+authors = ["N0xMare", "medittere"]
+homepage = "https://github.com/taralli-labs/taralli-protocol"
+repository = "https://github.com/taralli-labs/taralli-protocol"
+keywords = ["ethereum", "crypto"]
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+exclude = ["**/target"]
+
 [workspace]
-resolver = "2"
 members = [
-    "crates/taralli-primitives",
-    "crates/taralli-provider",
-    "crates/taralli-requester",
-    "crates/taralli-server",
+    "bin/*",
+    "crates/taralli-primitives/",
+    "crates/taralli-client/",
+    "crates/taralli-server/",
+    "crates/taralli-worker/",
 ]
+
+resolver = "2"
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"
@@ -27,6 +40,10 @@ alloy = { version = "0.8.0", default-features = false, features = [
 brotli = "7.0.0"
 tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-util = "0.7.13"
+tokio-postgres = { version = "0.7.12", features = [
+    "with-chrono-0_4",
+    "with-uuid-1",
+] }
 serde_json = "1.0.117"
 serde = { version = "1.0.197", features = ["derive"] }
 chrono = { version = "0.4.38", features = ["serde"] }

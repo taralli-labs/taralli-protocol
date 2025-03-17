@@ -7,4 +7,3 @@ data/
 .cursorignore
 *.hex
 anvil_state.json
-config.json
