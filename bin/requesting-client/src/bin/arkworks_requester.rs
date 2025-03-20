@@ -19,7 +19,9 @@ use taralli_primitives::abi::universal_bombetta::VerifierDetails;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::request::RequestValidationConfig;
+use taralli_primitives::validation::request::{
+    RequestValidationConfig, RequestVerifierConstraints,
+};
 use taralli_primitives::validation::BaseValidationConfig;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -102,6 +104,7 @@ async fn main() -> Result<()> {
         SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         SystemId::Arkworks,
         validation_config,
+        RequestVerifierConstraints::default(),
     );
 
     // set intent builder defaults
@@ -161,7 +164,7 @@ async fn main() -> Result<()> {
     let signed_request = requester.sign(compute_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request, &Default::default())?;
+    requester.validate_request(&signed_request)?;
 
     tracing::info!(
         "signed request proof commitment: {:?}",

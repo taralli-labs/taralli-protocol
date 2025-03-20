@@ -14,7 +14,10 @@ use futures_util::StreamExt;
 use taralli_primitives::{
     intents::{request::ComputeRequest, ComputeIntent},
     systems::{SystemId, SystemParams},
-    validation::request::{RequestValidationConfig, RequestVerifierConstraints},
+    validation::{
+        registry::ValidatorRegistry,
+        request::{ComputeRequestValidator, RequestValidationConfig},
+    },
 };
 
 use url::Url;
@@ -40,7 +43,7 @@ where
 {
     base: BaseClient<T, P, N, S>,
     api: SubscribeApiClient,
-    analyzer: ComputeRequestAnalyzer<T, P, N, ComputeRequest<SystemParams>>,
+    analyzer: ComputeRequestAnalyzer<T, P, N>,
     bidder: ComputeRequestBidder<T, P, N>,
     worker_manager: WorkerManager<ComputeRequest<SystemParams>>,
     resolver: ComputeRequestResolver<T, P, N>,
@@ -59,16 +62,14 @@ where
         signer: S,
         market_address: Address,
         validation_config: RequestValidationConfig,
-        verifier_constraints: Option<HashMap<SystemId, RequestVerifierConstraints>>,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
-            api: SubscribeApiClient::new(server_url.clone()),
+            api: SubscribeApiClient::new(server_url.clone(), 0u8),
             analyzer: ComputeRequestAnalyzer::new(
                 rpc_provider.clone(),
                 market_address,
                 validation_config,
-                verifier_constraints,
             ),
             bidder: ComputeRequestBidder::new(rpc_provider.clone(), market_address),
             worker_manager: WorkerManager::new(HashMap::new()),
@@ -76,26 +77,39 @@ where
         }
     }
 
-    /// Register a worker for a specific proving system
-    pub fn with_worker<W: ComputeWorker<ComputeRequest<SystemParams>> + Send + Sync + 'static>(
+    /// Register a system configuration with the client for a specific system
+    /// (systemID -> ComputeWorker + Validator)
+    pub fn with_system_configuration<
+        W: ComputeWorker<ComputeRequest<SystemParams>> + Send + Sync + 'static,
+    >(
         mut self,
         system_id: SystemId,
         worker: W,
+        validator: ComputeRequestValidator,
     ) -> Result<Self> {
+        // update api client's system ID bit mask for subscriptions
+        // bitwise OR against the existing bit mask
+        let updated_mask = self.api.subscribed_to | system_id.as_bit();
+        // set api client's system id mask for subscription of this system
+        self.api.set_system_id_mask(updated_mask);
+
+        // set compute worker for the system
         self.worker_manager
             .workers
             .insert(system_id, Arc::new(worker));
+
+        // set analyzer/validator for the system
+        self.analyzer
+            .validator_registry
+            .register(system_id, validator);
         Ok(self)
     }
 
     pub async fn run(&self) -> Result<()> {
-        // collect system IDs the client has compute worker support for
-        let system_ids: Vec<SystemId> = self.worker_manager.workers.keys().cloned().collect();
-
-        // subscribe to all markets the client
+        // subscribe to all markets included within the client's system mask
         let mut stream = self
             .api
-            .subscribe_to_markets(&system_ids)
+            .subscribe_to_markets()
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
         tracing::info!("subscribed to markets, waiting for incoming requests");

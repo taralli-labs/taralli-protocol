@@ -1,7 +1,11 @@
+use alloy::primitives::{address, fixed_bytes, Address, FixedBytes};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
+use crate::markets::Network;
 use crate::systems::{System, SystemConfig};
+use crate::validation::offer::OfferVerifierConstraints;
+use crate::validation::request::RequestVerifierConstraints;
 
 use super::system_id::Risc0;
 use super::SystemInputs;
@@ -39,5 +43,58 @@ impl System for Risc0ProofParams {
             ));
         }
         Ok(())
+    }
+}
+
+/// Risc0-specific verifier constraints with hardcoded values by network
+pub struct Risc0VerifierConstraints {
+    pub verifier: Option<Address>,
+    pub selector: Option<FixedBytes<4>>,
+    pub is_sha_commitment: Option<bool>,
+    // Other fields
+}
+
+impl Risc0VerifierConstraints {
+    /// Create network-specific constraints
+    pub fn for_network(network: Network) -> Self {
+        match network {
+            Network::Sepolia => Self::sepolia(),
+            // Add other networks as needed
+        }
+    }
+
+    /// Sepolia network constraints
+    pub fn sepolia() -> Self {
+        Self {
+            verifier: Some(address!("AC292cF957Dd5BA174cdA13b05C16aFC71700327")),
+            selector: Some(fixed_bytes!("ab750e75")),
+            is_sha_commitment: Some(true),
+            // Set other fields
+        }
+    }
+
+    // Add Network constraints here
+}
+
+// Implement conversion to Intent specific VerifierConstraints
+impl From<Risc0VerifierConstraints> for RequestVerifierConstraints {
+    fn from(constraints: Risc0VerifierConstraints) -> Self {
+        RequestVerifierConstraints {
+            verifier: constraints.verifier,
+            selector: constraints.selector,
+            is_sha_commitment: constraints.is_sha_commitment,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Risc0VerifierConstraints> for OfferVerifierConstraints {
+    fn from(constraints: Risc0VerifierConstraints) -> Self {
+        OfferVerifierConstraints {
+            verifier: constraints.verifier,
+            selector: constraints.selector,
+            is_sha_commitment: constraints.is_sha_commitment,
+            ..Default::default()
+        }
     }
 }

@@ -14,6 +14,12 @@ pub mod gnark;
 pub mod risc0;
 pub mod sp1;
 
+/// Mask for the supported systems.
+/// The bit position of the system in the mask is the same as the bit position of the system in the
+/// `SystemId` enum.
+/// If we add more than 8 proving systems, we need to change this to u16 or bigger.
+pub type SystemIdMask = u8;
+
 /// traits for system configuration
 pub trait SystemConfig: for<'de> Deserialize<'de> + Debug + Clone {}
 
@@ -61,7 +67,7 @@ macro_rules! systems {
     (
         $(
             $(#[$attr:meta])*
-            ($variant:ident, $str:literal, $params:ty)
+            ($variant:ident, $str:literal, $params:ty, $bit:expr)
         ),* $(,)?
     ) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -96,6 +102,19 @@ macro_rules! systems {
                 [
                     $($variant),*
                 ]
+            }
+
+            pub fn as_bit(&self) -> SystemIdMask {
+                match self {
+                    $(Self::$variant => $bit),*
+                }
+            }
+
+            pub fn from_bit(bit: SystemIdMask) -> Option<Self> {
+                match bit {
+                    $($bit => Some(Self::$variant),)*
+                    _ => None,
+                }
             }
         }
 
@@ -171,9 +190,9 @@ macro_rules! systems {
 }
 
 systems! {
-    (AlignedLayer, "aligned-layer", AlignedLayerProofParams),
-    (Arkworks, "arkworks", ArkworksProofParams),
-    (Gnark, "gnark", GnarkProofParams),
-    (Risc0, "risc0", Risc0ProofParams),
-    (Sp1, "sp1", Sp1ProofParams)
+    (AlignedLayer, "aligned-layer", AlignedLayerProofParams, 0x01),
+    (Arkworks, "arkworks", ArkworksProofParams, 0x02),
+    (Gnark, "gnark", GnarkProofParams, 0x04),
+    (Risc0, "risc0", Risc0ProofParams, 0x08),
+    (Sp1, "sp1", Sp1ProofParams, 0x10)
 }

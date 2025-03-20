@@ -1,14 +1,16 @@
 use reqwest::{
     header::{HeaderMap, HeaderValue},
+    multipart::{Form, Part},
     Client,
 };
+use serde_json::json;
 use taralli_primitives::{env::Environment, intents::ComputeIntent};
 use url::Url;
 
-use crate::api::compression::compress_intent;
+use crate::api::compression::compress_system;
 use crate::error::{ClientError, Result};
 
-/// Submit compute intents to the server
+/// Submit compute intents to the protocol server
 pub struct SubmitApiClient {
     _api_key: String,
     client: Client,
@@ -36,20 +38,41 @@ impl SubmitApiClient {
         }
     }
 
-    pub async fn submit_intent<I: ComputeIntent>(&self, intent: I) -> Result<reqwest::Response> {
-        let endpoint = format!("/submit/{}", intent.type_string());
+    /// Returns Multipart intent Form with two parts: `System` as a `application/octet-stream` and remaining
+    /// fields as `application/json`.
+    fn build_multipart<I: ComputeIntent>(&self, intent: I) -> Result<Form> {
+        let partial_intent = json!({
+            "system_id": intent.system_id(),
+            "proof_commitment": intent.proof_commitment(),
+            "signature": intent.signature(),
+        });
 
+        let partial_intent_string = serde_json::to_string(&partial_intent)
+            .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
+        let partial_request_part = Part::text(partial_intent_string);
+
+        let compressed = compress_system(intent.system())?;
+        let compressed_part = Part::bytes(compressed);
+
+        let form = Form::new()
+            .part("partial_request", partial_request_part)
+            .part("proving_system_information", compressed_part);
+
+        Ok(form)
+    }
+
+    pub async fn submit_intent<I: ComputeIntent>(&self, intent: I) -> Result<reqwest::Response> {
         let url = self
             .server_url
-            .join(&endpoint)
+            .join("/submit")
             .map_err(|e| ClientError::ServerUrlParsingError(e.to_string()))?;
 
-        let compressed_payload = compress_intent(intent)?;
+        let payload = self.build_multipart(intent)?;
 
         let response = self
             .client
             .post(url)
-            .body(compressed_payload)
+            .multipart(payload)
             .send()
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;

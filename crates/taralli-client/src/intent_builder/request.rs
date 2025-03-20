@@ -9,7 +9,6 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::intents::request::ComputeRequest;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::validation::request::RequestValidationConfig;
 
 use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
@@ -28,8 +27,6 @@ where
     pub max_reward_amount: U256,
     pub min_reward_amount: U256,
     pub minimum_stake: u128,
-    // Compute request validation config
-    pub validation_config: RequestValidationConfig,
 }
 
 impl<T, P, N> ComputeRequestBuilder<T, P, N>
@@ -43,7 +40,6 @@ where
         signer_address: Address,
         market_address: Address,
         system_id: SystemId,
-        validation_config: RequestValidationConfig,
     ) -> Self {
         // build permit2 nonce manager
         let permit2_nonce_manager = Permit2NonceManager::new(rpc_provider.clone(), signer_address);
@@ -70,7 +66,6 @@ where
             max_reward_amount: U256::ZERO,
             min_reward_amount: U256::ZERO,
             minimum_stake: 0u128,
-            validation_config,
         }
     }
 

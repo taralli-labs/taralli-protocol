@@ -13,8 +13,8 @@ use std::str::FromStr;
 use taralli_client::client::requester::requesting::RequesterRequestingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_bombetta::VerifierDetails;
-use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
-use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::markets::{Network, SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS};
+use taralli_primitives::systems::risc0::{Risc0ProofParams, Risc0VerifierConstraints};
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
@@ -71,6 +71,9 @@ async fn main() -> Result<()> {
     let pre_determined_partial_commitment: FixedBytes<32> =
         fixed_bytes!("0000000000000000000000000000000000000000000000000000000000000000");
 
+    // network
+    let network = Network::Sepolia;
+
     // signer
     let signer = PrivateKeySigner::from_str(priv_key)?;
 
@@ -93,6 +96,7 @@ async fn main() -> Result<()> {
         SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         SystemId::Risc0,
         validation_config,
+        Risc0VerifierConstraints::for_network(network).into(),
     );
 
     // set intent builder defaults
@@ -149,7 +153,7 @@ async fn main() -> Result<()> {
     let signed_request = requester.sign(compute_request.clone()).await?;
 
     // validate before submitting
-    requester.validate_request(&signed_request, &Default::default())?;
+    requester.validate_request(&signed_request)?;
 
     // submit and track ComputeRequest
     requester

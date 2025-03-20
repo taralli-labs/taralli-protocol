@@ -8,9 +8,7 @@ use std::env;
 use std::str::FromStr;
 use taralli_client::client::requester::searching::RequesterSearchingClient;
 use taralli_primitives::alloy::primitives::U256;
-use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS;
-use taralli_primitives::systems::risc0::Risc0ProofParams;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
 use taralli_primitives::validation::BaseValidationConfig;
@@ -54,16 +52,14 @@ async fn main() -> Result<()> {
     verifier_constraints.insert(SystemId::Risc0, OfferVerifierConstraints::default());
 
     // instantiate requester searching client
-    let searcher_client: RequesterSearchingClient<_, _, _, _, ComputeOffer<Risc0ProofParams>> =
-        RequesterSearchingClient::new(
-            server_url,
-            rpc_provider,
-            signer.clone(),
-            SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS,
-            SystemId::Risc0,
-            validation_config,
-            Some(verifier_constraints),
-        );
+    let searcher_client: RequesterSearchingClient<_, _, _, _> = RequesterSearchingClient::new(
+        server_url,
+        rpc_provider,
+        signer.clone(),
+        SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS,
+        SystemId::Risc0,
+        validation_config,
+    );
 
     //// run searcher client
     // Query the server at the selected system id, filter through various criteria based what offers are returned from the query.

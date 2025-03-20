@@ -9,7 +9,7 @@ use super::BaseState;
 /// ComputeRequest specific state
 #[derive(Clone)]
 pub struct RequestState<T, P> {
-    base: BaseState<T, P>,
+    pub base: BaseState<T, P>,
     subscription_manager: Arc<SubscriptionManager>,
 }
 

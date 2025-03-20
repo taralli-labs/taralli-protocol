@@ -15,8 +15,10 @@ use std::sync::Arc;
 use taralli_client::client::provider::offering::ProviderOfferingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_porchetta::VerifierDetails;
-use taralli_primitives::markets::SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS;
-use taralli_primitives::systems::sp1::{Sp1Config, Sp1Mode, Sp1ProofParams};
+use taralli_primitives::markets::{Network, SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS};
+use taralli_primitives::systems::sp1::{
+    Sp1Config, Sp1Mode, Sp1ProofParams, Sp1VerifierConstraints,
+};
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
@@ -56,7 +58,8 @@ async fn main() -> Result<()> {
     let stake_amount = U256::from(1); // 1 wei of tokens
     let proving_time = 60u32; // 1 min
     let auction_length = 90u32; // 3 min
-                                // SP1 sepolia groth16 verifier
+
+    // SP1 sepolia groth16 verifier
     let verifier_address = address!("E780809121774D06aD9B0EEeC620fF4B3913Ced1");
     // verifyProof(bytes32 programVKey,bytes calldata publicValues,bytes calldata proofBytes)
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("41493c60");
@@ -65,6 +68,9 @@ async fn main() -> Result<()> {
     let inputs_length = U256::from(64);
     // uses sha
     let is_sha_commitment = true;
+
+    // network
+    let network = Network::Sepolia;
 
     // signer
     let signer = PrivateKeySigner::from_str(priv_key)?;
@@ -99,6 +105,7 @@ async fn main() -> Result<()> {
         SystemId::Sp1,
         worker,
         validation_config,
+        Sp1VerifierConstraints::for_network(network).into(),
     );
 
     // set intent builder defaults
@@ -160,7 +167,7 @@ async fn main() -> Result<()> {
     let signed_offer = provider.sign(compute_offer.clone()).await?;
 
     // validate before submitting
-    provider.validate_offer(&signed_offer, &Default::default())?;
+    provider.validate_offer(&signed_offer)?;
 
     println!(
         "signed offer proof commitment: {:?}",

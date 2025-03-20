@@ -1,19 +1,24 @@
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::broadcast::{channel, Receiver, Sender};
-
-use taralli_primitives::systems::SystemId;
-use tokio::sync::RwLock;
+use taralli_primitives::systems::SystemIdMask;
+use tokio::sync::broadcast::{self, Receiver};
 
 use crate::error::{Result, ServerError};
 
+#[derive(Clone)]
+/// A wrapper type for the message that is broadcasted to all subscribers.
+/// content: The serialized proof request, with proving system information being compressed.
+/// subscribed_to: The proving system id that the request is related to. See `proving_systems` macro in primitives.
+pub struct BroadcastedMessage {
+    pub content: Vec<u8>,
+    pub subscribed_to: SystemIdMask,
+}
+
 // Generic over a Message type M
 // Todo: Remove generic and use only Vec<u8> when removing propagation of Request<ProvingSystemParams> through SSE.
-pub struct SubscriptionManager<M = Vec<u8>>
+pub struct SubscriptionManager<M = BroadcastedMessage>
 where
     M: Clone,
 {
-    pub channels: Arc<RwLock<HashMap<SystemId, Sender<M>>>>,
-    pub capacity: usize,
+    sender: broadcast::Sender<M>,
 }
 
 impl<M> SubscriptionManager<M>
@@ -21,71 +26,45 @@ where
     M: Clone,
 {
     pub fn new(capacity: usize) -> Self {
-        Self {
-            channels: Arc::new(RwLock::new(HashMap::new())),
-            capacity,
+        let (sender, _) = broadcast::channel(capacity);
+        Self { sender }
+    }
+
+    pub fn add_subscription(&self) -> Receiver<M> {
+        self.sender.subscribe()
+    }
+
+    pub fn active_subscriptions(&self) -> usize {
+        self.sender.receiver_count()
+    }
+
+    /// Send an event to all the receivers in the broadcast.
+    /// Although this function is just a wrapper around `tokio::sync::broadcast::Sender::send` as of now,
+    /// in the future we might want to add custom logic to it.
+    pub fn broadcast(&self, event: M) -> Result<usize> {
+        let subscriber_count = self.active_subscriptions();
+        if subscriber_count == 0 {
+            tracing::warn!("Attempted to broadcast event but found no active subscribers");
+            return Err(ServerError::NoProvidersAvailable());
         }
-    }
 
-    /// avoids needing a write lock for first time use of a system
-    pub async fn init_channels(&self, ids: &[SystemId]) {
-        let mut map = self.channels.write().await;
-        for &id in ids {
-            map.entry(id).or_insert_with(|| channel(self.capacity).0);
-        }
-    }
-
-    /// Retrieve (or create) the channel sender for a given ID.
-    pub async fn get_or_create_sender(&self, id: SystemId) -> Sender<M> {
-        let mut map = self.channels.write().await;
-        map.entry(id)
-            .or_insert_with(|| channel(self.capacity).0)
-            .clone()
-    }
-
-    /// Subscribe to the channel for a given ID (read only).
-    pub async fn subscribe_to_id(&self, id: SystemId) -> Receiver<M> {
-        let sender = self.get_or_create_sender(id).await;
-        sender.subscribe()
-    }
-
-    /// Get multiple Receivers if you want multi-ID SSE.
-    pub async fn subscribe_to_ids(&self, ids: &[SystemId]) -> Vec<Receiver<M>> {
-        let mut receivers = Vec::with_capacity(ids.len());
-        for &id in ids {
-            receivers.push(self.subscribe_to_id(id).await);
-        }
-        receivers
-    }
-
-    /// Broadcast an event for a single ID
-    pub async fn broadcast(&self, id: SystemId, event: M) -> Result<usize> {
-        let map = self.channels.read().await;
-        let sender = match map.get(&id) {
-            Some(sender) => sender.clone(),
-            None => {
-                return Err(ServerError::BroadcastError(format!(
-                    "No channel found for ID {:?}",
-                    id
-                )))
+        match self.sender.send(event) {
+            Ok(recv_count) => {
+                tracing::info!("Successfully broadcast event to {} receiver(s)", recv_count);
+                Ok(recv_count)
             }
-        };
-        drop(map);
-
-        let subs = sender.receiver_count();
-        if subs == 0 {
-            return Err(ServerError::BroadcastError(format!(
-                "No subscribers for ID {:?}",
-                id
-            )));
+            Err(e) => {
+                tracing::error!(
+                    "Failed to broadcast event to {} subscribers: {}",
+                    subscriber_count,
+                    e
+                );
+                Err(ServerError::BroadcastError(e.to_string()))
+            }
         }
-        sender
-            .send(event)
-            .map_err(|e| ServerError::BroadcastError(e.to_string()))
     }
 }
 
-// Should not have this default? Maybe env var
 impl<M> Default for SubscriptionManager<M>
 where
     M: Clone,

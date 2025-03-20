@@ -4,9 +4,9 @@ use crate::{
 };
 use deadpool_postgres::{Manager, Pool};
 use taralli_primitives::{
-    intents::{offer::ComputeOffer, ComputeIntent},
-    server_utils::StoredIntent,
-    systems::{System, SystemId},
+    intents::offer::compute_offer_id,
+    server_utils::{db::StoredIntent, intents::ComputeOfferCompressed},
+    systems::SystemId,
 };
 use tokio_postgres::{Config, NoTls};
 
@@ -201,13 +201,14 @@ impl Db {
     }
 
     /// Store a submitted ComputeOffer within the database
-    pub async fn store_offer<S: System>(&self, offer: &ComputeOffer<S>) -> Result<StoredIntent> {
-        let offer_id = offer.compute_id();
-        let system_bytes = serde_json::to_vec(&offer.system)
+    pub async fn store_offer(
+        &self,
+        compressed_offer: &ComputeOfferCompressed,
+    ) -> Result<StoredIntent> {
+        let offer_id = compute_offer_id(&compressed_offer.proof_offer, &compressed_offer.signature);
+        let proof_commitment_bytes = serde_json::to_vec(&compressed_offer.proof_offer)
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
-        let proof_commitment_bytes = serde_json::to_vec(&offer.proof_offer)
-            .map_err(|e| ServerError::SerializationError(e.to_string()))?;
-        let expiration_timestamp = offer.proof_offer.endAuctionTimestamp as f64;
+        let expiration_timestamp = compressed_offer.proof_offer.endAuctionTimestamp as f64;
 
         tracing::info!("POSTGRES: attempting to store intent");
 
@@ -227,10 +228,10 @@ impl Db {
                 &prepared_stmt,
                 &[
                     &offer_id.as_slice(),
-                    &offer.system_id.as_str(),
-                    &system_bytes,
+                    &compressed_offer.system_id.as_str(),
+                    &compressed_offer.system,
                     &proof_commitment_bytes,
-                    &offer.signature.as_bytes().to_vec(),
+                    &compressed_offer.signature.as_bytes().to_vec(),
                     &expiration_timestamp,
                 ],
             )

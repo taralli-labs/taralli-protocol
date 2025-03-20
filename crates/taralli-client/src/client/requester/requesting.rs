@@ -7,9 +7,9 @@ use taralli_primitives::intents::request::ComputeRequest;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
 use taralli_primitives::validation::request::{
-    RequestValidationConfig, RequestVerifierConstraints,
+    ComputeRequestValidator, RequestValidationConfig, RequestVerifierConstraints,
 };
-use taralli_primitives::validation::Validate;
+use taralli_primitives::validation::IntentValidator;
 use url::Url;
 
 use crate::api::submit::SubmitApiClient;
@@ -31,6 +31,7 @@ where
 {
     pub base: BaseClient<T, P, N, S>,
     pub api: SubmitApiClient,
+    pub validator: ComputeRequestValidator,
     pub builder: ComputeRequestBuilder<T, P, N>,
     pub tracker: ComputeRequestTracker<T, P, N>,
 }
@@ -49,16 +50,17 @@ where
         market_address: Address,
         system_id: SystemId,
         validation_config: RequestValidationConfig,
+        verifier_constraints: RequestVerifierConstraints,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
             api: SubmitApiClient::new(server_url),
+            validator: ComputeRequestValidator::new(validation_config, verifier_constraints),
             builder: ComputeRequestBuilder::new(
                 rpc_provider.clone(),
                 signer.address(),
                 market_address,
                 system_id,
-                validation_config,
             ),
             tracker: ComputeRequestTracker::new(rpc_provider, market_address),
         }
@@ -147,17 +149,12 @@ where
         Ok(request)
     }
 
-    pub fn validate_request(
-        &self,
-        request: &ComputeRequest<SystemParams>,
-        verifier_constraints: &RequestVerifierConstraints,
-    ) -> Result<()> {
+    pub fn validate_request(&self, request: &ComputeRequest<SystemParams>) -> Result<()> {
         // validate a request built by the requester client
-        request.validate(
+        self.validator.validate(
+            request,
             request.proof_request.startAuctionTimestamp,
-            &self.base.market_address,
-            &self.builder.validation_config,
-            verifier_constraints,
+            &request.proof_request.market,
         )?;
         Ok(())
     }

@@ -3,16 +3,15 @@ use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
-use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use taralli_client::client::requester::searching::RequesterSearchingClient;
 use taralli_primitives::alloy::primitives::U256;
-use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS;
-use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
+use taralli_primitives::validation::offer::{
+    ComputeOfferValidator, OfferValidationConfig, OfferVerifierConstraints,
+};
 use taralli_primitives::validation::BaseValidationConfig;
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -50,20 +49,20 @@ async fn main() -> Result<()> {
     };
 
     // verifier constraints
-    let mut verifier_constraints = HashMap::new();
-    verifier_constraints.insert(SystemId::Arkworks, OfferVerifierConstraints::default());
+    let verifier_constraints = OfferVerifierConstraints::default();
+
+    // validator
+    let _validator = ComputeOfferValidator::new(validation_config.clone(), verifier_constraints);
 
     // instantiate requester searching client
-    let searcher_client: RequesterSearchingClient<_, _, _, _, ComputeOffer<ArkworksProofParams>> =
-        RequesterSearchingClient::new(
-            server_url,
-            rpc_provider,
-            signer.clone(),
-            SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS,
-            SystemId::Arkworks,
-            validation_config,
-            Some(verifier_constraints),
-        );
+    let searcher_client: RequesterSearchingClient<_, _, _, _> = RequesterSearchingClient::new(
+        server_url,
+        rpc_provider,
+        signer.clone(),
+        SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS,
+        SystemId::Arkworks,
+        validation_config,
+    );
 
     // run searcher client
     // Query the server at the selected system id, filter through various criteria based what offers are returned from the query.

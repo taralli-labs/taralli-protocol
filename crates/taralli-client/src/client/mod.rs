@@ -10,7 +10,7 @@ pub mod requester;
 pub struct BaseClient<T, P, N, S> {
     rpc_provider: P,
     signer: S,
-    market_address: Address,
+    _market_address: Address,
     phantom: PhantomData<(T, N)>,
 }
 
@@ -19,7 +19,7 @@ impl<T, P, N, S> BaseClient<T, P, N, S> {
         Self {
             rpc_provider,
             signer,
-            market_address,
+            _market_address: market_address,
             phantom: PhantomData,
         }
     }

@@ -3,7 +3,7 @@ use reqwest::{
     Client,
 };
 use taralli_primitives::env::Environment;
-use taralli_primitives::server_utils::StoredIntent;
+use taralli_primitives::server_utils::db::StoredIntent;
 use taralli_primitives::{
     intents::offer::ComputeOffer,
     systems::{SystemId, SystemParams},

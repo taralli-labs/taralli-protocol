@@ -1,9 +1,9 @@
-use alloy::primitives::{Address, FixedBytes, B256, U256};
+use alloy::primitives::{Address, FixedBytes, PrimitiveSignature, B256, U256};
 use alloy::sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 
 use crate::abi::universal_bombetta::ProofRequestVerifierDetails;
-use crate::intents::ComputeIntent;
+use crate::intents::request::compute_request_permit2_digest;
 use crate::Result;
 use crate::{
     abi::universal_bombetta::UniversalBombetta::ProofRequest,
@@ -12,13 +12,15 @@ use crate::{
     PrimitivesError,
 };
 
-use super::{BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate};
+use super::{
+    BaseValidationConfig, CommonValidationConfig, CommonVerifierConstraints, IntentValidator,
+};
 
 /// Verifier constraints specific to ProofRequest proof commitments withing ComputeRequest intents
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RequestVerifierConstraints {
     pub verifier: Option<Address>,
-    pub selector: Option<[u8; 4]>,
+    pub selector: Option<FixedBytes<4>>,
     pub is_sha_commitment: Option<bool>,
     pub inputs_offset: Option<U256>,
     pub inputs_length: Option<U256>,
@@ -26,6 +28,24 @@ pub struct RequestVerifierConstraints {
     pub submitted_partial_commitment_result_offset: Option<U256>,
     pub submitted_partial_commitment_result_length: Option<U256>,
     pub predetermined_partial_commitment: Option<B256>,
+}
+
+impl CommonVerifierConstraints for RequestVerifierConstraints {
+    fn verifier(&self) -> Option<Address> {
+        self.verifier
+    }
+
+    fn selector(&self) -> Option<FixedBytes<4>> {
+        self.selector
+    }
+
+    fn inputs_offset(&self) -> Option<U256> {
+        self.inputs_offset
+    }
+
+    fn inputs_length(&self) -> Option<U256> {
+        self.inputs_length
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -48,77 +68,66 @@ impl CommonValidationConfig for RequestValidationConfig {
     }
 }
 
-// Implement for both proof types
-impl ProofCommon for ProofRequest {
-    fn market(&self) -> &Address {
-        &self.market
-    }
-    fn nonce(&self) -> &U256 {
-        &self.nonce
-    }
-    fn start_auction_timestamp(&self) -> u64 {
-        self.startAuctionTimestamp
-    }
-    fn end_auction_timestamp(&self) -> u64 {
-        self.endAuctionTimestamp
-    }
-    fn proving_time(&self) -> u32 {
-        self.provingTime
-    }
-    fn inputs_commitment(&self) -> FixedBytes<32> {
-        self.inputsCommitment
+#[derive(Debug, Clone)]
+pub struct ComputeRequestValidator {
+    validation_config: RequestValidationConfig,
+    verifier_constraints: RequestVerifierConstraints,
+}
+
+impl ComputeRequestValidator {
+    pub fn new(
+        validation_config: RequestValidationConfig,
+        verifier_constraints: RequestVerifierConstraints,
+    ) -> Self {
+        Self {
+            validation_config,
+            verifier_constraints,
+        }
     }
 }
 
-// Implement Validate for ComputeRequest
-impl<S: System> Validate for ComputeRequest<S> {
-    type Config = RequestValidationConfig;
+impl<S: System> IntentValidator<ComputeRequest<S>> for ComputeRequestValidator {
+    type ValidationConfig = RequestValidationConfig;
     type VerifierConstraints = RequestVerifierConstraints;
 
-    fn system_id(&self) -> SystemId {
-        self.system_id
+    fn validation_config(&self) -> &RequestValidationConfig {
+        &self.validation_config
     }
 
-    fn system(&self) -> &impl System {
-        &self.system
+    fn verifier_constraints(&self) -> &RequestVerifierConstraints {
+        &self.verifier_constraints
     }
 
-    fn proof_common(&self) -> &impl ProofCommon {
-        &self.proof_request
-    }
-
-    fn validate_specific(
-        &self,
-        config: &Self::Config,
-        verifier_constraints: &Self::VerifierConstraints,
-    ) -> Result<()> {
-        // Request-specific validation
-        validate_request(self, config, verifier_constraints)
+    fn validate_specific(&self, request: &ComputeRequest<S>) -> Result<()> {
+        validate_request(request, &self.validation_config, &self.verifier_constraints)
     }
 }
 
 /// ComputeRequest specific validation
 pub fn validate_request<S: System>(
     request: &ComputeRequest<S>,
-    config: &RequestValidationConfig,
+    validation_config: &RequestValidationConfig,
     verifier_constraints: &RequestVerifierConstraints,
 ) -> Result<()> {
     // Request-specific validation logic
-    validate_signature(request)?;
-    validate_amount_constraints(request, config.maximum_allowed_stake)?;
-    validate_request_verifier_details(request, verifier_constraints)?;
+    validate_request_signature(&request.proof_request, &request.signature)?;
+    validate_request_amount_constraints(
+        &request.proof_request,
+        validation_config.maximum_allowed_stake,
+    )?;
+    validate_request_verifier_details(&request.proof_request, verifier_constraints)?;
     Ok(())
 }
 
-pub fn validate_amount_constraints<S: System>(
-    request: &ComputeRequest<S>,
+pub fn validate_request_amount_constraints(
+    proof_request: &ProofRequest,
     maximum_allowed_stake: u128,
 ) -> Result<()> {
-    if request.proof_request.maxRewardAmount < request.proof_request.minRewardAmount {
+    if proof_request.maxRewardAmount < proof_request.minRewardAmount {
         Err(PrimitivesError::ValidationError(
             "reward token amounts invalid".to_string(),
         ))
-    } else if request.proof_request.minimumStake > maximum_allowed_stake {
+    } else if proof_request.minimumStake > maximum_allowed_stake {
         Err(PrimitivesError::ValidationError(
             "eth stake amount invalid".to_string(),
         ))
@@ -127,17 +136,15 @@ pub fn validate_amount_constraints<S: System>(
     }
 }
 
-pub fn validate_request_verifier_details<S: System>(
-    request: &ComputeRequest<S>,
+pub fn validate_request_verifier_details(
+    proof_request: &ProofRequest,
     verifier_constraints: &RequestVerifierConstraints,
 ) -> Result<()> {
     // Decode and validate verifier details structure from the intent
-    let verifier_details =
-        ProofRequestVerifierDetails::abi_decode(&request.proof_request.extraData, true).map_err(
-            |e| {
-                PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
-            },
-        )?;
+    let verifier_details = ProofRequestVerifierDetails::abi_decode(&proof_request.extraData, true)
+        .map_err(|e| {
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+        })?;
 
     // Check each constraint only if it's set
     if let Some(expected_verifier) = verifier_constraints.verifier {
@@ -215,18 +222,20 @@ pub fn validate_request_verifier_details<S: System>(
     Ok(())
 }
 
-pub fn validate_signature<S: System>(request: &ComputeRequest<S>) -> Result<()> {
+pub fn validate_request_signature(
+    proof_request: &ProofRequest,
+    signature: &PrimitiveSignature,
+) -> Result<()> {
     // compute permit digest
-    let computed_digest = request.compute_permit2_digest();
+    let computed_digest = compute_request_permit2_digest(proof_request);
     // ec recover signing public key
-    let computed_verifying_key = request
-        .signature
+    let computed_verifying_key = signature
         .recover_from_prehash(&computed_digest)
         .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    if computed_signer != request.proof_request.signer {
+    if computed_signer != proof_request.signer {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),
         ))

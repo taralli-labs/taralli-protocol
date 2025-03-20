@@ -3,14 +3,13 @@ use alloy::providers::ProviderBuilder;
 use alloy::signers::local::PrivateKeySigner;
 use color_eyre::Result;
 use dotenv::dotenv;
-use std::collections::HashMap;
 use std::env;
 use std::str::FromStr;
 use taralli_client::client::provider::streaming::ProviderStreamingClient;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::request::{
-    RequestValidationConfig, RequestVerifierConstraints,
+    ComputeRequestValidator, RequestValidationConfig, RequestVerifierConstraints,
 };
 use taralli_primitives::validation::BaseValidationConfig;
 use taralli_worker::arkworks::ArkworksWorker;
@@ -48,9 +47,11 @@ async fn main() -> Result<()> {
         maximum_allowed_stake: 10000000000000000000, // 10 ether
     };
 
-    // verifier constraints
-    let mut verifier_constraints = HashMap::new();
-    verifier_constraints.insert(SystemId::Arkworks, RequestVerifierConstraints::default());
+    // arkworks verifier constraints
+    let verifier_constraints = RequestVerifierConstraints::default();
+
+    // validator
+    let validator = ComputeRequestValidator::new(validation_config.clone(), verifier_constraints);
 
     // instantiate provider streaming client
     let provider_client = ProviderStreamingClient::new(
@@ -59,9 +60,8 @@ async fn main() -> Result<()> {
         signer.clone(),
         SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
         validation_config,
-        Some(verifier_constraints),
     )
-    .with_worker(SystemId::Arkworks, ArkworksWorker::new())?;
+    .with_system_configuration(SystemId::Arkworks, ArkworksWorker::new(), validator)?;
 
     // run provider client
     // Subscribes to the server and receives back a ws stream or fails.

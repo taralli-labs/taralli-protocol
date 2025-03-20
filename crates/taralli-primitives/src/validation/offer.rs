@@ -1,10 +1,12 @@
-use alloy::primitives::{Address, FixedBytes, U256};
+use alloy::primitives::{Address, FixedBytes, PrimitiveSignature, U256};
 use alloy::sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 
-use super::{BaseValidationConfig, CommonValidationConfig, ProofCommon, Validate};
+use super::{
+    BaseValidationConfig, CommonValidationConfig, CommonVerifierConstraints, IntentValidator,
+};
 use crate::abi::universal_porchetta::ProofOfferVerifierDetails;
-use crate::intents::ComputeIntent;
+use crate::intents::offer::compute_offer_permit2_digest;
 use crate::Result;
 use crate::{
     abi::universal_porchetta::UniversalPorchetta::ProofOffer,
@@ -17,10 +19,28 @@ use crate::{
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OfferVerifierConstraints {
     pub verifier: Option<Address>,
-    pub selector: Option<[u8; 4]>,
+    pub selector: Option<FixedBytes<4>>,
     pub is_sha_commitment: Option<bool>,
     pub inputs_offset: Option<U256>,
     pub inputs_length: Option<U256>,
+}
+
+impl CommonVerifierConstraints for OfferVerifierConstraints {
+    fn verifier(&self) -> Option<Address> {
+        self.verifier
+    }
+
+    fn selector(&self) -> Option<FixedBytes<4>> {
+        self.selector
+    }
+
+    fn inputs_offset(&self) -> Option<U256> {
+        self.inputs_offset
+    }
+
+    fn inputs_length(&self) -> Option<U256> {
+        self.inputs_length
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -44,51 +64,38 @@ impl CommonValidationConfig for OfferValidationConfig {
     }
 }
 
-impl ProofCommon for ProofOffer {
-    fn market(&self) -> &Address {
-        &self.market
-    }
-    fn nonce(&self) -> &U256 {
-        &self.nonce
-    }
-    fn start_auction_timestamp(&self) -> u64 {
-        self.startAuctionTimestamp
-    }
-    fn end_auction_timestamp(&self) -> u64 {
-        self.endAuctionTimestamp
-    }
-    fn proving_time(&self) -> u32 {
-        self.provingTime
-    }
-    fn inputs_commitment(&self) -> FixedBytes<32> {
-        self.inputsCommitment
+#[derive(Debug, Clone)]
+pub struct ComputeOfferValidator {
+    validation_config: OfferValidationConfig,
+    verifier_constraints: OfferVerifierConstraints,
+}
+
+impl ComputeOfferValidator {
+    pub fn new(
+        validation_config: OfferValidationConfig,
+        verifier_constraints: OfferVerifierConstraints,
+    ) -> Self {
+        Self {
+            validation_config,
+            verifier_constraints,
+        }
     }
 }
 
-// Implement Validate for ComputeOffer
-impl<S: System> Validate for ComputeOffer<S> {
-    type Config = OfferValidationConfig;
+impl<S: System> IntentValidator<ComputeOffer<S>> for ComputeOfferValidator {
+    type ValidationConfig = OfferValidationConfig;
     type VerifierConstraints = OfferVerifierConstraints;
 
-    fn system_id(&self) -> SystemId {
-        self.system_id
+    fn validation_config(&self) -> &OfferValidationConfig {
+        &self.validation_config
     }
 
-    fn system(&self) -> &impl System {
-        &self.system
+    fn verifier_constraints(&self) -> &OfferVerifierConstraints {
+        &self.verifier_constraints
     }
 
-    fn proof_common(&self) -> &impl ProofCommon {
-        &self.proof_offer
-    }
-
-    fn validate_specific(
-        &self,
-        config: &Self::Config,
-        verifier_constraints: &Self::VerifierConstraints,
-    ) -> Result<()> {
-        // ComputeOffer-specific validation
-        validate_offer(self, config, verifier_constraints)
+    fn validate_specific(&self, offer: &ComputeOffer<S>) -> Result<()> {
+        validate_offer(offer, &self.validation_config, &self.verifier_constraints)
     }
 }
 
@@ -99,26 +106,26 @@ pub fn validate_offer<S: System>(
     verifier_constraints: &OfferVerifierConstraints,
 ) -> Result<()> {
     // Offer-specific validation logic
-    validate_signature(offer)?;
-    validate_amount_constraints(
-        offer,
+    validate_offer_signature(&offer.proof_offer, &offer.signature)?;
+    validate_offer_amount_constraints(
+        &offer.proof_offer,
         config.maximum_allowed_reward,
         config.minimum_allowed_stake,
     )?;
-    validate_offer_verifier_details(offer, verifier_constraints)?;
+    validate_offer_verifier_details(&offer.proof_offer, verifier_constraints)?;
     Ok(())
 }
 
-pub fn validate_amount_constraints<S: System>(
-    offer: &ComputeOffer<S>,
+pub fn validate_offer_amount_constraints(
+    proof_offer: &ProofOffer,
     maximum_allowed_reward: U256,
     minimum_allowed_stake: U256,
 ) -> Result<()> {
-    if offer.proof_offer.rewardAmount > maximum_allowed_reward {
+    if proof_offer.rewardAmount > maximum_allowed_reward {
         Err(PrimitivesError::ValidationError(
             "token reward amount invalid".to_string(),
         ))
-    } else if offer.proof_offer.stakeAmount < minimum_allowed_stake {
+    } else if proof_offer.stakeAmount < minimum_allowed_stake {
         Err(PrimitivesError::ValidationError(
             "token stake amount invalid".to_string(),
         ))
@@ -127,13 +134,13 @@ pub fn validate_amount_constraints<S: System>(
     }
 }
 
-pub fn validate_offer_verifier_details<S: System>(
-    offer: &ComputeOffer<S>,
+pub fn validate_offer_verifier_details(
+    proof_offer: &ProofOffer,
     verifier_constraints: &OfferVerifierConstraints,
 ) -> Result<()> {
     // Decode and validate verifier details structure from the intent
-    let verifier_details =
-        ProofOfferVerifierDetails::abi_decode(&offer.proof_offer.extraData, true).map_err(|e| {
+    let verifier_details = ProofOfferVerifierDetails::abi_decode(&proof_offer.extraData, true)
+        .map_err(|e| {
             PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
         })?;
 
@@ -181,18 +188,20 @@ pub fn validate_offer_verifier_details<S: System>(
     Ok(())
 }
 
-pub fn validate_signature<S: System>(offer: &ComputeOffer<S>) -> Result<()> {
+pub fn validate_offer_signature(
+    proof_offer: &ProofOffer,
+    signature: &PrimitiveSignature,
+) -> Result<()> {
     // compute permit digest
-    let computed_digest = offer.compute_permit2_digest();
+    let computed_digest = compute_offer_permit2_digest(proof_offer);
     // ec recover signing public key
-    let computed_verifying_key = offer
-        .signature
+    let computed_verifying_key = signature
         .recover_from_prehash(&computed_digest)
         .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    if computed_signer != offer.proof_offer.signer {
+    if computed_signer != proof_offer.signer {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),
         ))

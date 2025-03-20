@@ -8,7 +8,6 @@ use taralli_primitives::alloy::{
 };
 use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::validation::offer::OfferValidationConfig;
 
 use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
@@ -28,8 +27,6 @@ where
     pub stake_token_address: Address,
     pub stake_token_decimals: u8,
     pub stake_amount: U256,
-    // Compute offer validation config
-    pub validation_config: OfferValidationConfig,
 }
 
 impl<T, P, N> ComputeOfferBuilder<T, P, N>
@@ -43,7 +40,6 @@ where
         signer_address: Address,
         market_address: Address,
         system_id: SystemId,
-        validation_config: OfferValidationConfig,
     ) -> Self {
         // build permit2 nonce manager
         let permit2_nonce_manager = Permit2NonceManager::new(rpc_provider.clone(), signer_address);
@@ -71,7 +67,6 @@ where
             stake_token_address: Address::ZERO,
             stake_token_decimals: 0u8,
             stake_amount: U256::ZERO,
-            validation_config,
         }
     }
 

@@ -7,7 +7,7 @@ use super::BaseState;
 /// ComputeOffer specific state
 #[derive(Clone)]
 pub struct OfferState<T, P> {
-    base: BaseState<T, P>,
+    pub base: BaseState<T, P>,
     intent_db: Db,
 }
 

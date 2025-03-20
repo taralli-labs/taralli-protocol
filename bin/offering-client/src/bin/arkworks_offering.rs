@@ -21,7 +21,7 @@ use taralli_primitives::abi::universal_porchetta::VerifierDetails;
 use taralli_primitives::markets::SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS;
 use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::offer::OfferValidationConfig;
+use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
 use taralli_primitives::validation::BaseValidationConfig;
 use taralli_worker::arkworks::ArkworksWorker;
 use tracing::Level;
@@ -67,7 +67,8 @@ async fn main() -> Result<()> {
     let stake_amount = U256::from(1); // 1 wei of tokens
     let proving_time = 60u32; // 1 min
     let auction_length = 60u32; // 2 min
-                                // existing groth16 verifier deployment for this test circuit
+
+    // existing groth16 verifier deployment for this test circuit
     let verifier_address = address!("558D8D2f90c085A8Ed704084716F2797AAB26cC6");
     // verifyProof(uint256[2] calldata _pA,uint256[2][2] calldata _pB,uint256[2] calldata _pC,uint256[1] calldata _pubSignals)
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("43753b4d");
@@ -108,6 +109,7 @@ async fn main() -> Result<()> {
         SystemId::Arkworks,
         worker,
         validation_config,
+        OfferVerifierConstraints::default(),
     );
 
     // set intent builder defaults
@@ -167,7 +169,7 @@ async fn main() -> Result<()> {
     let signed_offer = provider.sign(compute_offer.clone()).await?;
 
     // validate before submitting
-    provider.validate_offer(&signed_offer, &Default::default())?;
+    provider.validate_offer(&signed_offer)?;
 
     tracing::info!(
         "signed offer proof commitment: {:?}",

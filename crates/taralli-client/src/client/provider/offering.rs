@@ -6,8 +6,10 @@ use std::time::Duration;
 use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
-use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
-use taralli_primitives::validation::Validate;
+use taralli_primitives::validation::offer::{
+    ComputeOfferValidator, OfferValidationConfig, OfferVerifierConstraints,
+};
+use taralli_primitives::validation::IntentValidator;
 use url::Url;
 
 use crate::api::submit::SubmitApiClient;
@@ -32,6 +34,7 @@ where
 {
     pub base: BaseClient<T, P, N, S>,
     pub api: SubmitApiClient,
+    pub validator: ComputeOfferValidator,
     pub builder: ComputeOfferBuilder<T, P, N>,
     pub tracker: ComputeOfferTracker<T, P, N>,
     pub worker: Arc<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
@@ -45,6 +48,7 @@ where
     N: Network + Clone,
     S: Signer + Clone,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         server_url: Url,
         rpc_provider: P,
@@ -53,16 +57,17 @@ where
         system_id: SystemId,
         worker: Arc<dyn ComputeWorker<ComputeOffer<SystemParams>>>,
         validation_config: OfferValidationConfig,
+        verifier_constraints: OfferVerifierConstraints,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
             api: SubmitApiClient::new(server_url.clone()),
+            validator: ComputeOfferValidator::new(validation_config, verifier_constraints),
             builder: ComputeOfferBuilder::new(
                 rpc_provider.clone(),
                 signer.address(),
                 market_address,
                 system_id,
-                validation_config,
             ),
             tracker: ComputeOfferTracker::new(rpc_provider.clone(), market_address),
             worker,
@@ -158,17 +163,12 @@ where
         Ok(offer)
     }
 
-    pub fn validate_offer(
-        &self,
-        offer: &ComputeOffer<SystemParams>,
-        verifier_constraints: &OfferVerifierConstraints,
-    ) -> Result<()> {
+    pub fn validate_offer(&self, offer: &ComputeOffer<SystemParams>) -> Result<()> {
         // validate an offer built by the client
-        offer.validate(
+        self.validator.validate(
+            offer,
             offer.proof_offer.startAuctionTimestamp,
-            &self.base.market_address,
-            &self.builder.validation_config,
-            verifier_constraints,
+            &offer.proof_offer.market,
         )?;
         Ok(())
     }

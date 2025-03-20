@@ -16,8 +16,8 @@ use std::sync::Arc;
 use taralli_client::client::provider::offering::ProviderOfferingClient;
 use taralli_client::intent_builder::IntentBuilder;
 use taralli_primitives::abi::universal_porchetta::VerifierDetails;
-use taralli_primitives::markets::SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS;
-use taralli_primitives::systems::risc0::Risc0ProofParams;
+use taralli_primitives::markets::{Network, SEPOLIA_UNIVERSAL_PORCHETTA_ADDRESS};
+use taralli_primitives::systems::risc0::{Risc0ProofParams, Risc0VerifierConstraints};
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;
@@ -61,7 +61,8 @@ async fn main() -> Result<()> {
     let stake_amount = U256::from(1); // 1 wei of tokens
     let proving_time = 60u32; // 1 min
     let auction_length = 90u32; // 3 min
-                                // Risc0 sepolia groth16 verifier
+
+    // Risc0 sepolia groth16 verifier
     let verifier_address = address!("AC292cF957Dd5BA174cdA13b05C16aFC71700327");
     // verify(bytes calldata seal, bytes32 imageId, bytes32 journalDigest)
     let verify_function_selector: FixedBytes<4> = fixed_bytes!("ab750e75");
@@ -70,6 +71,9 @@ async fn main() -> Result<()> {
     let inputs_length = U256::from(64);
     // uses sha
     let is_sha_commitment = true;
+
+    // network
+    let network = Network::Sepolia;
 
     // signer
     let signer = PrivateKeySigner::from_str(priv_key)?;
@@ -104,6 +108,7 @@ async fn main() -> Result<()> {
         SystemId::Risc0,
         worker,
         validation_config,
+        Risc0VerifierConstraints::for_network(network).into(),
     );
 
     // set intent builder defaults
@@ -161,7 +166,7 @@ async fn main() -> Result<()> {
     let signed_offer = provider.sign(compute_offer.clone()).await?;
 
     // validate before submitting
-    provider.validate_offer(&signed_offer, &Default::default())?;
+    provider.validate_offer(&signed_offer)?;
 
     tracing::info!(
         "signed offer proof commitment: {:?}",

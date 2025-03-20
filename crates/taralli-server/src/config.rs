@@ -2,11 +2,9 @@ use alloy::primitives::{Address, U256};
 use serde::Deserialize;
 use std::fs;
 use std::str::FromStr;
-use taralli_primitives::intents::{offer::ComputeOffer, request::ComputeRequest};
-use taralli_primitives::systems::System;
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::request::RequestValidationConfig;
-use taralli_primitives::validation::{BaseValidationConfig, Validate};
+use taralli_primitives::validation::BaseValidationConfig;
 use thiserror::Error;
 use tracing::Level;
 
@@ -38,22 +36,6 @@ pub struct RawOfferConfig {
 pub struct ServerValidationConfigs {
     pub request: RequestValidationConfig,
     pub offer: OfferValidationConfig,
-}
-
-pub trait ServerValidationConfigProvider: Validate {
-    fn get_config(configs: &ServerValidationConfigs) -> &Self::Config;
-}
-
-impl<S: System> ServerValidationConfigProvider for ComputeRequest<S> {
-    fn get_config(configs: &ServerValidationConfigs) -> &Self::Config {
-        &configs.request
-    }
-}
-
-impl<S: System> ServerValidationConfigProvider for ComputeOffer<S> {
-    fn get_config(configs: &ServerValidationConfigs) -> &Self::Config {
-        &configs.offer
-    }
 }
 
 #[derive(Debug, Deserialize)]

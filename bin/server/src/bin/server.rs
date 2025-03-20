@@ -9,14 +9,13 @@ use color_eyre::{eyre::Context, Result};
 use dotenv::dotenv;
 use serde_json::json;
 use std::{str::FromStr, time::Duration};
-use taralli_primitives::systems::SYSTEMS;
 use taralli_server::{
     config::Config,
     postgres::Db,
     routes::{
         query::get_active_intents_by_id_handler,
         submit::{submit_offer_handler, submit_request_handler},
-        subscribe::subscribe_handler,
+        subscribe::websocket_subscribe_handler,
     },
     state::{offer::OfferState, request::RequestState, BaseState},
     subscription_manager::SubscriptionManager,
@@ -57,7 +56,6 @@ async fn main() -> Result<()> {
     // setup subscription manager
     tracing::info!("Setting up subscription manager");
     let subscription_manager: SubscriptionManager = Default::default();
-    subscription_manager.init_channels(&SYSTEMS).await;
 
     // initialize intent database
     tracing::info!("Setting up intent database");
@@ -77,7 +75,7 @@ async fn main() -> Result<()> {
     // Create separate routers for each intent type
     let request_routes = Router::new()
         .route("/submit/request", post(submit_request_handler))
-        .route("/subscribe", get(subscribe_handler))
+        .route("/subscribe", get(websocket_subscribe_handler))
         .with_state(request_state);
     let offer_routes = Router::new()
         .route("/submit/offer", post(submit_offer_handler))

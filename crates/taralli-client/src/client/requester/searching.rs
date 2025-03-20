@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::time::Duration;
 
 use alloy::consensus::BlockHeader;
@@ -11,7 +10,8 @@ use alloy::signers::Signer;
 use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::offer::{OfferValidationConfig, OfferVerifierConstraints};
+use taralli_primitives::validation::offer::{ComputeOfferValidator, OfferValidationConfig};
+use taralli_primitives::validation::registry::ValidatorRegistry;
 use url::Url;
 
 use crate::analyzer::{offer::ComputeOfferAnalyzer, IntentAnalyzer};
@@ -27,7 +27,7 @@ use crate::client::BaseClient;
 /// Client that queries the server for a given system ID to search for a compute offering
 /// they want to bid upon. Once an offer has been found and analyzed, it is bid upon thereafter
 /// being tracked until resolution of the offered compute workload.
-pub struct RequesterSearchingClient<T, P, N, S, I>
+pub struct RequesterSearchingClient<T, P, N, S>
 where
     T: Transport + Clone,
     P: Provider<T, N> + Clone,
@@ -36,18 +36,17 @@ where
     pub base: BaseClient<T, P, N, S>,
     pub api: SubmitApiClient,
     pub searcher: ComputeOfferSearcher,
-    pub analyzer: ComputeOfferAnalyzer<T, P, N, I>,
+    pub analyzer: ComputeOfferAnalyzer<T, P, N>,
     pub bidder: ComputeOfferBidder<T, P, N>,
     pub tracker: ComputeOfferTracker<T, P, N>,
 }
 
-impl<T, P, N, S, I> RequesterSearchingClient<T, P, N, S, I>
+impl<T, P, N, S> RequesterSearchingClient<T, P, N, S>
 where
     T: Transport + Clone,
     P: Provider<T, N> + Clone,
     N: Network + Clone,
     S: Signer + Clone,
-    I: ComputeIntent,
 {
     pub fn new(
         server_url: Url,
@@ -56,7 +55,6 @@ where
         market_address: Address,
         system_id: SystemId,
         validation_config: OfferValidationConfig,
-        verifier_constraints: Option<HashMap<SystemId, OfferVerifierConstraints>>,
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
@@ -66,11 +64,23 @@ where
                 rpc_provider.clone(),
                 market_address,
                 validation_config,
-                verifier_constraints,
             ),
             bidder: ComputeOfferBidder::new(rpc_provider.clone(), market_address),
             tracker: ComputeOfferTracker::new(rpc_provider, market_address),
         }
+    }
+
+    /// Register a system configuration with the client for a specific system
+    /// (systemID ->  Validator)
+    pub fn with_system_configuration(
+        mut self,
+        system_id: SystemId,
+        validator: ComputeOfferValidator,
+    ) -> Result<Self> {
+        self.analyzer
+            .validator_registry
+            .register(system_id, validator);
+        Ok(self)
     }
 
     pub async fn run(&self) -> Result<()> {
