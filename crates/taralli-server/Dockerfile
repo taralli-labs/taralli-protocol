@@ -10,6 +10,13 @@ ARG CONFIG=config.json
 FROM lukemathwalker/cargo-chef:latest-rust-bookworm AS chef
 WORKDIR /app
 
+# Install Mold for faster linking
+RUN wget https://github.com/rui314/mold/releases/download/v2.37.1/mold-2.37.1-x86_64-linux.tar.gz
+RUN tar -xf mold-2.37.1-x86_64-linux.tar.gz
+RUN mv mold-2.37.1-x86_64-linux/bin/mold /bin/mold
+ENV MOLD_PATH="/bin/mold"
+ENV RUSTFLAGS="-C linker=/bin/mold"
+
 FROM chef AS planner
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl3 \
