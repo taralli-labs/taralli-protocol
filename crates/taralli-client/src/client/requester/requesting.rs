@@ -99,7 +99,7 @@ where
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
 
         // track the request
-        if !response.status().is_success() {
+        /*if !response.status().is_success() {
             // Parse the error response
             let error_body = response.json::<serde_json::Value>().await.map_err(|e| {
                 ClientError::ServerRequestError(format!("Failed to parse error response: {}", e))
@@ -109,6 +109,29 @@ where
                 "Server validation failed: {}",
                 error_body["error"].as_str().unwrap_or("Unknown error")
             )));
+        }*/
+
+        // Log the response status and headers for debugging
+        tracing::info!("Server response status: {}", response.status());
+        tracing::info!("Server response headers: {:?}", response.headers());
+
+        if !response.status().is_success() {
+            // Get the response text instead of trying to parse JSON directly
+            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
+            
+            // Try to parse as JSON if possible
+            let error_message = match serde_json::from_str::<serde_json::Value>(&error_text) {
+                Ok(json) => {
+                    if let Some(error) = json.get("error").and_then(|e| e.as_str()) {
+                        format!("Server validation failed: {}", error)
+                    } else {
+                        format!("Server returned error: {}", error_text)
+                    }
+                },
+                Err(_) => format!("Server returned error: {}", error_text),
+            };
+            
+            return Err(ClientError::IntentSubmissionFailed(error_message));
         }
 
         tracing::info!("Request submitted successfully, waiting for auction result");

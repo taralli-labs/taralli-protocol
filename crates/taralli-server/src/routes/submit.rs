@@ -41,7 +41,7 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
         Ok(recv_count) => Ok((
             StatusCode::OK,
             Json(json!({
-                "message": "Proof request broadcast to providers",
+                "message": "compute request broadcast to providers",
                 "broadcast_receivers": recv_count
             })),
         )),

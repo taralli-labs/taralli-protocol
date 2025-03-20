@@ -41,33 +41,42 @@ impl SubmitApiClient {
     /// Returns Multipart intent Form with two parts: `System` as a `application/octet-stream` and remaining
     /// fields as `application/json`.
     fn build_multipart<I: ComputeIntent>(&self, intent: I) -> Result<Form> {
+        let proof_commitment_string = format!("proof_{}", intent.type_string());
+
         let partial_intent = json!({
             "system_id": intent.system_id(),
-            "proof_commitment": intent.proof_commitment(),
+            proof_commitment_string: intent.proof_commitment(),
             "signature": intent.signature(),
         });
 
+        tracing::info!("Partial request JSON: {}", partial_intent);
+
         let partial_intent_string = serde_json::to_string(&partial_intent)
             .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
-        let partial_request_part = Part::text(partial_intent_string);
+        let partial_intent_part = Part::text(partial_intent_string);
+        let partial_intent_field_name = format!("partial_{}", intent.type_string());
 
         let compressed = compress_system(intent.system())?;
         let compressed_part = Part::bytes(compressed);
 
         let form = Form::new()
-            .part("partial_request", partial_request_part)
-            .part("proving_system_information", compressed_part);
+            .part(partial_intent_field_name, partial_intent_part)
+            .part("system_bytes", compressed_part);
 
         Ok(form)
     }
 
     pub async fn submit_intent<I: ComputeIntent>(&self, intent: I) -> Result<reqwest::Response> {
+        let endpoint = format!("/submit/{}", intent.type_string());
+
         let url = self
             .server_url
-            .join("/submit")
+            .join(&endpoint)
             .map_err(|e| ClientError::ServerUrlParsingError(e.to_string()))?;
 
         let payload = self.build_multipart(intent)?;
+
+        tracing::info!("wth");
 
         let response = self
             .client
@@ -76,6 +85,9 @@ impl SubmitApiClient {
             .send()
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
+
+        tracing::info!("wth 1");
+
         Ok(response)
     }
 }
