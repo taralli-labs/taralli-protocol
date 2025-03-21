@@ -1,283 +1,216 @@
-use std::time::Duration;
-
-use axum::body::to_bytes;
-use common::fixtures::{setup_app, submit, subscribe, MAX_BODY_SIZE};
-use futures::Stream;
+use common::fixtures::provider_fixture;
 use hyper::StatusCode;
+use rstest::*;
 use serde_json::{json, Value};
+use serial_test::serial;
+use taralli_client::api::{submit::SubmitApiClient, subscribe::SubscribeApiClient};
 use taralli_primitives::systems::SystemId;
 use tokio_stream::StreamExt;
-
+use url::Url;
 mod common;
+use crate::common::fixtures::{request_fixture, requester_fixture};
+use futures::FutureExt;
 
 #[tokio::test]
-async fn test_submit_with_no_subscribers() {
-    let router = setup_app(None).await;
-
-    let arkworks_msg = json!({
-        "proving_system_id": "arkworks",
-        "message": "test1"
-    })
-    .to_string();
-
-    let response = submit(router.clone(), arkworks_msg).await;
-    assert_eq!(response.status(), StatusCode::ACCEPTED);
-    let body = to_bytes(response.into_body(), MAX_BODY_SIZE).await.unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
-    assert_eq!(
-        body["message"],
-        json!("Request accepted, but there were no receivers to submit to.")
-    );
-    assert!(body["broadcast_error"].is_string());
-}
-
-#[tokio::test]
-async fn test_broadcast_single() {
-    let router = setup_app(None).await;
-    let _stream = subscribe(router, &[SystemId::Arkworks]).await;
-}
-
-#[tokio::test]
-async fn test_broadcast_over_with_no_more_subscribers() {
-    // Setup broadcast queue with size 1
-    let router = setup_app(Some(1)).await;
-
-    // Create and immediately drop the subscriber to ensure no receivers
-    drop(subscribe(router.clone(), &[SystemId::Arkworks]).await);
-
-    let arkworks_msg = json!({
-        "proving_system_id": "arkworks",
-        "message": "test1"
-    })
-    .to_string();
-
-    // Submit a message when there are no subscribers
-    let submit_response = submit(router.clone(), arkworks_msg).await;
-    assert_eq!(submit_response.status(), StatusCode::ACCEPTED);
-
-    let body = to_bytes(submit_response.into_body(), MAX_BODY_SIZE)
+#[rstest]
+#[serial]
+async fn test_submit_with_no_subscribers(requester_fixture: SubmitApiClient) {
+    let request = request_fixture().await;
+    let response = requester_fixture
+        .submit_intent(request)
         .await
-        .unwrap();
-    let body: Value = serde_json::from_slice(&body).unwrap();
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    let response_body: Value = response.json().await.unwrap();
     assert_eq!(
-        body["message"],
-        json!("Request accepted, but there were no receivers to submit to.")
+        response_body["message"],
+        json!("No providers subscribed to listen for this request.")
     );
-    assert!(body["broadcast_error"].is_string());
 }
 
 #[tokio::test]
-async fn test_single_subscriber_multiple_systems() {
-    let router = setup_app(Some(3)).await;
-
-    // We now pass multiple IDs, each generating system_ids=arkworks&system_ids=risc0
-    let mut stream = subscribe(
-        router.clone(),
-        &[
-            SystemId::Arkworks,
-            SystemId::Risc0,
-            SystemId::Gnark,
-            SystemId::Sp1,
-            SystemId::AlignedLayer,
-        ],
+#[rstest]
+#[serial]
+async fn test_broadcast_single(requester_fixture: SubmitApiClient, provider_fixture: SubscribeApiClient) {
+    let request = request_fixture().await;
+    let _subscription = provider_fixture
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let response = requester_fixture
+        .submit_intent(request)
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    let response_body: Value = response.json().await.unwrap();
+    assert_eq!(
+        response_body,
+        json!({
+            "message": "Proof request accepted and submitted to Proof Providers.",
+            "broadcasted_to": 1
+        })
     )
-    .await;
+}
 
-    // Give time for subscription setup
-    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+#[tokio::test]
+#[rstest]
+#[serial]
+// RsTest won't let us fixture two providers, so we just call it below normally for this one.
+async fn test_broadcast_multiple(requester_fixture: SubmitApiClient) {
+    let request = request_fixture().await;
+    let _subscription = provider_fixture()
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let _other_sub = provider_fixture()
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let response = requester_fixture
+        .submit_intent(request)
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    let response_body: Value = response.json().await.unwrap();
+    assert_eq!(
+        response_body,
+        json!({
+            "message": "Proof request accepted and submitted to Proof Providers.",
+            "broadcasted_to": 2
+        })
+    )
+}
 
-    // Submit simple messages
-    let arkworks_msg = json!({
-        "proving_system_id": "arkworks",
-        "message": "test1"
-    })
-    .to_string();
+#[tokio::test]
+#[rstest]
+#[serial]
+async fn test_broadcast_dropped_subscriber(
+    requester_fixture: SubmitApiClient,
+    provider_fixture: SubscribeApiClient,
+) {
+    let request = request_fixture().await;
+    let subscription = provider_fixture
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let response = requester_fixture
+        .submit_intent(request.clone())
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    let response_body: Value = response.json().await.unwrap();
+    assert_eq!(
+        response_body,
+        json!({
+            "message": "Proof request accepted and submitted to Proof Providers.",
+            "broadcasted_to": 1
+        })
+    );
+    drop(subscription);
+    let response = requester_fixture
+        .submit_intent(request)
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    let response_body: Value = response.json().await.unwrap();
+    assert_eq!(
+        response_body["message"],
+        json!("No providers subscribed to listen for this request.")
+    );
+}
 
-    let risc0_msg = json!({
-        "proving_system_id": "risc0",
-        "message": "test2"
-    })
-    .to_string();
+#[tokio::test]
+#[rstest]
+#[serial]
+// We test that proof requests are broadcasted to the correct providers.
+// The Arkworks provider only listens for Arkworks requests, and the Risc0 provider only listens for Risc0 requests.
+async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitApiClient) {
+    let subscribe_url = Url::parse("http://localhost:8080").unwrap();
 
-    let submit1 = submit(router.clone(), arkworks_msg.to_string()).await;
-    assert_eq!(submit1.status(), StatusCode::OK);
+    let provider_arkworks = SubscribeApiClient::new(subscribe_url.clone(), SystemId::Arkworks.as_bit());
 
-    let submit2 = submit(router.clone(), risc0_msg.to_string()).await;
-    assert_eq!(submit2.status(), StatusCode::OK);
+    let provider_risc0 = SubscribeApiClient::new(subscribe_url.clone(), SystemId::Risc0.as_bit());
 
-    // Verify we receive both messages on the single stream
-    for _ in 0..2 {
-        if let Some(Ok(event_data)) = stream.next().await {
-            let data = String::from_utf8(event_data.into()).unwrap();
-            assert!(
-                data.contains("test1") || data.contains("test2"),
-                "Received unexpected message: {}",
-                data
-            );
+    let provider_arkworks_risc0 = SubscribeApiClient::new(subscribe_url, SystemId::Risc0.as_bit() | SystemId::Arkworks.as_bit());
+
+    let mut subscription_arkworks = provider_arkworks
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let mut subscription_risc0 = provider_risc0
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+    let mut subscription_arkworks_risc0 = provider_arkworks_risc0
+        .subscribe_to_markets()
+        .await
+        .expect("Couldn't subscribe");
+
+    // Let's submit 2 requests, each with a different proving system.
+    let mut request = request_fixture().await;
+    let mut response = requester_fixture
+        .submit_intent(request.clone())
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+    // Change the req proving system type and resubmit.
+    request.system_id = SystemId::Arkworks;
+    response = requester_fixture
+        .submit_intent(request)
+        .await
+        .expect("Couldn't submit");
+    assert_eq!(response.status(), StatusCode::OK);
+
+    // We assert that the Arkworks provider received only the Arkworks request, despite the submission of a Risc0 request.
+    // The timeout is in case this test becomes broken. This way it won't hang forever.
+    let arkworks_message = subscription_arkworks
+        .next()
+        .now_or_never()
+        .expect("Couldn't get Arkworks request from stream")
+        .expect("No Arkworks request received")
+        .unwrap();
+    assert_eq!(
+        arkworks_message.system_id,
+        SystemId::Arkworks
+    );
+    // assert!(subscription_arkworks.peek
+    assert!(subscription_arkworks
+        .peekable()
+        .peek()
+        .now_or_never()
+        .is_none());
+
+    // Same logic as above, but for Risc0.
+    let risc0_message = subscription_risc0
+        .next()
+        .now_or_never()
+        .expect("Couldn't get Risc0 request from stream")
+        .expect("No Risc0 request received")
+        .unwrap();
+    assert_eq!(risc0_message.system_id, SystemId::Risc0);
+    assert!(subscription_risc0
+        .peekable()
+        .peek()
+        .now_or_never()
+        .is_none());
+
+    // Finally, assert the provider subscribed to both proving systems has received both requests.
+    for i in 0..2 {
+        let message = subscription_arkworks_risc0
+            .next()
+            .now_or_never()
+            .expect(format!("Missing request {} from stream", i).as_str())
+            .expect("No request received")
+            .unwrap();
+        if i == 0 {
+            assert_eq!(message.system_id, SystemId::Risc0);
         } else {
-            panic!("Missing expected message");
+            assert_eq!(message.system_id, SystemId::Arkworks);
         }
     }
-}
-
-#[tokio::test]
-async fn test_multiple_subscribers_single_system() {
-    let router = setup_app(Some(3)).await;
-
-    // Create three separate subscribers all listening to Arkworks
-    let mut streams = Vec::new();
-    for _ in 0..3 {
-        let stream = subscribe(router.clone(), &[SystemId::Arkworks]).await;
-        streams.push(stream);
-    }
-
-    // Submit simple messages
-    let arkworks_msg = json!({
-        "proving_system_id": "arkworks",
-        "message": "test1"
-    })
-    .to_string();
-
-    let submit_response = submit(router.clone(), arkworks_msg.to_string()).await;
-    assert_eq!(submit_response.status(), StatusCode::OK);
-
-    // Verify each subscriber receives the message
-    for (i, mut stream) in streams.into_iter().enumerate() {
-        if let Some(Ok(event_data)) = stream.next().await {
-            println!("Subscriber {} received message", i);
-            assert_eq!(
-                String::from_utf8(event_data.into()).unwrap(),
-                format!("data: {}\n\n", arkworks_msg)
-            );
-        } else {
-            panic!("Subscriber {} didn't receive message", i);
-        }
-    }
-}
-
-#[tokio::test]
-async fn test_multiple_subscribers_multiple_systems() {
-    let router = setup_app(Some(10)).await;
-
-    // Create subscribers for different combinations of systems
-    let stream1 = subscribe(
-        router.clone(),
-        &[
-            SystemId::Arkworks,
-            SystemId::Risc0,
-            SystemId::Gnark,
-            SystemId::Sp1,
-            SystemId::AlignedLayer,
-        ],
-    )
-    .await;
-
-    let stream2 = subscribe(router.clone(), &[SystemId::Arkworks, SystemId::Risc0]).await;
-
-    let stream3 = subscribe(
-        router.clone(),
-        &[SystemId::Arkworks, SystemId::AlignedLayer],
-    )
-    .await;
-
-    let stream4 = subscribe(router.clone(), &[SystemId::Sp1]).await;
-
-    // Create test messages for different systems
-    let arkworks_msg = json!({
-        "proving_system_id": "arkworks",
-        "data": "test_arkworks_data"
-    })
-    .to_string();
-
-    let risc0_msg = json!({
-        "proving_system_id": "risc0",
-        "data": "test_risc0_data"
-    })
-    .to_string();
-
-    let gnark_msg = json!({
-        "proving_system_id": "gnark",
-        "data": "test_gnark_data"
-    })
-    .to_string();
-
-    let sp1_msg = json!({
-        "proving_system_id": "sp1",
-        "data": "test_sp1_data"
-    })
-    .to_string();
-
-    let aligned_msg = json!({
-        "proving_system_id": "aligned-layer",
-        "data": "test_aligned_data"
-    })
-    .to_string();
-
-    // Submit all messages
-    submit(router.clone(), arkworks_msg.clone()).await;
-    submit(router.clone(), risc0_msg.clone()).await;
-    submit(router.clone(), gnark_msg.clone()).await;
-    submit(router.clone(), sp1_msg.clone()).await;
-    submit(router.clone(), aligned_msg.clone()).await;
-
-    // Collect messages from all streams for a short duration
-    let timeout = Duration::from_millis(100);
-
-    let messages1 = collect_messages(stream1, timeout).await;
-    let messages2 = collect_messages(stream2, timeout).await;
-    let messages3 = collect_messages(stream3, timeout).await;
-    let messages4 = collect_messages(stream4, timeout).await;
-
-    // Verify stream1 (subscribed to all) received all messages
-    assert_eq!(messages1.len(), 5);
-    assert!(messages1
-        .iter()
-        .any(|msg| msg.contains("test_arkworks_data")));
-    assert!(messages1.iter().any(|msg| msg.contains("test_risc0_data")));
-    assert!(messages1.iter().any(|msg| msg.contains("test_gnark_data")));
-    assert!(messages1.iter().any(|msg| msg.contains("test_sp1_data")));
-    assert!(messages1
-        .iter()
-        .any(|msg| msg.contains("test_aligned_data")));
-
-    // Verify stream2 (Arkworks, Risc0) received only its messages
-    assert_eq!(messages2.len(), 2);
-    assert!(messages2
-        .iter()
-        .any(|msg| msg.contains("test_arkworks_data")));
-    assert!(messages2.iter().any(|msg| msg.contains("test_risc0_data")));
-
-    // Verify stream3 (Arkworks, AlignedLayer) received only its messages
-    assert_eq!(messages3.len(), 2);
-    assert!(messages3
-        .iter()
-        .any(|msg| msg.contains("test_arkworks_data")));
-    assert!(messages3
-        .iter()
-        .any(|msg| msg.contains("test_aligned_data")));
-
-    // Verify stream4 (Sp1 only) received only its message
-    assert_eq!(messages4.len(), 1);
-    assert!(messages4.iter().any(|msg| msg.contains("test_sp1_data")));
-}
-
-// Helper function to collect messages from a stream for a given duration
-async fn collect_messages(
-    mut stream: impl Stream<Item = Result<String, axum::Error>> + Unpin,
-    timeout: Duration,
-) -> Vec<String> {
-    let mut messages = Vec::new();
-
-    let collection_task = async {
-        while let Some(Ok(msg)) = stream.next().await {
-            messages.push(msg);
-        }
-    };
-
-    tokio::select! {
-        _ = collection_task => {},
-        _ = tokio::time::sleep(timeout) => {},
-    }
-
-    messages
+    assert!(subscription_arkworks_risc0
+        .peekable()
+        .peek()
+        .now_or_never()
+        .is_none());
 }

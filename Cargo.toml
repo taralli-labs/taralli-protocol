@@ -33,6 +33,7 @@ all = "warn"
 
 [workspace.dependencies]
 taralli-primitives = { path = "crates/taralli-primitives" }
+taralli-client = { path = "crates/taralli-client" }
 alloy = { version = "0.8.0", default-features = false, features = [
     "full",
     "reqwest-rustls-tls",

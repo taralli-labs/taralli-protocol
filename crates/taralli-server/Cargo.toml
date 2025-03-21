@@ -36,6 +36,9 @@ http-body-util = "0.1.2"
 
 [dev-dependencies]
 tower = { version = "0.5.1", features = ["util"] }
+rstest = "0.17"
+serial_test = "3.1.1"
+taralli-client = { workspace = true }
 
 [features]
 default = []

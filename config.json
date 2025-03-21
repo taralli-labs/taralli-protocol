@@ -12,9 +12,7 @@
         "supported_systems": [
             "Arkworks",
             "Risc0",
-            "Sp1",
-            "AlignedLayer",
-            "Gnark"
+            "Sp1"
         ]
     },
     "request_validation_config": {
