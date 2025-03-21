@@ -20,18 +20,21 @@ async fn test_submit_with_no_subscribers(requester_fixture: SubmitApiClient) {
         .submit_intent(request)
         .await
         .expect("Couldn't submit");
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
     let response_body: Value = response.json().await.unwrap();
     assert_eq!(
-        response_body["message"],
-        json!("No providers subscribed to listen for this request.")
+        response_body,
+        json!({"error": "No proof providers available"})
     );
 }
 
 #[tokio::test]
 #[rstest]
 #[serial]
-async fn test_broadcast_single(requester_fixture: SubmitApiClient, provider_fixture: SubscribeApiClient) {
+async fn test_broadcast_single(
+    requester_fixture: SubmitApiClient,
+    provider_fixture: SubscribeApiClient,
+) {
     let request = request_fixture().await;
     let _subscription = provider_fixture
         .subscribe_to_markets()
@@ -46,8 +49,8 @@ async fn test_broadcast_single(requester_fixture: SubmitApiClient, provider_fixt
     assert_eq!(
         response_body,
         json!({
-            "message": "Proof request accepted and submitted to Proof Providers.",
-            "broadcasted_to": 1
+            "message": "compute request broadcast to providers",
+            "broadcast_receivers": 1
         })
     )
 }
@@ -75,8 +78,8 @@ async fn test_broadcast_multiple(requester_fixture: SubmitApiClient) {
     assert_eq!(
         response_body,
         json!({
-            "message": "Proof request accepted and submitted to Proof Providers.",
-            "broadcasted_to": 2
+            "message": "compute request broadcast to providers",
+            "broadcast_receivers": 2
         })
     )
 }
@@ -102,8 +105,8 @@ async fn test_broadcast_dropped_subscriber(
     assert_eq!(
         response_body,
         json!({
-            "message": "Proof request accepted and submitted to Proof Providers.",
-            "broadcasted_to": 1
+            "message": "compute request broadcast to providers",
+            "broadcast_receivers": 1
         })
     );
     drop(subscription);
@@ -111,11 +114,11 @@ async fn test_broadcast_dropped_subscriber(
         .submit_intent(request)
         .await
         .expect("Couldn't submit");
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
     let response_body: Value = response.json().await.unwrap();
     assert_eq!(
-        response_body["message"],
-        json!("No providers subscribed to listen for this request.")
+        response_body,
+        json!({"error": "No proof providers available"})
     );
 }
 
@@ -127,11 +130,15 @@ async fn test_broadcast_dropped_subscriber(
 async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitApiClient) {
     let subscribe_url = Url::parse("http://localhost:8080").unwrap();
 
-    let provider_arkworks = SubscribeApiClient::new(subscribe_url.clone(), SystemId::Arkworks.as_bit());
+    let provider_arkworks =
+        SubscribeApiClient::new(subscribe_url.clone(), SystemId::Arkworks.as_bit());
 
     let provider_risc0 = SubscribeApiClient::new(subscribe_url.clone(), SystemId::Risc0.as_bit());
 
-    let provider_arkworks_risc0 = SubscribeApiClient::new(subscribe_url, SystemId::Risc0.as_bit() | SystemId::Arkworks.as_bit());
+    let provider_arkworks_risc0 = SubscribeApiClient::new(
+        subscribe_url,
+        SystemId::Risc0.as_bit() | SystemId::Arkworks.as_bit(),
+    );
 
     let mut subscription_arkworks = provider_arkworks
         .subscribe_to_markets()
@@ -169,10 +176,7 @@ async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitA
         .expect("Couldn't get Arkworks request from stream")
         .expect("No Arkworks request received")
         .unwrap();
-    assert_eq!(
-        arkworks_message.system_id,
-        SystemId::Arkworks
-    );
+    assert_eq!(arkworks_message.system_id, SystemId::Arkworks);
     // assert!(subscription_arkworks.peek
     assert!(subscription_arkworks
         .peekable()
@@ -199,7 +203,7 @@ async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitA
         let message = subscription_arkworks_risc0
             .next()
             .now_or_never()
-            .expect(format!("Missing request {} from stream", i).as_str())
+            .unwrap_or_else(|| panic!("Missing request {} from stream", i))
             .expect("No request received")
             .unwrap();
         if i == 0 {

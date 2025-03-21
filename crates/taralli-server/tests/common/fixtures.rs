@@ -1,18 +1,21 @@
-use std::{path::Path, str::FromStr, u32};
+use std::{path::Path, str::FromStr};
 
 use alloy::{
-    primitives::{address, Address, FixedBytes, Uint, U256, PrimitiveSignature},
+    primitives::{address, Address, FixedBytes, PrimitiveSignature, Uint, U256},
     signers::{local::PrivateKeySigner, Signer},
     sol_types::SolValue,
 };
 use rstest::*;
 
 use taralli_client::api::{submit::SubmitApiClient, subscribe::SubscribeApiClient};
-use taralli_primitives::{abi::universal_bombetta::UniversalBombetta::ProofRequest, intents::ComputeIntent, systems::{risc0::Risc0ProofParams, SystemIdMask}};
 use taralli_primitives::{
+    abi::universal_bombetta::UniversalBombetta::ProofRequest, intents::ComputeIntent,
+    systems::risc0::Risc0ProofParams,
+};
+use taralli_primitives::{
+    intents::request::ComputeRequest,
     markets::SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
     systems::{SystemId, SystemParams},
-    intents::request::ComputeRequest
 };
 use url::Url;
 
@@ -33,7 +36,10 @@ pub fn requester_fixture() -> SubmitApiClient {
 
 #[fixture]
 pub fn provider_fixture() -> SubscribeApiClient {
-    SubscribeApiClient::new(Url::parse("http://localhost:8080").unwrap(), SystemIdMask::MAX)
+    SubscribeApiClient::new(
+        Url::parse("http://localhost:8080").unwrap(),
+        SystemId::Arkworks.as_bit(),
+    )
 }
 
 /// Generate a Request to be sent to the server.

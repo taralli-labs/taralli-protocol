@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  taralli-auth:
+    container_name: taralli-server-bin
+    image: taralli-server:latest
+    ports:
+      - "8000:8000"

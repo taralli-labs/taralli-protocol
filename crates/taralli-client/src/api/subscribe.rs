@@ -22,7 +22,8 @@ use url::Url;
 use crate::error::{ClientError, Result};
 
 // type alias for stream of compute requests returned by the protocol server
-pub type ComputeRequestStream = Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
+pub type ComputeRequestStream =
+    Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
 
 /// Subscribe over websocket stream to broadcasts as new ComputeRequest's are submitted to
 /// the protocol server
