@@ -4,7 +4,7 @@ use axum::{
     extract::{FromRequest, Multipart, Request},
     http::StatusCode,
 };
-use taralli_primitives::server_utils::intents::{PartialComputeOffer, PartialComputeRequest};
+use taralli_primitives::compression_utils::intents::{PartialComputeOffer, PartialComputeRequest};
 
 /// A custom extracted type that contains both all Request data of `Request<I: ProvingSystemInformation>`.
 /// Although we use a vector of bytes to reprent the compressed proving system.

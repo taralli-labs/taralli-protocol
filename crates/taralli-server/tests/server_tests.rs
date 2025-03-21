@@ -1,4 +1,4 @@
-/*use std::time::Duration;
+use std::time::Duration;
 
 use axum::body::to_bytes;
 use common::fixtures::{setup_app, submit, subscribe, MAX_BODY_SIZE};
@@ -281,4 +281,3 @@ async fn collect_messages(
 
     messages
 }
-*/

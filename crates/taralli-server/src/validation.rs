@@ -9,7 +9,7 @@ use taralli_primitives::{
         providers::Provider,
         transports::Transport,
     },
-    server_utils::intents::{PartialComputeOffer, PartialComputeRequest},
+    compression_utils::intents::{PartialComputeOffer, PartialComputeRequest},
     validation::{
         offer::{validate_offer_amount_constraints, validate_offer_signature},
         request::{validate_request_amount_constraints, validate_request_signature},
@@ -38,7 +38,6 @@ pub async fn validate_partial_request<T: Transport + Clone, P: Provider<T> + Clo
             .base
             .maximum_start_delay as u64;
 
-    //let validation_timeout_seconds = state.validation_timeout_seconds();
     let config = &state.validation_configs().request;
 
     // check system id exists, skip full system validation
@@ -92,7 +91,6 @@ pub async fn validate_partial_offer<T: Transport + Clone, P: Provider<T> + Clone
             .base
             .maximum_start_delay as u64;
 
-    //let validation_timeout_seconds = state.validation_timeout_seconds();
     let config = &state.validation_configs().offer;
 
     // check system id exists, skip full system validation

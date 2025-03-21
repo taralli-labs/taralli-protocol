@@ -10,8 +10,7 @@ use alloy::signers::Signer;
 use alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::SystemId;
-use taralli_primitives::validation::offer::{ComputeOfferValidator, OfferValidationConfig};
-use taralli_primitives::validation::registry::ValidatorRegistry;
+use taralli_primitives::validation::offer::OfferValidationConfig;
 use url::Url;
 
 use crate::analyzer::{offer::ComputeOfferAnalyzer, IntentAnalyzer};
@@ -62,25 +61,13 @@ where
             searcher: ComputeOfferSearcher::new(server_url, system_id, market_address),
             analyzer: ComputeOfferAnalyzer::new(
                 rpc_provider.clone(),
+                system_id,
                 market_address,
                 validation_config,
             ),
             bidder: ComputeOfferBidder::new(rpc_provider.clone(), market_address),
             tracker: ComputeOfferTracker::new(rpc_provider, market_address),
         }
-    }
-
-    /// Register a system configuration with the client for a specific system
-    /// (systemID ->  Validator)
-    pub fn with_system_configuration(
-        mut self,
-        system_id: SystemId,
-        validator: ComputeOfferValidator,
-    ) -> Result<Self> {
-        self.analyzer
-            .validator_registry
-            .register(system_id, validator);
-        Ok(self)
     }
 
     pub async fn run(&self) -> Result<()> {
@@ -107,8 +94,6 @@ where
             .header()
             .timestamp();
 
-        tracing::info!("current ts: {}", current_ts);
-
         // compute resolve deadline timestamp
         let resolve_deadline_ts =
             offer.proof_offer.endAuctionTimestamp + offer.proof_offer.provingTime as u64;
@@ -118,7 +103,7 @@ where
             .analyze(current_ts, &offer)
             .await
             .map_err(|e| ClientError::IntentAnalysisError(e.to_string()))?;
-        tracing::info!("analysis done");
+        tracing::info!("analysis done, bidding");
 
         // Submit a bid for the offer
         self.bidder

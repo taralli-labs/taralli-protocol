@@ -2,22 +2,20 @@
 
 use crate::error::Result;
 use crate::systems::{
-    aligned_layer::AlignedLayerProofParams, arkworks::ArkworksProofParams, gnark::GnarkProofParams,
-    risc0::Risc0ProofParams, sp1::Sp1ProofParams,
+    arkworks::ArkworksProofParams, risc0::Risc0ProofParams, sp1::Sp1ProofParams,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-pub mod aligned_layer;
 pub mod arkworks;
-pub mod gnark;
 pub mod risc0;
 pub mod sp1;
 
 /// Mask for the supported systems.
 /// The bit position of the system in the mask is the same as the bit position of the system in the
 /// `SystemId` enum.
-/// If we add more than 8 proving systems, we need to change this to u16 or bigger.
+/// As the number of systems increases, this bit mask must also increase in size corresponding with the 
+/// number of systems (e.g. 8 bit -> 128 bit, etc.)
 pub type SystemIdMask = u8;
 
 /// traits for system configuration
@@ -190,9 +188,7 @@ macro_rules! systems {
 }
 
 systems! {
-    (AlignedLayer, "aligned-layer", AlignedLayerProofParams, 0x01),
-    (Arkworks, "arkworks", ArkworksProofParams, 0x02),
-    (Gnark, "gnark", GnarkProofParams, 0x04),
-    (Risc0, "risc0", Risc0ProofParams, 0x08),
-    (Sp1, "sp1", Sp1ProofParams, 0x10)
+    (Arkworks, "arkworks", ArkworksProofParams, 0x01),
+    (Risc0, "risc0", Risc0ProofParams, 0x02),
+    (Sp1, "sp1", Sp1ProofParams, 0x04)
 }

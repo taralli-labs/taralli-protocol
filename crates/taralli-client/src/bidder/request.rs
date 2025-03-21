@@ -110,9 +110,6 @@ where
 
         tracing::info!("bidder: calculate target ts for target amount");
 
-        tracing::info!("bidder: latest_ts: {:?}", latest_ts);
-        tracing::info!("bidder: request id computed: {}", intent_id);
-
         let active_request_return = market_contract
             .activeProofRequestData(intent_id)
             .call()
@@ -124,24 +121,6 @@ where
                 "Another Bid has already submitted for this Auction".into(),
             ));
         }
-
-        let gas_estimate = market_contract
-            .bid(
-                intent_proof_commitment.clone(),
-                Bytes::from(signature.as_bytes()),
-            )
-            .value(U256::from(intent_proof_commitment.minimumStake))
-            .estimate_gas()
-            .await
-            .map_err(|e| {
-                ClientError::TransactionSetupError(format!("Gas estimation failed: {}", e))
-            })?;
-
-        tracing::info!("Estimated gas for bid: {}", gas_estimate);
-        tracing::info!(
-            "msg.value for bid: {}",
-            U256::from(intent_proof_commitment.minimumStake)
-        );
 
         let receipt = market_contract
             .bid(

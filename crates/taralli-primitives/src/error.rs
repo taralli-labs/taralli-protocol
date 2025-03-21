@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum PrimitivesError {
+    #[error("Compression error: {0}")]
+    CompressionError(String),
+    #[error("Decompression error: {0}")]
+    DecompressionError(String),
     #[error("Contract interaction error: {0}")]
     ContractError(String),
     #[error("Configuration error: {0}")]

@@ -54,6 +54,8 @@ where
         intent_id: FixedBytes<32>,
         opaque_submission: Bytes,
     ) -> Result<N::ReceiptResponse> {
+        tracing::info!("resolving intent");
+
         let market_contract =
             UniversalPorchettaInstance::new(self.market_address, self.rpc_provider.clone());
 
@@ -62,8 +64,6 @@ where
             .send()
             .await
             .map_err(|e| ClientError::TransactionError(e.to_string()))?;
-
-        tracing::info!("resolve call_return done, getting txs recipt");
 
         let receipt = call_return
             .get_receipt()

@@ -4,8 +4,8 @@ use crate::{
 };
 use deadpool_postgres::{Manager, Pool};
 use taralli_primitives::{
+    compression_utils::{db::StoredIntent, intents::ComputeOfferCompressed},
     intents::offer::compute_offer_id,
-    server_utils::{db::StoredIntent, intents::ComputeOfferCompressed},
     systems::SystemId,
 };
 use tokio_postgres::{Config, NoTls};
@@ -91,6 +91,17 @@ impl Db {
             .get()
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+
+        // Check if RESET_DB environment variable is set
+        if std::env::var("RESET_DB").unwrap_or_default() == "true" {
+            tracing::info!("RESET_DB flag set, dropping all tables");
+            conn.simple_query("DROP TABLE IF EXISTS intents CASCADE;")
+                .await
+                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+            conn.simple_query("DROP TABLE IF EXISTS market_address CASCADE;")
+                .await
+                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+        }
 
         // Check if the market_address table exists
         let table_exists = conn

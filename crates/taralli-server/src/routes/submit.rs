@@ -1,7 +1,9 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde_json::json;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::server_utils::intents::{ComputeOfferCompressed, ComputeRequestCompressed};
+use taralli_primitives::compression_utils::intents::{
+    ComputeOfferCompressed, ComputeRequestCompressed,
+};
 
 use crate::error::{Result, ServerError};
 use crate::extracted_intents::{ExtractedOffer, ExtractedRequest};

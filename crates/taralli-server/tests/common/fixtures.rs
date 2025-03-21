@@ -1,4 +1,4 @@
-/*use std::{path::Path, str::FromStr, u32};
+use std::{path::Path, str::FromStr, u32};
 
 use alloy::{
     primitives::{address, Address, FixedBytes, Uint, U256},
@@ -88,4 +88,4 @@ pub async fn request_fixture() -> Request<ProvingSystemParams> {
     proof_request.signature = signature;
 
     proof_request
-}*/
+}

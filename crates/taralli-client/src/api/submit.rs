@@ -4,10 +4,11 @@ use reqwest::{
     Client,
 };
 use serde_json::json;
-use taralli_primitives::{env::Environment, intents::ComputeIntent};
+use taralli_primitives::{
+    compression_utils::compression::compress_system, env::Environment, intents::ComputeIntent,
+};
 use url::Url;
 
-use crate::api::compression::compress_system;
 use crate::error::{ClientError, Result};
 
 /// Submit compute intents to the protocol server

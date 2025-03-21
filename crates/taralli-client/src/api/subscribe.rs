@@ -5,9 +5,9 @@ use futures::{
     SinkExt, Stream, StreamExt,
 };
 use taralli_primitives::{
+    compression_utils::{compression::decompress_system, intents::ComputeRequestCompressed},
     env::Environment,
     intents::request::ComputeRequest,
-    server_utils::intents::ComputeRequestCompressed,
     systems::{SystemIdMask, SystemParams},
 };
 use tokio::{net::TcpStream, signal, time::timeout};
@@ -19,13 +19,10 @@ use tungstenite::{
 };
 use url::Url;
 
-use crate::{
-    api::compression::decompress_system,
-    error::{ClientError, Result},
-};
+use crate::error::{ClientError, Result};
 
 // type alias for stream of compute requests returned by the protocol server
-pub type RequestStream = Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
+pub type ComputeRequestStream = Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
 
 /// Subscribe over websocket stream to broadcasts as new ComputeRequest's are submitted to
 /// the protocol server
@@ -69,7 +66,7 @@ impl SubscribeApiClient {
     async fn get_stream_with_shutdown(
         listener: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
         shutdown_receiver: tokio::sync::oneshot::Receiver<()>,
-    ) -> Result<RequestStream> {
+    ) -> Result<ComputeRequestStream> {
         // Start a `stream::unfold`, which keeps passing listener and shutdown_receiver to next iterations,
         // whilst yielding `Request<ProvingSystemParams>` at the end of each iteration.
         let parsed_stream = futures::stream::unfold(
@@ -95,7 +92,7 @@ impl SubscribeApiClient {
                                 }
                             };
 
-                            // Then, we need to decompress the proving system information.
+                            // Then, we need to decompress the system information.
                             let system = match decompress_system(
                                 request_compressed.system
                             ).await {
@@ -108,7 +105,7 @@ impl SubscribeApiClient {
                                 }
                             };
 
-                            // Create the final Request object
+                            // Create the final ComputeRequest object
                             let request = ComputeRequest::<SystemParams> {
                                 system_id: request_compressed.system_id,
                                 system,
@@ -162,7 +159,7 @@ impl SubscribeApiClient {
         Ok(Box::pin(parsed_stream))
     }
 
-    pub async fn subscribe_to_markets(&self) -> Result<RequestStream> {
+    pub async fn subscribe_to_markets(&self) -> Result<ComputeRequestStream> {
         let mut url = self
             .server_url
             .join(format!("/subscribe?subscribed_to={}", self.subscribed_to).as_str())
@@ -196,7 +193,7 @@ impl SubscribeApiClient {
             .header("Upgrade", "websocket")
             .body(())
             .map_err(|e| {
-                ClientError::ServerSubscriptionError(format!("Request build error: {e}"))
+                ClientError::ServerSubscriptionError(format!("ComputeRequest build error: {e}"))
             })?;
 
         let (ws_stream, _resp) = connect_async(request).await.map_err(|e| {
@@ -287,10 +284,10 @@ impl SubscribeApiClient {
     }
 }
 
-/// Wrapper around the RequestStream type.
+/// Wrapper around the ComputeRequestStream type.
 /// The intent here is to implement a custom `Drop` so we can set the closing of WebSocket conns.
 pub struct CleanupStream {
-    inner: RequestStream,
+    inner: ComputeRequestStream,
     cleanup_sender: Option<tokio::sync::oneshot::Sender<()>>,
 }
 

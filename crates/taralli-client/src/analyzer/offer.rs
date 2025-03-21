@@ -4,10 +4,10 @@ use alloy::{network::Network, primitives::Address, providers::Provider, transpor
 use async_trait::async_trait;
 use taralli_primitives::{
     intents::offer::ComputeOffer,
-    systems::SystemParams,
+    systems::{SystemId, SystemParams},
     validation::{
-        offer::{OfferValidationConfig, OfferVerifierConstraints},
-        registry::{ComputeOfferValidatorRegistry, ValidatorRegistry},
+        offer::{ComputeOfferValidator, OfferValidationConfig, OfferVerifierConstraints},
+        IntentValidator,
     },
 };
 
@@ -24,7 +24,7 @@ where
 {
     _rpc_provider: P,
     pub market_address: Address,
-    pub validator_registry: ComputeOfferValidatorRegistry,
+    validator: ComputeOfferValidator,
     phantom_data: PhantomData<(T, N)>,
 }
 
@@ -36,16 +36,16 @@ where
 {
     pub fn new(
         rpc_provider: P,
+        _system_id: SystemId,
         market_address: Address,
         validation_config: OfferValidationConfig,
     ) -> Self {
+        let verifier_constraints = OfferVerifierConstraints::default();
+
         Self {
             _rpc_provider: rpc_provider,
             market_address,
-            validator_registry: ComputeOfferValidatorRegistry::new(
-                validation_config.clone(),
-                OfferVerifierConstraints::default(),
-            ),
+            validator: ComputeOfferValidator::new(validation_config, verifier_constraints),
             phantom_data: PhantomData,
         }
     }
@@ -62,7 +62,7 @@ where
 
     async fn analyze(&self, latest_ts: u64, intent: &Self::Intent) -> Result<()> {
         // general correctness checks
-        self.validator_registry
+        self.validator
             .validate(intent, latest_ts, &self.market_address)?;
 
         //// TODO: economic checks
