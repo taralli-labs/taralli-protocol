@@ -5,8 +5,8 @@ use crate::error::{Result, ServerError};
 
 #[derive(Clone)]
 /// A wrapper type for the message that is broadcasted to all subscribers.
-/// content: The serialized proof request, with proving system information being compressed.
-/// subscribed_to: The proving system id that the request is related to. See `proving_systems` macro in primitives.
+/// content: The serialized compute request, with system information being compressed.
+/// subscribed_to: The system id that the compute request is related to. See `systems` macro in primitives.
 pub struct BroadcastedMessage {
     pub content: Vec<u8>,
     pub subscribed_to: SystemIdMask,

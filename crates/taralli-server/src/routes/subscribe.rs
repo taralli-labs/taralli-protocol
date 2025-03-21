@@ -78,10 +78,10 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                 match maybe_broadcast {
                     Some(Ok(message)) => {
                         let bytes = message.content;
-                        let message_proving_system_id = message.subscribed_to;
-                        // Check if the message is for the subscribed proving system
-                        // If no proving system is specified, default to 1, client is subscribed to all proving systems.
-                        if message_proving_system_id & subscribed_to.unwrap_or(1) == 0 {
+                        let message_system_id = message.subscribed_to;
+                        // Check if the message is for the subscribed system
+                        // If no system is specified, default to 1, client is subscribed to all systems.
+                        if message_system_id & subscribed_to.unwrap_or(1) == 0 {
                             continue;
                         }
                         // Try sending a binary message to the client
