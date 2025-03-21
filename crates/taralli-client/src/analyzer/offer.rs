@@ -4,7 +4,7 @@ use alloy::{network::Network, primitives::Address, providers::Provider, transpor
 use async_trait::async_trait;
 use taralli_primitives::{
     intents::offer::ComputeOffer,
-    systems::{SystemId, SystemParams},
+    systems::SystemParams,
     validation::{
         offer::{ComputeOfferValidator, OfferValidationConfig, OfferVerifierConstraints},
         IntentValidator,
@@ -36,7 +36,6 @@ where
 {
     pub fn new(
         rpc_provider: P,
-        _system_id: SystemId,
         market_address: Address,
         validation_config: OfferValidationConfig,
     ) -> Self {

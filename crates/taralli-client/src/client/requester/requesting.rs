@@ -88,8 +88,10 @@ where
             .tracker
             .track_resolve(request_id, Duration::from_secs(resolve_deadline));
 
-        tracing::info!("tracking setup for request ID: {}", request_id);
-        tracing::info!("submitting request to server");
+        tracing::info!(
+            "tracking setup for request ID: {}. submitting to server",
+            request_id
+        );
 
         // submit signed request to server
         let response = self

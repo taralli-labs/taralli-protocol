@@ -61,7 +61,6 @@ where
             searcher: ComputeOfferSearcher::new(server_url, system_id, market_address),
             analyzer: ComputeOfferAnalyzer::new(
                 rpc_provider.clone(),
-                system_id,
                 market_address,
                 validation_config,
             ),

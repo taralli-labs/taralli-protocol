@@ -5,7 +5,7 @@ use reqwest::{
 };
 use serde_json::json;
 use taralli_primitives::{
-    compression_utils::compression::compress_system, env::Environment, intents::ComputeIntent,
+    compression_utils::compression::compress_brotli, env::Environment, intents::ComputeIntent,
 };
 use url::Url;
 
@@ -50,14 +50,14 @@ impl SubmitApiClient {
             "signature": intent.signature(),
         });
 
-        tracing::info!("Partial request JSON: {}", partial_intent);
-
         let partial_intent_string = serde_json::to_string(&partial_intent)
             .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
         let partial_intent_part = Part::text(partial_intent_string);
         let partial_intent_field_name = format!("partial_{}", intent.type_string());
 
-        let compressed = compress_system(intent.system())?;
+        let compression_string = serde_json::to_string(&intent.system())
+            .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
+        let compressed = compress_brotli(compression_string)?;
         let compressed_part = Part::bytes(compressed);
 
         let form = Form::new()
@@ -77,8 +77,6 @@ impl SubmitApiClient {
 
         let payload = self.build_multipart(intent)?;
 
-        tracing::info!("wth");
-
         let response = self
             .client
             .post(url)
@@ -86,8 +84,6 @@ impl SubmitApiClient {
             .send()
             .await
             .map_err(|e| ClientError::ServerRequestError(e.to_string()))?;
-
-        tracing::info!("wth 1");
 
         Ok(response)
     }

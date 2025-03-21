@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 taralli-primitives = { workspace = true }
-taralli-server = { path = "../../crates/taralli-server" }
+taralli-server = { workspace = true }
 alloy = { workspace = true, features = ["full", "getrandom", "providers", "hyper"] }
 serde = { workspace = true }
 serde_json = { workspace = true }

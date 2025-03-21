@@ -5,11 +5,10 @@ use tokio::io::AsyncReadExt;
 
 use crate::{
     error::{PrimitivesError, Result},
-    intents::ComputeIntent,
-    systems::{System, SystemParams},
+    systems::SystemParams,
 };
 
-/// Compresses the intent payload using Brotli compression
+/// Compresses the bytes payload using Brotli compression
 /// and returns the compressed payload as a byte vector
 /// # Arguments
 /// * `intent` - The intent to be compressed
@@ -20,7 +19,7 @@ use crate::{
 /// via the environment variables.
 /// Furthermore, we chose to instantiate a new compressor for each intent
 /// if the need to submit multiple intent concurrently arises.
-pub fn compress_intent<I: ComputeIntent>(intent: &I) -> Result<Vec<u8>> {
+pub fn compress_brotli(payload: String) -> Result<Vec<u8>> {
     // We opt for some default values that may be reasonable for the general use case.
     let mut brotli_encoder = brotli::CompressorWriter::new(
         Vec::new(),
@@ -37,35 +36,6 @@ pub fn compress_intent<I: ComputeIntent>(intent: &I) -> Result<Vec<u8>> {
             .parse::<u32>()
             .unwrap_or(24),
     );
-    let payload = serde_json::to_string(&intent)
-        .map_err(|e| PrimitivesError::CompressionError(e.to_string()))?;
-    brotli_encoder
-        .write_all(payload.as_bytes())
-        .map_err(|e| PrimitivesError::CompressionError(e.to_string()))?;
-    Ok(brotli_encoder.into_inner())
-}
-
-/// Compresses the system payload using brotli compression
-/// and returns the compressed payload as a byte vector
-pub fn compress_system<S: System>(system: &S) -> Result<Vec<u8>> {
-    // We opt for some default values that may be reasonable for the general use case.
-    let mut brotli_encoder = brotli::CompressorWriter::new(
-        Vec::new(),
-        std::env::var("BROTLI_BUFFER_SIZE")
-            .unwrap_or_else(|_| "0".to_string())
-            .parse::<usize>()
-            .unwrap_or(0),
-        std::env::var("BROTLI_COMPRESSION_LEVEL")
-            .unwrap_or_else(|_| "7".to_string())
-            .parse::<u32>()
-            .unwrap_or(7),
-        std::env::var("BROTLI_WINDOW_SIZE")
-            .unwrap_or_else(|_| "24".to_string())
-            .parse::<u32>()
-            .unwrap_or(24),
-    );
-    let payload = serde_json::to_string(&system)
-        .map_err(|e| PrimitivesError::CompressionError(e.to_string()))?;
     brotli_encoder
         .write_all(payload.as_bytes())
         .map_err(|e| PrimitivesError::CompressionError(e.to_string()))?;

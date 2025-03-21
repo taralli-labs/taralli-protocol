@@ -94,8 +94,10 @@ where
             .tracker
             .track_auction(offer_id, Duration::from_secs(auction_time_length));
 
-        tracing::info!("tracking started for offer ID: {}", offer_id);
-        tracing::info!("submitting offer to server");
+        tracing::info!(
+            "tracking started for offer ID: {}. Submitting to server",
+            offer_id
+        );
 
         // submit signed request to server
         let response = self
