@@ -9,6 +9,7 @@ use color_eyre::{eyre::Context, Result};
 use dotenv::dotenv;
 use serde_json::json;
 use std::{str::FromStr, time::Duration};
+use taralli_primitives::env::Environment;
 use taralli_server::{
     config::Config,
     postgres::Db,
@@ -39,7 +40,13 @@ async fn main() -> Result<()> {
     // Load configuration json
     let config = Config::from_file("config.json").context("Failed to load config")?;
     // Load rpc url used by the server's rpc provider (sepolia currently)
-    let rpc_url = Url::from_str(&std::env::var("RPC_URL").expect("rpc url from env failed"));
+
+    let url_opt = std::env::var("RPC_URL");
+    let rpc_url_string = match Environment::from_env_var() {
+        Environment::Production => url_opt.expect("rpc url from env failed"),
+        Environment::Development => url_opt.unwrap_or("http://rpc_url.com".to_string()),
+    };
+    let rpc_url = Url::from_str(&rpc_url_string).context("Invalid RPC URL")?;
 
     // setup tracing
     tracing_subscriber::fmt()
@@ -51,7 +58,7 @@ async fn main() -> Result<()> {
     let validation_configs = config.get_validation_configs();
 
     tracing::info!("Setting up RPC provider");
-    let rpc_provider = ProviderBuilder::new().on_http(rpc_url?);
+    let rpc_provider = ProviderBuilder::new().on_http(rpc_url);
 
     // setup subscription manager
     tracing::info!("Setting up subscription manager");

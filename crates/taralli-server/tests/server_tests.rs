@@ -169,11 +169,11 @@ async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitA
     assert_eq!(response.status(), StatusCode::OK);
 
     // We assert that the Arkworks provider received only the Arkworks request, despite the submission of a Risc0 request.
-    // The timeout is in case this test becomes broken. This way it won't hang forever.
+    // Await for the first request from the Arkworks provider. Rest should have arrived afterwards.
+    // We need to await because github actions aren't beefy enough to handle the load and sometimes now_or_never() fails.
     let arkworks_message = subscription_arkworks
         .next()
-        .now_or_never()
-        .expect("Couldn't get Arkworks request from stream")
+        .await
         .expect("No Arkworks request received")
         .unwrap();
     assert_eq!(arkworks_message.system_id, SystemId::Arkworks);
