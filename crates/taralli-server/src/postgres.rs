@@ -128,7 +128,7 @@ impl Db {
             .map_err(|e| ServerError::SerializationError(e.to_string()))?;
         let expiration_timestamp = compressed_offer.proof_offer.endAuctionTimestamp as f64;
 
-        tracing::info!("POSTGRES: attempting to store intent");
+        tracing::info!("POSTGRES: attempting to store intent with ID: {}", offer_id);
 
         let conn = self
             .pool
@@ -156,7 +156,7 @@ impl Db {
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
 
-        tracing::info!("POSTGRES: stored intent");
+        tracing::info!("POSTGRES: stored intent with ID: {}", offer_id);
 
         Ok(StoredIntent::try_from(row)?)
     }
