@@ -78,25 +78,10 @@ impl Db {
                 .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
         }
 
-        // Check if intents table exists
-        let intents_exists = conn
-            .query_one(
-                "SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_schema = 'public' 
-            AND table_name = 'intents'
-        )",
-                &[],
-            )
-            .await
-            .map_err(|e| ServerError::DatabaseError(e.to_string()))?
-            .get::<_, bool>(0);
-
-        // Create intents table if it doesn't exist
-        if !intents_exists {
-            // Create the intents table
-            tracing::info!("Creating intents table");
-            conn.batch_execute(
+        // Define all tables and their creation statements
+        let tables = vec![
+            (
+                "intents",
                 "CREATE TABLE intents (
                     intent_id BYTEA PRIMARY KEY,
                     system_id TEXT NOT NULL,
@@ -107,12 +92,39 @@ impl Db {
                     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     expired_at TIMESTAMPTZ DEFAULT NULL
                 );
-
+                
                 CREATE INDEX idx_intents_system ON intents(system_id);
                 CREATE INDEX idx_intents_expiration ON intents(expiration_ts);",
-            )
-            .await
-            .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+            ),
+            // Add more tables here as needed
+        ];
+
+        // Create each table if it doesn't exist
+        for (table_name, create_statement) in tables {
+            // Check if table exists
+            let table_exists = conn
+                .query_one(
+                    &format!(
+                        "SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_schema = 'public' 
+                            AND table_name = '{}'
+                        )",
+                        table_name
+                    ),
+                    &[],
+                )
+                .await
+                .map_err(|e| ServerError::DatabaseError(e.to_string()))?
+                .get::<_, bool>(0);
+
+            // Create table if it doesn't exist
+            if !table_exists {
+                tracing::info!("Creating {} table", table_name);
+                conn.batch_execute(create_statement)
+                    .await
+                    .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
+            }
         }
 
         Ok(())
