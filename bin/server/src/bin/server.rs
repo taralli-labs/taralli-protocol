@@ -65,8 +65,8 @@ async fn main() -> Result<()> {
     let subscription_manager: SubscriptionManager = Default::default();
 
     // initialize intent database
-    tracing::info!("Setting up intent database");
-    let intent_db = Db::new(config.markets.clone()).await;
+    tracing::info!("Setting up database");
+    let intent_db = Db::new().await;
 
     tracing::info!("Setting up state");
     let base_state = BaseState::new(

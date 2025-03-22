@@ -1,7 +1,4 @@
-use crate::{
-    config::Markets,
-    error::{Result, ServerError},
-};
+use crate::error::{Result, ServerError};
 use deadpool_postgres::{Manager, Pool};
 use taralli_primitives::{
     compression_utils::{db::StoredIntent, intents::ComputeOfferCompressed},
@@ -9,23 +6,6 @@ use taralli_primitives::{
     systems::SystemId,
 };
 use tokio_postgres::{Config, NoTls};
-
-pub const CREATE_MARKET_ADDRESS_TABLE: &str = "
-    CREATE TABLE IF NOT EXISTS market_address (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        porchetta_address BYTEA NOT NULL
-    );
-";
-
-pub const GET_STORED_MARKET_ADDRESS: &str = "
-    SELECT porchetta_address FROM market_address WHERE id = 1;
-";
-
-pub const UPDATE_MARKET_ADDRESS: &str = "
-    INSERT INTO market_address (id, porchetta_address)
-    VALUES (1, $1)
-    ON CONFLICT (id) DO UPDATE SET porchetta_address = $1;
-";
 
 pub const INSERT_INTENT: &str = "
     INSERT INTO intents (intent_id, system_id, system, proof_commitment, signature, expiration_ts)
@@ -55,7 +35,7 @@ pub struct Db {
 
 impl Db {
     /// instantiate new/existing postgres intent db
-    pub async fn new(markets: Markets) -> Self {
+    pub async fn new() -> Self {
         let mut config: Config = Config::new();
         config.host(std::env::var("POSTGRES_URL").unwrap_or("localhost".to_string()));
         let postgres_port = std::env::var("POSTGRES_PORT").unwrap_or("5432".to_string());
@@ -78,14 +58,12 @@ impl Db {
 
         let db = Db { pool };
         // Run migrations on startup
-        db.run_migrations(markets.universal_porchetta.to_vec())
-            .await
-            .expect("Failed to run migrations");
+        db.run_migrations().await.expect("Failed to run migrations");
         db
     }
 
     /// Create a fresh postgres table if market addresses change or load the existing intent db
-    async fn run_migrations(&self, porchetta_market_address: Vec<u8>) -> Result<()> {
+    async fn run_migrations(&self) -> Result<()> {
         let conn = self
             .pool
             .get()
@@ -98,71 +76,7 @@ impl Db {
             conn.simple_query("DROP TABLE IF EXISTS intents CASCADE;")
                 .await
                 .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-            conn.simple_query("DROP TABLE IF EXISTS market_address CASCADE;")
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
         }
-
-        // Check if the market_address table exists
-        let table_exists = conn
-            .query_one(
-                "SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' 
-                AND table_name = 'market_address'
-            )",
-                &[],
-            )
-            .await
-            .map_err(|e| ServerError::DatabaseError(e.to_string()))?
-            .get::<_, bool>(0);
-
-        // Create market_address table if it doesn't exist
-        if !table_exists {
-            tracing::info!("Creating market_address table for the first time");
-            conn.batch_execute(CREATE_MARKET_ADDRESS_TABLE)
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-        }
-
-        // Check if we need to update the market address
-        let should_recreate_intents = if !table_exists {
-            // First run, store the address and create intents table
-            conn.execute(UPDATE_MARKET_ADDRESS, &[&porchetta_market_address])
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-            true
-        } else {
-            // Table exists, check if the address matches
-            let stored_address_rows = conn
-                .query(GET_STORED_MARKET_ADDRESS, &[])
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-
-            if stored_address_rows.is_empty() {
-                // No address stored (shouldn't happen, but handle it)
-                conn.execute(UPDATE_MARKET_ADDRESS, &[&porchetta_market_address])
-                    .await
-                    .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-                true
-            } else {
-                // Compare stored address with current one
-                let stored_address: &[u8] = stored_address_rows[0].get(0);
-
-                if stored_address != porchetta_market_address.as_slice() {
-                    // Address changed, update it and recreate intents table
-                    tracing::info!("Market address changed, updating and recreating intents table");
-                    conn.execute(UPDATE_MARKET_ADDRESS, &[&porchetta_market_address])
-                        .await
-                        .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-                    true
-                } else {
-                    // Address matches, no need to recreate intents table
-                    tracing::info!("Market address unchanged, using existing tables");
-                    false
-                }
-            }
-        };
 
         // Check if intents table exists
         let intents_exists = conn
@@ -178,15 +92,8 @@ impl Db {
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?
             .get::<_, bool>(0);
 
-        // Drop and recreate intents table if needed
-        if should_recreate_intents || !intents_exists {
-            if intents_exists {
-                tracing::info!("Dropping existing intents table due to market address change");
-                conn.batch_execute("DROP TABLE intents;")
-                    .await
-                    .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-            }
-
+        // Create intents table if it doesn't exist
+        if !intents_exists {
             // Create the intents table
             tracing::info!("Creating intents table");
             conn.batch_execute(

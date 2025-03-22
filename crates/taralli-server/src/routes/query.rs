@@ -16,6 +16,7 @@ pub async fn get_active_intents_by_id_handler<T: Transport + Clone, P: Provider<
     State(app_state): State<OfferState<T, P>>,
     Path(system_id): Path<String>,
 ) -> Result<(StatusCode, Json<serde_json::Value>)> {
+    tracing::info!("Searcher queried market for system ID: {}", system_id);
     let system_id = SystemId::try_from(system_id.as_str())
         .map_err(|e| ServerError::QueryError(e.to_string()))?;
 
