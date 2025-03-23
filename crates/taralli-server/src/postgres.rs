@@ -7,6 +7,22 @@ use taralli_primitives::{
 };
 use tokio_postgres::{Config, NoTls};
 
+pub const CREATE_INTENTS_TABLE: &str = "
+    CREATE TABLE IF NOT EXISTS intents (
+        intent_id BYTEA PRIMARY KEY,
+        system_id TEXT NOT NULL,
+        system BYTEA NOT NULL,
+        proof_commitment BYTEA NOT NULL,
+        signature BYTEA NOT NULL,
+        expiration_ts TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expired_at TIMESTAMPTZ DEFAULT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_intents_system ON intents(system_id);
+    CREATE INDEX IF NOT EXISTS idx_intents_expiration ON intents(expiration_ts);
+";
+
 pub const INSERT_INTENT: &str = "
     INSERT INTO intents (intent_id, system_id, system, proof_commitment, signature, expiration_ts)
     VALUES ($1, $2, $3, $4, $5, to_timestamp($6))
@@ -24,6 +40,7 @@ pub const UPDATE_EXPIRED_INTENTS: &str = "
 pub const GET_INTENTS_BY_ID: &str = "
     SELECT intent_id, system_id, system, proof_commitment, signature, expiration_ts, created_at, expired_at FROM intents
     WHERE intents.system_id = $1
+    AND intents.expiration_ts > NOW()
     AND intents.expired_at IS NULL;
 ";
 
@@ -70,61 +87,17 @@ impl Db {
             .await
             .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
 
-        // Check if RESET_DB environment variable is set
-        if std::env::var("RESET_DB").unwrap_or_default() == "true" {
-            tracing::info!("RESET_DB flag set, dropping all tables");
-            conn.simple_query("DROP TABLE IF EXISTS intents CASCADE;")
-                .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-        }
-
         // Define all tables and their creation statements
         let tables = vec![
-            (
-                "intents",
-                "CREATE TABLE intents (
-                    intent_id BYTEA PRIMARY KEY,
-                    system_id TEXT NOT NULL,
-                    system BYTEA NOT NULL,
-                    proof_commitment BYTEA NOT NULL,
-                    signature BYTEA NOT NULL,
-                    expiration_ts TIMESTAMPTZ NOT NULL,
-                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                    expired_at TIMESTAMPTZ DEFAULT NULL
-                );
-                
-                CREATE INDEX idx_intents_system ON intents(system_id);
-                CREATE INDEX idx_intents_expiration ON intents(expiration_ts);",
-            ),
+            ("intents", CREATE_INTENTS_TABLE)
             // Add more tables here as needed
         ];
 
-        // Create each table if it doesn't exist
-        for (table_name, create_statement) in tables {
-            // Check if table exists
-            let table_exists = conn
-                .query_one(
-                    &format!(
-                        "SELECT EXISTS (
-                            SELECT FROM information_schema.tables 
-                            WHERE table_schema = 'public' 
-                            AND table_name = '{}'
-                        )",
-                        table_name
-                    ),
-                    &[],
-                )
+        for (table_name, ddl) in tables {
+            tracing::info!("Ensuring {} table exists", table_name);
+            conn.batch_execute(ddl)
                 .await
-                .map_err(|e| ServerError::DatabaseError(e.to_string()))?
-                .get::<_, bool>(0);
-
-            // Create table if it doesn't exist
-            if !table_exists {
-                tracing::info!("Creating {} table", table_name);
-                conn.batch_execute(create_statement)
-                    .await
-                    .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
-            }
+                .map_err(|e| ServerError::DatabaseError(e.to_string()))?;
         }
 
         Ok(())
