@@ -89,8 +89,7 @@ impl Db {
 
         // Define all tables and their creation statements
         let tables = vec![
-            ("intents", CREATE_INTENTS_TABLE)
-            // Add more tables here as needed
+            ("intents", CREATE_INTENTS_TABLE), // Add more tables here as needed
         ];
 
         for (table_name, ddl) in tables {
