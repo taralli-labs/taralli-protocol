@@ -91,9 +91,10 @@ pub fn validate_system<I: ComputeIntent>(intent: &I, supported_systems: &[System
     }
 
     // Validate the proving system specific parameters
-    intent.system().validate_inputs().map_err(|e| {
-        PrimitivesError::ValidationError(format!("invalid system parameters: {}", e))
-    })?;
+    intent
+        .system()
+        .validate_inputs()
+        .map_err(|e| PrimitivesError::ValidationError(format!("invalid system parameters: {e}")))?;
 
     Ok(())
 }
@@ -115,7 +116,7 @@ pub fn validate_time_constraints(
     min_proving_time: u32,
     max_start_delay: u32,
 ) -> Result<()> {
-    if latest_timestamp < start_auction_timestamp.saturating_sub(max_start_delay as u64)
+    if latest_timestamp < start_auction_timestamp.saturating_sub(u64::from(max_start_delay))
         || latest_timestamp >= end_auction_timestamp
     {
         return Err(PrimitivesError::ValidationError("invalid timestamp".into()));

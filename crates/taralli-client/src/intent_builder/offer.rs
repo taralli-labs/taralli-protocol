@@ -13,7 +13,7 @@ use super::{BaseIntentBuilder, IntentBuilder};
 use crate::error::Result;
 use crate::nonce_manager::Permit2NonceManager;
 
-/// Intent builder for ComputeOffers
+/// Intent builder for `ComputeOffers`
 #[derive(Clone)]
 pub struct ComputeOfferBuilder<T, P, N>
 where

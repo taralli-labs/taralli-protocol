@@ -44,7 +44,7 @@ pub trait ValidatorRegistry {
     ) -> Result<()>;
 }
 
-/// Concrete implementation of ValidatorRegistry
+/// Concrete implementation of `ValidatorRegistry`
 pub struct StandardValidatorRegistry<I, C, V>
 where
     I: ComputeIntent,

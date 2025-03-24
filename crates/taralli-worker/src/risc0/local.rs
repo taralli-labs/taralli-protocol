@@ -9,6 +9,7 @@ pub struct Risc0LocalProver {
 }
 
 impl Risc0LocalProver {
+    #[must_use]
     pub fn new(proving_options: ProverOpts) -> Self {
         Self { proving_options }
     }

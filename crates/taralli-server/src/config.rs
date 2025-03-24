@@ -75,6 +75,7 @@ impl Config {
             .map_err(|_| ConfigError::LogLevelParseError(self.log_level.clone()))
     }
 
+    #[must_use]
     pub fn get_request_validation_config(&self) -> RequestValidationConfig {
         RequestValidationConfig {
             base: self.base_validation_config.clone(),
@@ -82,6 +83,7 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn get_offer_validation_config(&self) -> OfferValidationConfig {
         OfferValidationConfig {
             base: self.base_validation_config.clone(),
@@ -96,6 +98,7 @@ impl Config {
         }
     }
 
+    #[must_use]
     pub fn get_validation_configs(&self) -> ServerValidationConfigs {
         ServerValidationConfigs {
             request: self.get_request_validation_config(),

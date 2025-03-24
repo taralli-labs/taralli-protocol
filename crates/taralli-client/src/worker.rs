@@ -30,6 +30,7 @@ pub struct WorkerManager<I: ComputeIntent> {
 }
 
 impl<I: ComputeIntent> WorkerManager<I> {
+    #[must_use]
     pub fn new(
         workers: HashMap<SystemId, Arc<dyn ComputeWorker<I> + Send + Sync + 'static>>,
     ) -> Self {

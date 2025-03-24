@@ -32,6 +32,7 @@ type ProofValues = (Vec<DynSolValue>, Vec<Vec<DynSolValue>>, Vec<DynSolValue>);
 
 /// TODO: make generic over any circuit
 impl ArkworksWorker {
+    #[must_use]
     pub fn new() -> Self {
         Self
     }

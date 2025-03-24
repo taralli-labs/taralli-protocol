@@ -184,7 +184,7 @@ async fn main() -> Result<()> {
 
     // submit and track ComputeOffer
     provider
-        .submit_and_track(signed_offer, auction_length as u64)
+        .submit_and_track(signed_offer, u64::from(auction_length))
         .await?;
     Ok(())
 }

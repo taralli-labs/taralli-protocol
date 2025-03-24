@@ -1,4 +1,4 @@
-//! This module contains the ComputeIntent Implementations used by the protocol.
+//! This module contains the `ComputeIntent` Implementations used by the protocol.
 
 use crate::systems::{System, SystemId};
 use alloy::primitives::{Address, FixedBytes, PrimitiveSignature, U256};

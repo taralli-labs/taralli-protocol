@@ -15,7 +15,7 @@ use crate::error::Result;
 
 use super::IntentAnalyzer;
 
-/// Analyzes a ComputeRequest's validity and profitability
+/// Analyzes a `ComputeRequest`'s validity and profitability
 pub struct ComputeRequestAnalyzer<T, P, N>
 where
     T: Transport + Clone + Send + Sync,

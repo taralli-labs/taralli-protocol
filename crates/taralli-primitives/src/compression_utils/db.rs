@@ -30,8 +30,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(bytes) => B256::from_slice(&bytes),
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get intent_id: {}",
-                    e
+                    "Failed to get intent_id: {e}"
                 )));
             }
         };
@@ -40,8 +39,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(id) => id,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get system_id: {}",
-                    e
+                    "Failed to get system_id: {e}"
                 )));
             }
         };
@@ -50,8 +48,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(bytes) => bytes,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get system: {}",
-                    e
+                    "Failed to get system: {e}"
                 )));
             }
         };
@@ -60,8 +57,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(bytes) => bytes,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get proof_commitment: {}",
-                    e
+                    "Failed to get proof_commitment: {e}"
                 )));
             }
         };
@@ -70,8 +66,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(bytes) => bytes,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get signature: {}",
-                    e
+                    "Failed to get signature: {e}"
                 )));
             }
         };
@@ -80,8 +75,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(ts) => ts,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get expiration_ts: {}",
-                    e
+                    "Failed to get expiration_ts: {e}"
                 )));
             }
         };
@@ -90,8 +84,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(ts) => ts,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get created_at: {}",
-                    e
+                    "Failed to get created_at: {e}"
                 )));
             }
         };
@@ -101,8 +94,7 @@ impl TryFrom<Row> for StoredIntent {
             Ok(ts) => ts,
             Err(e) => {
                 return Err(PrimitivesError::DbSerializeError(format!(
-                    "Failed to get expired_at: {}",
-                    e
+                    "Failed to get expired_at: {e}"
                 )));
             }
         };
@@ -120,7 +112,7 @@ impl TryFrom<Row> for StoredIntent {
     }
 }
 
-/// Convert a StoredIntent into a ComputeOffer
+/// Convert a `StoredIntent` into a `ComputeOffer`
 impl<S: System> TryFrom<StoredIntent> for ComputeOffer<S>
 where
     S: for<'de> serde::Deserialize<'de>,
@@ -136,39 +128,35 @@ where
 
         let mut decompressed_bytes = Vec::new();
         std::io::Read::read_to_end(&mut decompressor, &mut decompressed_bytes).map_err(|e| {
-            PrimitivesError::DbDeserializeError(format!("Failed to decompress system bytes: {}", e))
+            PrimitivesError::DbDeserializeError(format!("Failed to decompress system bytes: {e}"))
         })?;
 
         // Parse the decompressed system data
         let system = serde_json::from_slice::<S>(&decompressed_bytes).map_err(|e| {
             PrimitivesError::DbDeserializeError(format!(
-                "Failed to deserialize decompressed system: {}",
-                e
+                "Failed to deserialize decompressed system: {e}"
             ))
         })?;
 
         // Parse the proof_commitment from binary data
         let proof_offer = serde_json::from_slice(&stored.proof_commitment).map_err(|e| {
             PrimitivesError::DbDeserializeError(format!(
-                "Failed to deserialize proof_commitment: {}",
-                e
+                "Failed to deserialize proof_commitment: {e}"
             ))
         })?;
 
         // Convert system_id string to SystemId
-        let system_id = SystemId::try_from(stored.system_id.as_str()).map_err(|e| {
-            PrimitivesError::DbDeserializeError(format!("Invalid system_id: {}", e))
-        })?;
+        let system_id = SystemId::try_from(stored.system_id.as_str())
+            .map_err(|e| PrimitivesError::DbDeserializeError(format!("Invalid system_id: {e}")))?;
 
         // Convert signature bytes to Signature type
-        let signature = PrimitiveSignature::try_from(stored.signature.as_slice()).map_err(|e| {
-            PrimitivesError::DbDeserializeError(format!("Invalid signature: {}", e))
-        })?;
+        let signature = PrimitiveSignature::try_from(stored.signature.as_slice())
+            .map_err(|e| PrimitivesError::DbDeserializeError(format!("Invalid signature: {e}")))?;
 
         // Construct and return the ComputeOffer
         Ok(ComputeOffer {
-            system,
             system_id,
+            system,
             proof_offer,
             signature,
         })

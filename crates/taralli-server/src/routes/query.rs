@@ -29,8 +29,7 @@ pub async fn get_active_intents_by_id_handler<T: Transport + Clone, P: Provider<
         Err(e) => {
             tracing::error!("Database error when querying intents: {}", e);
             return Err(ServerError::DatabaseError(format!(
-                "Failed to query intents: {}",
-                e
+                "Failed to query intents: {e}"
             )));
         }
     };

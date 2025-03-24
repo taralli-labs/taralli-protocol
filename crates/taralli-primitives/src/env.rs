@@ -8,6 +8,7 @@ pub enum Environment {
 }
 
 impl Environment {
+    #[must_use]
     pub fn from_env_var() -> Self {
         match env::var("ENV") {
             Ok(val) => match val.to_lowercase().as_str() {
@@ -20,6 +21,7 @@ impl Environment {
     }
 
     /// Converts the `Environment` enum to a string for debugging or display purposes.
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             Environment::Development => "development",

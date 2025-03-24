@@ -56,6 +56,7 @@ pub struct Risc0VerifierConstraints {
 
 impl Risc0VerifierConstraints {
     /// Create network-specific constraints
+    #[must_use]
     pub fn for_network(network: Network) -> Self {
         match network {
             Network::Sepolia => Self::sepolia(),
@@ -64,6 +65,7 @@ impl Risc0VerifierConstraints {
     }
 
     /// Sepolia network constraints
+    #[must_use]
     pub fn sepolia() -> Self {
         Self {
             verifier: Some(address!("AC292cF957Dd5BA174cdA13b05C16aFC71700327")),

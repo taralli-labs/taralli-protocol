@@ -44,7 +44,7 @@ pub const GET_INTENTS_BY_ID: &str = "
     AND intents.expired_at IS NULL;
 ";
 
-/// Postgres database used to store compute intents (currently ComputeOffers only)
+/// Postgres database used to store compute intents (currently `ComputeOffers` only)
 #[derive(Clone)]
 pub struct Db {
     pub pool: Pool,
@@ -102,7 +102,7 @@ impl Db {
         Ok(())
     }
 
-    /// Store a submitted ComputeOffer within the database
+    /// Store a submitted `ComputeOffer` within the database
     pub async fn store_offer(
         &self,
         compressed_offer: &ComputeOfferCompressed,

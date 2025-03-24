@@ -12,7 +12,7 @@ use url::Url;
 
 use crate::error::{ClientError, Result};
 
-/// Query ComputeOffers stored within the protocol server's intent db
+/// Query `ComputeOffers` stored within the protocol server's intent db
 pub struct QueryApiClient {
     _api_key: String,
     client: Client,
@@ -20,6 +20,7 @@ pub struct QueryApiClient {
 }
 
 impl QueryApiClient {
+    #[must_use]
     pub fn new(server_url: Url) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
@@ -80,7 +81,7 @@ impl QueryApiClient {
         let json: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
             tracing::error!("Failed to parse JSON response: {}", e);
             tracing::debug!("Response text: {}", response_text);
-            ClientError::ServerRequestError(format!("Invalid JSON response: {}", e))
+            ClientError::ServerRequestError(format!("Invalid JSON response: {e}"))
         })?;
 
         let offers = json.get("intents").ok_or_else(|| {
@@ -93,7 +94,7 @@ impl QueryApiClient {
         let stored_intents: Vec<StoredIntent> =
             serde_json::from_value(offers.clone()).map_err(|e| {
                 tracing::error!("Failed to parse stored intents: {}", e);
-                ClientError::ServerRequestError(format!("Failed to parse stored intents: {}", e))
+                ClientError::ServerRequestError(format!("Failed to parse stored intents: {e}"))
             })?;
 
         if stored_intents.is_empty() {
@@ -112,9 +113,7 @@ impl QueryApiClient {
                 result
             })
             .collect::<std::result::Result<Vec<_>, _>>()
-            .map_err(|e| {
-                ClientError::ServerRequestError(format!("Failed to parse offers: {}", e))
-            })?;
+            .map_err(|e| ClientError::ServerRequestError(format!("Failed to parse offers: {e}")))?;
 
         tracing::info!("Successfully parsed {} offers", offers.len());
 

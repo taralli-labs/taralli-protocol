@@ -11,7 +11,7 @@ use crate::error::{ClientError, Result};
 
 use super::IntentSearcher;
 
-/// Searcher for ComputeOffers
+/// Searcher for `ComputeOffers`
 pub struct ComputeOfferSearcher {
     api_client: QueryApiClient,
     system_id: SystemId,
@@ -19,6 +19,7 @@ pub struct ComputeOfferSearcher {
 }
 
 impl ComputeOfferSearcher {
+    #[must_use]
     pub fn new(server_url: Url, system_id: SystemId, market_address: Address) -> Self {
         Self {
             api_client: QueryApiClient::new(server_url),

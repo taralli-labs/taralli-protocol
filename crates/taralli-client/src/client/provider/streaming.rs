@@ -31,8 +31,8 @@ use crate::{
 };
 use crate::{api::subscribe::SubscribeApiClient, client::BaseClient};
 
-/// Client that fulfills ComputeRequests by subscribing to the protocol server over websocket
-/// stream to receive newly submitted ComputeRequests at the given system IDs they subscribed to.
+/// Client that fulfills `ComputeRequests` by subscribing to the protocol server over websocket
+/// stream to receive newly submitted `ComputeRequests` at the given system IDs they subscribed to.
 /// It then processes the incoming compute requests, bids upon them, compute's the requested compute
 /// workload and then resolves the compute request within the market contract.
 pub struct ProviderStreamingClient<T, P, N, S>
@@ -78,7 +78,7 @@ where
     }
 
     /// Register a system configuration with the client for a specific system
-    /// (systemID -> ComputeWorker + Validator)
+    /// (systemID -> `ComputeWorker` + Validator)
     pub fn with_system_configuration<
         W: ComputeWorker<ComputeRequest<SystemParams>> + Send + Sync + 'static,
     >(
@@ -177,7 +177,7 @@ where
                 request.signature,
             )
             .await
-            .map_err(|e| ClientError::TransactionFailure(format!("bid txs failed: {}", e)))?;
+            .map_err(|e| ClientError::TransactionFailure(format!("bid txs failed: {e}")))?;
 
         tracing::info!("bid transaction submitted successfully");
 
@@ -194,7 +194,7 @@ where
         self.resolver
             .resolve_intent(request_id, work_result.opaque_submission)
             .await
-            .map_err(|e| ClientError::TransactionFailure(format!("resolve txs failed: {}", e)))?;
+            .map_err(|e| ClientError::TransactionFailure(format!("resolve txs failed: {e}")))?;
 
         tracing::info!("resolve transaction submitted");
 
