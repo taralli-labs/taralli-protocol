@@ -1,0 +1,25 @@
+{
+    "server_port": 8080,
+    "log_level": "INFO",
+    "validation_timeout_seconds": 30,
+    "markets": {
+        "universal_bombetta": "0x6209431B6C8F38471dc65564Be2Fd08298705BBD",
+        "universal_porchetta": "0x67445680c74Fb82C46421374554e402e72E9e5d1"
+    },
+    "base_validation_config": {
+        "minimum_proving_time": 10,
+        "maximum_start_delay": 300,
+        "supported_systems": [
+            "Arkworks",
+            "Risc0",
+            "Sp1"
+        ]
+    },
+    "request_validation_config": {
+        "maximum_allowed_stake": 1000000000000000000000
+    },
+    "offer_validation_config": {
+        "maximum_allowed_reward": "1000000000000000000000",
+        "minimum_allowed_stake": "1"
+    }
+}

@@ -5,8 +5,7 @@ edition = "2021"
 
 [dependencies]
 taralli-primitives = { workspace = true }
-alloy = { workspace = true, features = ["full", "getrandom"] }
-brotli = { workspace = true }
+alloy = { workspace = true, features = ["full", "getrandom", "providers", "hyper"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full", "io-util"] }
@@ -19,28 +18,27 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 async-trait = { workspace = true }
 color-eyre = { workspace = true }
-axum = { version = "0.7.4", features = ["ws", "multipart"] }
+chrono = { workspace = true }
+brotli = { workspace = true }
+bincode = { workspace = true }
+tokio-util = { workspace = true }
+tokio-postgres = { workspace = true }
+axum = { version = "0.7.4", features = ["macros", "ws", "multipart"] }
 base64 = "0.22.0"
 bytes = "1.6.0"
 tokio-stream = "0.1.14"
-tokio-util = { workspace = true }
-tower-http = { version = "0.6.2", features = [
-    "compression-full",
-    "decompression-full",
-    "trace",
-] }
+tower-http = { version = "0.6.2", features = ["compression-full", "decompression-full", "trace"] }
 async-stream = "0.3.5"
 hex = "0.4.3"
+deadpool-postgres = { version = "0.14.0", features = ["rt_tokio_1"] }
 hyper = "1.6.0"
 http-body-util = "0.1.2"
-bincode = "1.3.3"
 
 [dev-dependencies]
 tower = { version = "0.5.1", features = ["util"] }
 rstest = "0.17"
-taralli-requester = { workspace = true }
-taralli-provider = { workspace = true }
 serial_test = "3.1.1"
+taralli-client = { workspace = true }
 
 [features]
 default = []

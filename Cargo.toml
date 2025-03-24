@@ -1,10 +1,24 @@
+[workspace.package]
+edition = "2024"
+license = "MIT"
+rust-version = "1.85"
+authors = ["N0xMare", "medittere"]
+homepage = "https://github.com/taralli-labs/taralli-protocol"
+repository = "https://github.com/taralli-labs/taralli-protocol"
+keywords = ["ethereum", "crypto"]
+categories = ["cryptography", "cryptography::cryptocurrencies"]
+exclude = ["**/target"]
+
 [workspace]
 members = [
-    "crates/taralli-primitives",
-    "crates/taralli-provider",
-    "crates/taralli-requester",
-    "crates/taralli-server",
+    "bin/*",
+    "crates/taralli-primitives/",
+    "crates/taralli-client/",
+    "crates/taralli-server/",
+    "crates/taralli-worker/",
 ]
+
+resolver = "2"
 
 [profile.stripped]
 inherits = "release"
@@ -35,8 +49,9 @@ all = "warn"
 
 [workspace.dependencies]
 taralli-primitives = { path = "crates/taralli-primitives" }
-taralli-requester = { path = "crates/taralli-requester" }
-taralli-provider = { path = "crates/taralli-provider" }
+taralli-server = { path = "crates/taralli-server" }
+taralli-client = { path = "crates/taralli-client" }
+taralli-worker = { path = "crates/taralli-worker" }
 alloy = { version = "0.8.0", default-features = false, features = [
     "full",
     "reqwest-rustls-tls",
@@ -44,9 +59,13 @@ alloy = { version = "0.8.0", default-features = false, features = [
 brotli = "7.0.0"
 tokio = { version = "1.37.0", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-util = "0.7.13"
+tokio-postgres = { version = "0.7.12", features = [
+    "with-chrono-0_4",
+    "with-uuid-1",
+] }
 serde_json = "1.0.117"
 serde = { version = "1.0.197", features = ["derive"] }
-chrono = "0.4.38"
+chrono = { version = "0.4.38", features = ["serde"] }
 thiserror = "2.0.3"
 reqwest = { version = "0.12.2", default-features = false, features = [
     "json",
@@ -60,7 +79,8 @@ futures = "0.3.30"
 lazy_static = "1.5.0"
 async-trait = "0.1.83"
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 color-eyre = "0.6.3"
 url = { version = "2.5.2", features = ["serde"] }
 sha3 = "0.10.8"
+bincode = "1.3.3"

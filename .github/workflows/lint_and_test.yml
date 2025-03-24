@@ -20,6 +20,7 @@ jobs:
     - name: Setup Rust (nightly)
       uses: dtolnay/rust-toolchain@nightly
       with:
+        toolchain: nightly-2025-03-05
         components: rustfmt, clippy
 
     - name: Cache Rust dependencies
@@ -28,10 +29,10 @@ jobs:
         shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run fmt
-      run: cargo +nightly fmt -- --check
+      run: cargo +nightly-2025-03-05 fmt -- --check
 
     - name: Run clippy
-      run: cargo +nightly clippy --locked -- -W clippy::perfi -D warnings
+      run: cargo +nightly-2025-03-05 clippy --locked --no-deps -- -W clippy::perf -D warnings
 
   build_and_test:
     runs-on: ubuntu-latest
@@ -50,10 +51,9 @@ jobs:
         platforms: linux/amd64
         push: false
         tags: taralli-server:latest
-        # We use a dummy configuration file as we don't need anything useful for testing.
         build-args: |
           PROFILE=ci
-          CONFIG=example_server_config.json
+          CONFIG=config.json
           FEATURES=ci-test
         
     - name: Install Docker Compose
@@ -70,7 +70,7 @@ jobs:
         shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run tests
-      run: cargo test --locked --verbose
+      run: cargo +nightly-2025-03-05 test --locked --verbose
 
     - name: Teardown Docker services
       run: docker-compose -f crates/taralli-server/docker-compose.yml down

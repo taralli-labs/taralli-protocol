@@ -3,5 +3,30 @@ services:
   taralli-auth:
     container_name: taralli-server-bin
     image: taralli-server:latest
+    environment:
+      POSTGRES_URL: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: taralli
+      POSTGRES_DB: taralli-db
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "8080:8080"
+
+  postgres:
+    container_name: taralli-auth
+    image: postgres:17
+    environment:
+      POSTGRES_URL: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: taralli
+      POSTGRES_DB: taralli-db
+      POSTGRES_HOST_AUTH_METHOD: trust #add password later
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U taralli -d taralli-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"

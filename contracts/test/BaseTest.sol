@@ -3,9 +3,11 @@ pragma solidity ^0.8.23;
 
 import "forge-std/Test.sol";
 import "src/UniversalBombetta.sol";
+import "src/UniversalPorchetta.sol";
 import "src/verifiers/SimpleGroth16Verifier.sol";
 import "src/interfaces/IPermit2.sol";
 import "src/libraries/BombettaTypes.sol";
+import "src/libraries/Errors.sol";
 import "./mocks/ERC20Mock.sol";
 
 contract BaseTest is Test {
@@ -13,6 +15,8 @@ contract BaseTest is Test {
     IPermit2 permit2;
     // Bombetta contract(s)
     UniversalBombetta universalBombetta;
+    // Porchetta contract(s)
+    UniversalPorchetta universalPorchetta;
     // verifier contract(s)
     SimpleGroth16Verifier verifierG16;
     // test tokens for rewards
@@ -25,6 +29,7 @@ contract BaseTest is Test {
     address bob = vm.addr(BOB_PK);
 
     bytes32 public BOMBETTA_MARKET_WITNESS_TYPEHASH;
+    bytes32 public PORCHETTA_MARKET_WITNESS_TYPEHASH;
 
     string RPC_ETH_HOLESKY = vm.envString("ETH_HOLESKY_RPC_URL");
     //string LOCAL_RPC = vm.envString("ETH_LOCAL_RPC_URL");
@@ -44,11 +49,20 @@ contract BaseTest is Test {
         // deploy bombetta(s)
         universalBombetta = new UniversalBombetta(permit2);
 
+        // deploy porchetta(s)
+        universalPorchetta = new UniversalPorchetta(permit2);
+
         // set typehash for permit2 signatures
         BOMBETTA_MARKET_WITNESS_TYPEHASH = keccak256(
             abi.encodePacked(
                 universalBombetta.PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB(),
                 universalBombetta.FULL_PROOF_REQUEST_WITNESS_TYPE_STRING_STUB()
+            )
+        );
+        PORCHETTA_MARKET_WITNESS_TYPEHASH = keccak256(
+            abi.encodePacked(
+                universalPorchetta.PERMIT_TRANSFER_FROM_WITNESS_TYPEHASH_STUB(),
+                universalPorchetta.FULL_PROOF_OFFER_WITNESS_TYPE_STRING_STUB()
             )
         );
 
@@ -63,8 +77,11 @@ contract BaseTest is Test {
         // mint proof provider some tokens for stake
         testToken.mint(bob, 100000 ether);
 
-        // max approve permit2 contract on proof requester accounts
+        // max approve permit2 contract on proof requester accounts (for bombetta token transfers)
         vm.prank(alice);
+        testToken.approve(address(permit2), type(uint256).max);
+        // max approve permit2 contract on proof provider accounts (for porchetta token transfers)
+        vm.prank(bob);
         testToken.approve(address(permit2), type(uint256).max);
     }
 
@@ -148,7 +165,7 @@ contract BaseTest is Test {
     {
         // Create permit
         ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
-            permitted: ISignatureTransfer.TokenPermissions({token: request.token, amount: request.maxRewardAmount}),
+            permitted: ISignatureTransfer.TokenPermissions({token: request.rewardToken, amount: request.maxRewardAmount}),
             nonce: request.nonce,
             deadline: request.endAuctionTimestamp
         });
@@ -158,20 +175,54 @@ contract BaseTest is Test {
             signer: request.signer,
             market: request.market,
             nonce: request.nonce,
-            token: request.token,
+            rewardToken: request.rewardToken,
             maxRewardAmount: request.maxRewardAmount,
             minRewardAmount: request.minRewardAmount,
             minimumStake: request.minimumStake,
             startAuctionTimestamp: request.startAuctionTimestamp,
             endAuctionTimestamp: request.endAuctionTimestamp,
             provingTime: request.provingTime,
-            publicInputsCommitment: request.publicInputsCommitment,
+            inputsCommitment: request.inputsCommitment,
             extraData: request.extraData
         });
         bytes32 witness = universalBombetta.computeWitnessHash(proofRequestWitness);
 
         return _getPermitWitnessTransferSignatureForProofMarket(
             address(market), permit, witness, BOMBETTA_MARKET_WITNESS_TYPEHASH, privKey
+        );
+    }
+
+    function _getPorchettaSignature(address market, ProofOffer memory offer, uint256 privKey)
+        public
+        view
+        returns (bytes memory)
+    {
+        // Create permit
+        ISignatureTransfer.PermitTransferFrom memory permit = ISignatureTransfer.PermitTransferFrom({
+            permitted: ISignatureTransfer.TokenPermissions({token: offer.rewardToken, amount: offer.rewardAmount}),
+            nonce: offer.nonce,
+            deadline: offer.endAuctionTimestamp
+        });
+
+        // Create witness
+        ProofOffer memory proofOfferWitness = ProofOffer({
+            signer: offer.signer,
+            market: offer.market,
+            nonce: offer.nonce,
+            rewardToken: offer.rewardToken,
+            rewardAmount: offer.rewardAmount,
+            stakeToken: offer.stakeToken,
+            stakeAmount: offer.stakeAmount,
+            startAuctionTimestamp: offer.startAuctionTimestamp,
+            endAuctionTimestamp: offer.endAuctionTimestamp,
+            provingTime: offer.provingTime,
+            inputsCommitment: offer.inputsCommitment,
+            extraData: offer.extraData
+        });
+        bytes32 witness = universalPorchetta.computeWitnessHash(proofOfferWitness);
+
+        return _getPermitWitnessTransferSignatureForProofMarket(
+            address(market), permit, witness, PORCHETTA_MARKET_WITNESS_TYPEHASH, privKey
         );
     }
 
@@ -215,16 +266,17 @@ contract BaseTest is Test {
 
     function _logProofRequest(string memory note, ProofRequest memory request, bytes memory signature) public {
         emit log_string(note);
+        emit log_named_address("signer", request.signer);
         emit log_named_address("market", request.market);
         emit log_named_uint("nonce", request.nonce);
-        emit log_named_address("token", request.token);
-        emit log_named_uint("amount", request.maxRewardAmount);
-        emit log_named_uint("minReward", request.minRewardAmount);
+        emit log_named_address("rewardToken", request.rewardToken);
+        emit log_named_uint("maxRewardAmount", request.maxRewardAmount);
+        emit log_named_uint("minRewardAmount", request.minRewardAmount);
         emit log_named_uint("minimumStake", request.minimumStake);
         emit log_named_uint("startAuctionTimestamp", request.startAuctionTimestamp);
         emit log_named_uint("endAuctionTimestamp", request.endAuctionTimestamp);
         emit log_named_uint("provingTime", request.provingTime);
-        emit log_named_bytes32("publicInputsCommitment", request.publicInputsCommitment);
+        emit log_named_bytes32("inputsCommitment", request.inputsCommitment);
         emit log_named_bytes("extraData", request.extraData);
         emit log_named_bytes("signature", signature);
     }

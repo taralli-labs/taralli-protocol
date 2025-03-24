@@ -1,91 +1,112 @@
-use crate::abi::universal_bombetta::VerifierDetails;
+//! This module contains the system trait and its implementations.
+
 use crate::error::Result;
-use crate::systems::{
-    aligned_layer::AlignedLayerProofParams, arkworks::ArkworksProofParams, gnark::GnarkProofParams,
-    risc0::Risc0ProofParams, sp1::Sp1ProofParams,
-};
-use alloy::primitives::{Address, FixedBytes, U256};
+use crate::systems::{arkworks::ArkworksProofParams, risc0::Risc0ProofParams, sp1::Sp1ProofParams};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 
-pub mod aligned_layer;
 pub mod arkworks;
-pub mod gnark;
 pub mod risc0;
 pub mod sp1;
 
-/// Mask for the supported proving systems.
+/// Mask for the supported systems.
 /// The bit position of the system in the mask is the same as the bit position of the system in the
-/// `ProvingSystemId` enum.
-/// If we add more than 8 proving systems, we need to change this to u16 or bigger.
-pub type ProvingSystemMask = u8;
+/// `SystemId` enum.
+/// As the number of systems increases, this bit mask must also increase in size corresponding with the
+/// number of systems (e.g. 8 bit -> 128 bit, etc.)
+pub type SystemIdMask = u8;
 
-#[derive(Debug, Default)]
-pub struct VerifierConstraints {
-    pub verifier: Option<Address>,
-    pub selector: Option<FixedBytes<4>>,
-    pub is_sha_commitment: Option<bool>,
-    pub public_inputs_offset: Option<U256>,
-    pub public_inputs_length: Option<U256>,
-    pub has_partial_commitment_result_check: Option<bool>,
-    pub submitted_partial_commitment_result_offset: Option<U256>,
-    pub submitted_partial_commitment_result_length: Option<U256>,
-    pub predetermined_partial_commitment: Option<FixedBytes<32>>,
+/// traits for system configuration
+pub trait SystemConfig: for<'de> Deserialize<'de> + Debug + Clone {}
+
+// system has multiple proving modes
+pub trait MultiModeSystem: SystemConfig {
+    type Mode: Debug + Clone;
+    fn mode(&self) -> &Self::Mode;
 }
 
-pub trait ProofConfiguration: Debug + Send + Sync + 'static {
-    // return pre-determined verifier constraints of the system
-    fn verifier_constraints(&self) -> VerifierConstraints;
-    // validate verification configuration
-    fn validate(&self, verifier_details: &VerifierDetails) -> Result<()>;
+// system can use other systems
+pub trait CompositeSystem: SystemConfig {
+    type UnderlyingSystem: SystemConfig;
+    fn underlying_system(&self) -> &Self::UnderlyingSystem;
 }
 
-pub trait ProvingSystemInformation: Send + Sync + Clone + Serialize + 'static {
-    type Config: ProofConfiguration;
-    fn proof_configuration(&self) -> Self::Config;
-    // Validate the inputs needed for proof generation
+/// inputs can be represented as raw bytes or json
+#[derive(Clone, Debug)]
+pub enum SystemInputs {
+    Bytes(Vec<u8>),
+    Json(serde_json::Value),
+}
+
+// Main trait that all systems implement
+pub trait System: Send + Sync + 'static + Clone + Serialize + for<'de> Deserialize<'de> {
+    type Config: SystemConfig;
+    type Inputs: Debug + Clone;
+
+    fn system_id(&self) -> SystemId;
+    fn config(&self) -> &Self::Config;
+    fn inputs(&self) -> SystemInputs;
     fn validate_inputs(&self) -> Result<()>;
-    // return system id based on information type
-    fn proving_system_id(&self) -> ProvingSystemId;
+    fn system_params(&self) -> Option<&SystemParams> {
+        None
+    }
 }
 
-macro_rules! proving_systems {
-    ($(($variant:ident, $params:ty, $str:literal, $bit:expr)),* $(,)?) => {
-        // Generate ProvingSystemId enum
-        #[allow(non_upper_case_globals)]
-        #[allow(non_snake_case)]
+// Helper macro to count the number of variants
+macro_rules! count {
+    () => (0usize);
+    ($head:tt $(,$tail:tt)*) => (1usize + count!($($tail),*));
+}
+
+// Macro for generating system ID and system param utilities
+macro_rules! systems {
+    (
+        $(
+            $(#[$attr:meta])*
+            ($variant:ident, $str:literal, $params:ty, $bit:expr)
+        ),* $(,)?
+    ) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-        pub enum ProvingSystemId {
-            $($variant),*
+        pub enum SystemId {
+            $(
+                $(#[$attr])*
+                $variant
+            ),*
         }
 
-        // Generate const identifiers and strings
+        // System ID constants and metadata
         #[allow(non_upper_case_globals)]
         #[allow(non_snake_case)]
         pub mod system_id {
-            use super::ProvingSystemId;
+            use super::SystemId;
             $(
-                pub const $variant: ProvingSystemId = ProvingSystemId::$variant;
+                pub const $variant: SystemId = SystemId::$variant;
                 pub mod $variant {
                     pub const NAME: &str = $str;
                 }
             )*
         }
 
-        impl ProvingSystemId {
+        impl SystemId {
             pub fn as_str(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $str),*
                 }
             }
+            pub const fn all() -> [SystemId; {count!($($variant),*)}] {
+                use SystemId::*;
+                [
+                    $($variant),*
+                ]
+            }
 
-            pub fn as_bit(&self) -> ProvingSystemMask {
+            pub fn as_bit(&self) -> SystemIdMask {
                 match self {
                     $(Self::$variant => $bit),*
                 }
             }
 
-            pub fn from_bit(bit: ProvingSystemMask) -> Option<Self> {
+            pub fn from_bit(bit: SystemIdMask) -> Option<Self> {
                 match bit {
                     $($bit => Some(Self::$variant),)*
                     _ => None,
@@ -93,7 +114,9 @@ macro_rules! proving_systems {
             }
         }
 
-        impl TryFrom<&str> for ProvingSystemId {
+        pub const SYSTEMS: [SystemId; {count!($($variant),*)}] = SystemId::all();
+
+        impl TryFrom<&str> for SystemId {
             type Error = String;
 
             fn try_from(s: &str) -> core::result::Result<Self, Self::Error> {
@@ -104,51 +127,34 @@ macro_rules! proving_systems {
             }
         }
 
-        // Generate ProvingSystemParams enum
+        // Main params enum that contains all system configurations
         #[derive(Clone, Debug, Serialize, Deserialize)]
-        pub enum ProvingSystemParams {
+        pub enum SystemParams {
             $(
                 #[serde(rename = $str)]
                 $variant($params),
             )*
         }
 
-        impl ProvingSystemParams {
-            pub fn proving_system_id(&self) -> ProvingSystemId {
-                match self {
-                    $(Self::$variant(_) => ProvingSystemId::$variant,)*
-                }
-            }
-        }
+        impl SystemConfig for SystemParams {}
 
-        #[derive(Clone, Debug)]
-        pub enum ProvingSystemParamsConfig {
-            $(
-                $variant(<$params as ProvingSystemInformation>::Config),
-            )*
-        }
+        impl System for SystemParams {
+            type Config = Self;
+            type Inputs = serde_json::Value;
 
-        impl ProofConfiguration for ProvingSystemParamsConfig {
-            fn verifier_constraints(&self) -> VerifierConstraints {
+            fn system_id(&self) -> SystemId {
                 match self {
-                    $(Self::$variant(config) => config.verifier_constraints()),*
+                    $(Self::$variant(_) => SystemId::$variant),*
                 }
             }
 
-            fn validate(&self, verifier_details: &VerifierDetails) -> Result<()> {
-                match self {
-                    $(Self::$variant(config) => config.validate(verifier_details)),*
-                }
+            fn config(&self) -> &Self::Config {
+                self
             }
-        }
 
-        impl ProvingSystemInformation for ProvingSystemParams {
-            type Config = ProvingSystemParamsConfig;
-
-            fn proof_configuration(&self) -> Self::Config {
+            fn inputs(&self) -> SystemInputs {
                 match self {
-                    $(Self::$variant(params) =>
-                        ProvingSystemParamsConfig::$variant(params.proof_configuration()),)*
+                    $(Self::$variant(params) => params.inputs()),*
                 }
             }
 
@@ -158,21 +164,19 @@ macro_rules! proving_systems {
                 }
             }
 
-            fn proving_system_id(&self) -> ProvingSystemId {
-                match self {
-                    $(Self::$variant(_) => ProvingSystemId::$variant),*
-                }
+            fn system_params(&self) -> Option<&SystemParams> {
+                Some(self)
             }
         }
 
-        impl TryFrom<(&ProvingSystemId, Vec<u8>)> for ProvingSystemParams {
+        impl TryFrom<(&SystemId, Vec<u8>)> for SystemParams {
             type Error = String;
 
-            fn try_from((id, data): (&ProvingSystemId, Vec<u8>)) -> core::result::Result<Self, Self::Error> {
+            fn try_from((id, data): (&SystemId, Vec<u8>)) -> core::result::Result<Self, Self::Error> {
                 match id {
-                    $(ProvingSystemId::$variant => {
+                    $(SystemId::$variant => {
                         serde_json::from_slice::<$params>(&data)
-                            .map(ProvingSystemParams::$variant)
+                            .map(SystemParams::$variant)
                             .map_err(|e| format!("Failed to parse {} params: {}", $str, e))
                     },)*
                 }
@@ -181,10 +185,8 @@ macro_rules! proving_systems {
     }
 }
 
-proving_systems! {
-    (AlignedLayer, AlignedLayerProofParams, "aligned-layer", 0x01),
-    (Arkworks, ArkworksProofParams, "arkworks", 0x02),
-    (Gnark, GnarkProofParams, "gnark", 0x04),
-    (Risc0, Risc0ProofParams, "risc0", 0x08),
-    (Sp1, Sp1ProofParams, "sp1", 0x10),
+systems! {
+    (Arkworks, "arkworks", ArkworksProofParams, 0x01),
+    (Risc0, "risc0", Risc0ProofParams, 0x02),
+    (Sp1, "sp1", Sp1ProofParams, 0x04)
 }

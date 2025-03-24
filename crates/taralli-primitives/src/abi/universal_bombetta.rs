@@ -15,11 +15,13 @@ sol! {
         address verifier;
         bytes4 selector;
         bool isShaCommitment;
-        uint256 publicInputsOffset;
-        uint256 publicInputsLength;
+        uint256 inputsOffset;
+        uint256 inputsLength;
         bool hasPartialCommitmentResultCheck;
         uint256 submittedPartialCommitmentResultOffset;
         uint256 submittedPartialCommitmentResultLength;
         bytes32 predeterminedPartialCommitment;
     }
 }
+
+pub type ProofRequestVerifierDetails = VerifierDetails;

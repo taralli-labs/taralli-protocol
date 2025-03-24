@@ -23,7 +23,7 @@ ARG FEATURES
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --profile $PROFILE --recipe-path recipe.json
 COPY . .
-RUN cargo build --profile $PROFILE --locked --features $FEATURES --package taralli-server
+RUN cargo build --profile $PROFILE --locked --features $FEATURES --bin server
 
 FROM debian:bookworm-slim AS runtime
 ARG CONFIG

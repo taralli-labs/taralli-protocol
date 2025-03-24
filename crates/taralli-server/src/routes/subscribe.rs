@@ -9,14 +9,14 @@ use axum::{
 use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
 use std::sync::Arc;
-use taralli_primitives::systems::ProvingSystemMask;
+use taralli_primitives::systems::SystemIdMask;
 use tokio_stream::wrappers::BroadcastStream;
 
-use crate::app_state::AppState;
+use crate::state::request::RequestState;
 
 #[derive(Debug, Deserialize)]
 pub struct SubscribeArgs {
-    pub subscribed_to: Option<ProvingSystemMask>,
+    pub subscribed_to: Option<SystemIdMask>,
 }
 
 /// WebSocket subscription handler that upgrades the connection to a WebSocket session.
@@ -36,7 +36,7 @@ pub async fn websocket_subscribe_handler<
     P: Provider<T> + Clone + 'static,
 >(
     ws: WebSocketUpgrade,
-    State(app_state): State<AppState<T, P>>,
+    State(app_state): State<RequestState<T, P>>,
     Query(args): Query<SubscribeArgs>,
 ) -> impl IntoResponse {
     ws.on_upgrade(move |socket| {
@@ -55,8 +55,8 @@ pub async fn websocket_subscribe_handler<
 /// - `app_state`: Shared application state, containing the subscription manager.
 async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
-    app_state: Arc<AppState<T, P>>,
-    subscribed_to: Option<ProvingSystemMask>,
+    app_state: Arc<RequestState<T, P>>,
+    subscribed_to: Option<SystemIdMask>,
 ) {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
     let subscription = app_state.subscription_manager().add_subscription();
@@ -78,10 +78,10 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                 match maybe_broadcast {
                     Some(Ok(message)) => {
                         let bytes = message.content;
-                        let message_proving_system_id = message.subscribed_to;
-                        // Check if the message is for the subscribed proving system
-                        // If no proving system is specified, default to 1, client is subscribed to all proving systems.
-                        if message_proving_system_id & subscribed_to.unwrap_or(1) == 0 {
+                        let message_system_id = message.subscribed_to;
+                        // Check if the message is for the subscribed system
+                        // If no system is specified, default to 1, client is subscribed to all systems.
+                        if message_system_id & subscribed_to.unwrap_or(1) == 0 {
                             continue;
                         }
                         // Try sending a binary message to the client
