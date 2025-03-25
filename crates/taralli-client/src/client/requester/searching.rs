@@ -95,7 +95,7 @@ where
 
         // compute resolve deadline timestamp
         let resolve_deadline_ts =
-            offer.proof_offer.endAuctionTimestamp + offer.proof_offer.provingTime as u64;
+            offer.proof_offer.endAuctionTimestamp + u64::from(offer.proof_offer.provingTime);
 
         // analyze the validity and profitability of the offer
         self.analyzer
@@ -114,7 +114,7 @@ where
                 offer.signature,
             )
             .await
-            .map_err(|e| ClientError::TransactionFailure(format!("bid txs failed: {}", e)))?;
+            .map_err(|e| ClientError::TransactionFailure(format!("bid txs failed: {e}")))?;
 
         tracing::info!("bid transaction submitted successfully, tracking resolution of the offer");
 

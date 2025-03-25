@@ -18,6 +18,7 @@ pub struct Sp1LocalProver {
 }
 
 impl Sp1LocalProver {
+    #[must_use]
     pub fn new(use_cuda: bool, proof_mode: SP1ProofMode) -> Self {
         let prover = if use_cuda {
             Sp1LocalProverType::Cuda(ProverClient::builder().cuda().build())

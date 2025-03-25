@@ -16,7 +16,7 @@ use super::{
     BaseValidationConfig, CommonValidationConfig, CommonVerifierConstraints, IntentValidator,
 };
 
-/// Verifier constraints specific to ProofRequest proof commitments withing ComputeRequest intents
+/// Verifier constraints specific to `ProofRequest` proof commitments withing `ComputeRequest` intents
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RequestVerifierConstraints {
     pub verifier: Option<Address>,
@@ -75,6 +75,7 @@ pub struct ComputeRequestValidator {
 }
 
 impl ComputeRequestValidator {
+    #[must_use]
     pub fn new(
         validation_config: RequestValidationConfig,
         verifier_constraints: RequestVerifierConstraints,
@@ -103,7 +104,7 @@ impl<S: System> IntentValidator<ComputeRequest<S>> for ComputeRequestValidator {
     }
 }
 
-/// ComputeRequest specific validation
+/// `ComputeRequest` specific validation
 pub fn validate_request<S: System>(
     request: &ComputeRequest<S>,
     validation_config: &RequestValidationConfig,
@@ -143,7 +144,7 @@ pub fn validate_request_verifier_details(
     // Decode and validate verifier details structure from the intent
     let verifier_details = ProofRequestVerifierDetails::abi_decode(&proof_request.extraData, true)
         .map_err(|e| {
-            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {e}"))
         })?;
 
     // Check each constraint only if it's set
@@ -231,15 +232,15 @@ pub fn validate_request_signature(
     // ec recover signing public key
     let computed_verifying_key = signature
         .recover_from_prehash(&computed_digest)
-        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
+        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {e}")))?;
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    if computed_signer != proof_request.signer {
+    if computed_signer == proof_request.signer {
+        Ok(())
+    } else {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),
         ))
-    } else {
-        Ok(())
     }
 }

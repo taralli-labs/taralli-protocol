@@ -57,7 +57,7 @@ where
                 Some(s) => {
                     return Err((
                         StatusCode::BAD_REQUEST,
-                        format!("Field not recognized on submission {}", s),
+                        format!("Field not recognized on submission {s}"),
                     ));
                 }
                 None => {
@@ -133,7 +133,7 @@ where
                 Some(s) => {
                     return Err((
                         StatusCode::BAD_REQUEST,
-                        format!("Field not recognized on submission {}", s),
+                        format!("Field not recognized on submission {s}"),
                     ));
                 }
                 None => {

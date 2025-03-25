@@ -110,7 +110,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                         tracing::info!("Client sent Close: {:?}", message.take());
                         break;
                     }
-                    Some(Ok(Message::Ping(_)) | Ok(Message::Pong(_))) => {
+                    Some(Ok(Message::Ping(_) | Message::Pong(_))) => {
                         // Received a ping or pong, no need to do anything
                     }
                     Some(Err(e)) => {

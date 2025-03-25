@@ -18,7 +18,7 @@ use crate::error::{ClientError, Result};
 
 use super::{IntentAuctionTracker, IntentResolveTracker};
 
-/// ComputeRequest tracker for both auctions and resolutons
+/// `ComputeRequest` tracker for both auctions and resolutons
 pub struct ComputeRequestTracker<T, P, N> {
     rpc_provider: P,
     market_address: Address,
@@ -84,12 +84,11 @@ where
         })
         .await;
 
-        match result {
-            Ok(event) => Ok(event),
-            Err(_) => {
-                tracing::info!("Auction watching timed out");
-                Ok(None)
-            }
+        if let Ok(event) = result {
+            Ok(event)
+        } else {
+            tracing::info!("Auction watching timed out");
+            Ok(None)
         }
     }
 }
@@ -138,12 +137,11 @@ where
         })
         .await;
 
-        match result {
-            Ok(event) => Ok(event),
-            Err(_) => {
-                tracing::info!("Auction watching timed out");
-                Ok(None)
-            }
+        if let Ok(event) = result {
+            Ok(event)
+        } else {
+            tracing::info!("Auction watching timed out");
+            Ok(None)
         }
     }
 }

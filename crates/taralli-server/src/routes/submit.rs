@@ -12,7 +12,7 @@ use crate::state::request::RequestState;
 use crate::subscription_manager::BroadcastedMessage;
 use crate::validation::{validate_partial_offer, validate_partial_request};
 
-/// submit ComputeRequest
+/// submit `ComputeRequest`
 pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(state): State<RequestState<T, P>>,
     ExtractedRequest {
@@ -51,7 +51,7 @@ pub async fn submit_request_handler<T: Transport + Clone, P: Provider<T> + Clone
     }
 }
 
-/// submit ComputeOffer
+/// submit `ComputeOffer`
 pub async fn submit_offer_handler<T: Transport + Clone, P: Provider<T> + Clone>(
     State(state): State<OfferState<T, P>>,
     ExtractedOffer {

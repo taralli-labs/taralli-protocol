@@ -95,7 +95,7 @@ where
         }
     }
 
-    /// return the RequestBuilder with the added permit2 nonce
+    /// return the `RequestBuilder` with the added permit2 nonce
     pub async fn set_new_nonce(mut self) -> Result<Self> {
         self.nonce = self
             .permit2_nonce_manager
@@ -105,7 +105,7 @@ where
         Ok(self)
     }
 
-    /// return the RequestBuilder with the added auction timestamps based on auction length
+    /// return the `RequestBuilder` with the added auction timestamps based on auction length
     /// and the current latest block timestamp
     pub async fn set_auction_timestamps_from_auction_length(mut self) -> Result<Self> {
         if self.auction_length == 0 {
@@ -133,12 +133,12 @@ where
             .ok_or_else(|| ClientError::RpcRequestError("Latest block not found".to_string()))?;
 
         let start_auction_timestamp = latest_block.header().timestamp();
-        let end_auction_timestamp = start_auction_timestamp + auction_length as u64;
+        let end_auction_timestamp = start_auction_timestamp + u64::from(auction_length);
 
         Ok((start_auction_timestamp, end_auction_timestamp))
     }
 
-    /// return the IntentBuilder with the added auction time parameters
+    /// return the `IntentBuilder` with the added auction time parameters
     pub fn set_time_params(
         mut self,
         start_auction_ts: u64,
@@ -151,7 +151,7 @@ where
         self
     }
 
-    /// return the ProofRequest builder with the added verification commitments
+    /// return the `ProofRequest` builder with the added verification commitments
     pub fn set_verification_commitment_params(
         mut self,
         inputs_commitment: B256,
@@ -168,6 +168,7 @@ where
     }
 
     /// create dummy ECDSA signature
+    #[must_use]
     pub fn create_dummy_signature() -> PrimitiveSignature {
         PrimitiveSignature::try_from(&MOCK_SIGNATURE_BYTES[..])
             .expect("Unreachable: Mock Signature try from failure")

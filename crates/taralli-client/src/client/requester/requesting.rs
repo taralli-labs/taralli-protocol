@@ -21,7 +21,7 @@ use crate::{
 
 use crate::client::BaseClient;
 
-/// Client that submits signed ComputeRequest to the protocol server, tracks their auction status
+/// Client that submits signed `ComputeRequest` to the protocol server, tracks their auction status
 /// and then tracks their resolution status to see if the requested compute workload was fulfilled.
 pub struct RequesterRequestingClient<T, P, N, S>
 where
@@ -77,8 +77,8 @@ where
         let request_id = request.compute_id();
 
         // compute resolve deadline timestamp
-        let resolve_deadline =
-            request.proof_request.endAuctionTimestamp + request.proof_request.provingTime as u64;
+        let resolve_deadline = request.proof_request.endAuctionTimestamp
+            + u64::from(request.proof_request.provingTime);
 
         // setup tracking
         let auction_tracker = self
@@ -111,12 +111,12 @@ where
             let error_message = match serde_json::from_str::<serde_json::Value>(&error_text) {
                 Ok(json) => {
                     if let Some(error) = json.get("error").and_then(|e| e.as_str()) {
-                        format!("Server validation failed: {}", error)
+                        format!("Server validation failed: {error}")
                     } else {
-                        format!("Server returned error: {}", error_text)
+                        format!("Server returned error: {error_text}")
                     }
                 }
-                Err(_) => format!("Server returned error: {}", error_text),
+                Err(_) => format!("Server returned error: {error_text}"),
             };
 
             return Err(ClientError::IntentSubmissionFailed(error_message));

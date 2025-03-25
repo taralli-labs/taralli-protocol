@@ -52,7 +52,7 @@ async fn test_broadcast_single(
             "message": "compute request broadcast to providers",
             "broadcast_receivers": 1
         })
-    )
+    );
 }
 
 #[tokio::test]
@@ -81,7 +81,7 @@ async fn test_broadcast_multiple(requester_fixture: SubmitApiClient) {
             "message": "compute request broadcast to providers",
             "broadcast_receivers": 2
         })
-    )
+    );
 }
 
 #[tokio::test]
@@ -203,7 +203,7 @@ async fn test_broadcast_with_specific_proving_systems(requester_fixture: SubmitA
         let message = subscription_arkworks_risc0
             .next()
             .now_or_never()
-            .unwrap_or_else(|| panic!("Missing request {} from stream", i))
+            .unwrap_or_else(|| panic!("Missing request {i} from stream"))
             .expect("No request received")
             .unwrap();
         if i == 0 {

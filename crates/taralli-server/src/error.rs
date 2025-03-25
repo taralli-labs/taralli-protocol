@@ -42,7 +42,7 @@ impl IntoResponse for ServerError {
         let (status, error_message) = match &self {
             ServerError::ValidationTimeout(secs) => (
                 StatusCode::REQUEST_TIMEOUT,
-                format!("Validation timed out after {} seconds", secs),
+                format!("Validation timed out after {secs} seconds"),
             ),
             ServerError::NoProvidersAvailable() => (
                 StatusCode::SERVICE_UNAVAILABLE,
@@ -51,7 +51,7 @@ impl IntoResponse for ServerError {
             ServerError::ValidationError(s) => (StatusCode::BAD_REQUEST, s.to_owned()),
             ServerError::BroadcastError(s) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Broadcast failed: {}", s),
+                format!("Broadcast failed: {s}"),
             ),
             _ => (
                 StatusCode::INTERNAL_SERVER_ERROR,

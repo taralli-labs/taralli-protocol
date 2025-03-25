@@ -6,7 +6,7 @@ use crate::error::{Result, ServerError};
 #[derive(Clone)]
 /// A wrapper type for the message that is broadcasted to all subscribers.
 /// content: The serialized compute request, with system information being compressed.
-/// subscribed_to: The system id that the compute request is related to. See `systems` macro in primitives.
+/// `subscribed_to`: The system id that the compute request is related to. See `systems` macro in primitives.
 pub struct BroadcastedMessage {
     pub content: Vec<u8>,
     pub subscribed_to: SystemIdMask,
@@ -25,15 +25,18 @@ impl<M> SubscriptionManager<M>
 where
     M: Clone,
 {
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
         Self { sender }
     }
 
+    #[must_use]
     pub fn add_subscription(&self) -> Receiver<M> {
         self.sender.subscribe()
     }
 
+    #[must_use]
     pub fn active_subscriptions(&self) -> usize {
         self.sender.receiver_count()
     }

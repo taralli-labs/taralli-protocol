@@ -15,7 +15,7 @@ use crate::{
     PrimitivesError,
 };
 
-/// Verifier constraints specific to ProofOffer proof commitments within ComputeOffer intents
+/// Verifier constraints specific to `ProofOffer` proof commitments within `ComputeOffer` intents
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OfferVerifierConstraints {
     pub verifier: Option<Address>,
@@ -71,6 +71,7 @@ pub struct ComputeOfferValidator {
 }
 
 impl ComputeOfferValidator {
+    #[must_use]
     pub fn new(
         validation_config: OfferValidationConfig,
         verifier_constraints: OfferVerifierConstraints,
@@ -99,7 +100,7 @@ impl<S: System> IntentValidator<ComputeOffer<S>> for ComputeOfferValidator {
     }
 }
 
-/// ComputeOffer specific validation
+/// `ComputeOffer` specific validation
 pub fn validate_offer<S: System>(
     offer: &ComputeOffer<S>,
     config: &OfferValidationConfig,
@@ -141,7 +142,7 @@ pub fn validate_offer_verifier_details(
     // Decode and validate verifier details structure from the intent
     let verifier_details = ProofOfferVerifierDetails::abi_decode(&proof_offer.extraData, true)
         .map_err(|e| {
-            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {}", e))
+            PrimitivesError::ValidationError(format!("failed to decode VerifierDetails: {e}"))
         })?;
 
     // Check each constraint only if it's set
@@ -197,15 +198,15 @@ pub fn validate_offer_signature(
     // ec recover signing public key
     let computed_verifying_key = signature
         .recover_from_prehash(&computed_digest)
-        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {}", e)))?;
+        .map_err(|e| PrimitivesError::ValidationError(format!("ec recover failed: {e}")))?;
     let computed_signer = Address::from_public_key(&computed_verifying_key);
 
     // check signature validity
-    if computed_signer != proof_offer.signer {
+    if computed_signer == proof_offer.signer {
+        Ok(())
+    } else {
         Err(PrimitivesError::ValidationError(
             "signature invalid: computed signer != request.signer".to_string(),
         ))
-    } else {
-        Ok(())
     }
 }

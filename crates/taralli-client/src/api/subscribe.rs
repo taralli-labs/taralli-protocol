@@ -25,7 +25,7 @@ use crate::error::{ClientError, Result};
 pub type ComputeRequestStream =
     Pin<Box<dyn Stream<Item = Result<ComputeRequest<SystemParams>>> + Send>>;
 
-/// Subscribe over websocket stream to broadcasts as new ComputeRequest's are submitted to
+/// Subscribe over websocket stream to broadcasts as new `ComputeRequest`'s are submitted to
 /// the protocol server
 pub struct SubscribeApiClient {
     server_url: Url,
@@ -34,6 +34,7 @@ pub struct SubscribeApiClient {
 }
 
 impl SubscribeApiClient {
+    #[must_use]
     pub fn new(server_url: Url, subscribe_to: SystemIdMask) -> Self {
         let mut api_key = String::new();
         if Environment::from_env_var() == Environment::Production {
@@ -86,7 +87,7 @@ impl SubscribeApiClient {
                                 Ok(rc) => rc,
                                 Err(e) => {
                                     let err = Err(ClientError::IntentParsingError(
-                                        format!("Failed to deserialize WebSocket data: {:?}", e)
+                                        format!("Failed to deserialize WebSocket data: {e:?}")
                                     ));
                                     // Yield an error item but continue the stream
                                     return Some((err, (listener, shutdown_receiver)));
@@ -173,7 +174,7 @@ impl SubscribeApiClient {
             "https" => "wss",
             other => other,
         };
-        url.set_scheme(new_scheme).map_err(|_| {
+        url.set_scheme(new_scheme).map_err(|()| {
             ClientError::ServerSubscriptionError("Invalid WebSocket scheme".to_string())
         })?;
 
@@ -285,7 +286,7 @@ impl SubscribeApiClient {
     }
 }
 
-/// Wrapper around the ComputeRequestStream type.
+/// Wrapper around the `ComputeRequestStream` type.
 /// The intent here is to implement a custom `Drop` so we can set the closing of WebSocket conns.
 pub struct CleanupStream {
     inner: ComputeRequestStream,

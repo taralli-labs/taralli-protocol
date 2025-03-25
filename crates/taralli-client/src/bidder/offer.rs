@@ -12,7 +12,7 @@ use taralli_primitives::alloy::transports::Transport;
 
 use super::IntentBidder;
 
-/// Bid on a ComputeOffer
+/// Bid on a `ComputeOffer`
 #[derive(Clone)]
 pub struct ComputeOfferBidder<T, P, N> {
     rpc_provider: P,

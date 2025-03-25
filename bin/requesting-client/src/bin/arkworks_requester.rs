@@ -173,7 +173,7 @@ async fn main() -> Result<()> {
 
     // submit and track ComputeRequest
     requester
-        .submit_and_track(signed_request, auction_length as u64)
+        .submit_and_track(signed_request, u64::from(auction_length))
         .await?;
     Ok(())
 }

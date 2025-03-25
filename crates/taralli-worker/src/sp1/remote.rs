@@ -17,6 +17,7 @@ pub struct Sp1RemoteProver {
 }
 
 impl Sp1RemoteProver {
+    #[must_use]
     pub fn new(
         private_key: &str,
         rpc_url: &str,

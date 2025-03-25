@@ -15,7 +15,7 @@ use crate::error::Result;
 
 use super::IntentAnalyzer;
 
-/// Analyzes a ComputeOffer's validity and profitability
+/// Analyzes a `ComputeOffer`'s validity and profitability
 pub struct ComputeOfferAnalyzer<T, P, N>
 where
     T: Transport + Clone + Send + Sync,

@@ -19,6 +19,7 @@ pub struct SubmitApiClient {
 }
 
 impl SubmitApiClient {
+    #[must_use]
     pub fn new(server_url: Url) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));

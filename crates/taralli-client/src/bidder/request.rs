@@ -14,7 +14,7 @@ use tokio::time::{sleep, Duration};
 
 use super::IntentBidder;
 
-/// Bid on a ComputeRequest
+/// Bid on a `ComputeRequest`
 #[derive(Clone)]
 pub struct ComputeRequestBidder<T, P, N> {
     rpc_provider: P,
@@ -191,6 +191,6 @@ fn calculate_target_timestamp(
 
     // Convert U256 back to u64
     target_timestamp.try_into().map_err(|e| {
-        ClientError::TransactionSetupError(format!("Failed to convert target timestamp: {}", e))
+        ClientError::TransactionSetupError(format!("Failed to convert target timestamp: {e}"))
     })
 }

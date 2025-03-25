@@ -15,6 +15,7 @@ lazy_static! {
         keccak256(TOKEN_PERMISSIONS_TYPE_STRING.as_bytes());
 }
 
+#[must_use]
 pub fn hash_typed_data(domain_separator: B256, data_hash: B256) -> B256 {
     let final_hash_preimage = [
         "\x19\x01".abi_encode_packed(),

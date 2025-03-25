@@ -27,6 +27,8 @@ jobs:
       uses: Swatinem/rust-cache@v2
       with:
         shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        cache-directories: "**/target"
+        cache-on-failure: true
 
     - name: Run fmt
       run: cargo +nightly-2025-03-05 fmt -- --check
@@ -67,7 +69,9 @@ jobs:
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
-        shared-key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        shared-key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+        cache-directories: "**/target"
+        cache-on-failure: true
 
     - name: Run tests
       run: cargo +nightly-2025-03-05 test --locked --verbose

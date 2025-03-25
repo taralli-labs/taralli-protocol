@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
     let base_state = BaseState::new(
         rpc_provider.clone(),
         config.markets,
-        Duration::from_secs(config.validation_timeout_seconds as u64),
+        Duration::from_secs(u64::from(config.validation_timeout_seconds)),
         validation_configs,
     );
     let request_state = RequestState::new(base_state.clone(), subscription_manager);

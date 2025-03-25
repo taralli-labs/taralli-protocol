@@ -88,25 +88,25 @@ macro_rules! systems {
         }
 
         impl SystemId {
-            pub fn as_str(&self) -> &'static str {
+            #[must_use] pub fn as_str(&self) -> &'static str {
                 match self {
                     $(Self::$variant => $str),*
                 }
             }
-            pub const fn all() -> [SystemId; {count!($($variant),*)}] {
+            #[must_use] pub const fn all() -> [SystemId; {count!($($variant),*)}] {
                 use SystemId::*;
                 [
                     $($variant),*
                 ]
             }
 
-            pub fn as_bit(&self) -> SystemIdMask {
+            #[must_use] pub fn as_bit(&self) -> SystemIdMask {
                 match self {
                     $(Self::$variant => $bit),*
                 }
             }
 
-            pub fn from_bit(bit: SystemIdMask) -> Option<Self> {
+            #[must_use] pub fn from_bit(bit: SystemIdMask) -> Option<Self> {
                 match bit {
                     $($bit => Some(Self::$variant),)*
                     _ => None,

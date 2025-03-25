@@ -15,7 +15,7 @@ services:
       - "8080:8080"
 
   postgres:
-    container_name: taralli-auth
+    container_name: taralli-auth-db
     image: postgres:17
     environment:
       POSTGRES_URL: localhost

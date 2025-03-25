@@ -87,7 +87,7 @@ where
 
         // compute resolve deadline timestamp
         let _resolve_deadline =
-            offer.proof_offer.endAuctionTimestamp + offer.proof_offer.provingTime as u64;
+            offer.proof_offer.endAuctionTimestamp + u64::from(offer.proof_offer.provingTime);
 
         // setup tracking
         let auction_tracker = self
@@ -110,7 +110,7 @@ where
         if !response.status().is_success() {
             // Parse the error response
             let error_body = response.json::<serde_json::Value>().await.map_err(|e| {
-                ClientError::ServerRequestError(format!("Failed to parse error response: {}", e))
+                ClientError::ServerRequestError(format!("Failed to parse error response: {e}"))
             })?;
 
             return Err(ClientError::IntentSubmissionFailed(format!(
@@ -141,7 +141,7 @@ where
         self.resolver
             .resolve_intent(offer_id, work_result.opaque_submission)
             .await
-            .map_err(|e| ClientError::TransactionFailure(format!("resolver failed: {}", e)))?;
+            .map_err(|e| ClientError::TransactionFailure(format!("resolver failed: {e}")))?;
 
         tracing::info!("Compute offer resolved");
         Ok(())
