@@ -1,5 +1,4 @@
 # justfile
-set dotenv-path := "./contracts/.env"
 
 # Fixes the formatting of the workspace
 fmt-fix:

@@ -8,15 +8,18 @@ Taralli protocol is a verifiable compute marketplace built on top of ethereum. T
 
 **`smart contracts`**
 
-- [Bombetta](./contracts/src/Bombetta.sol): The generic standard for bombetta marketplace contracts to implement.
+- [Bombetta](./contracts/src/abstract/Bombetta.sol): The generic standard for bombetta marketplace contracts to implement.
+- [Porchetta](./contracts/src/abstract/Porchetta.sol): The generic standard for porchetta marketplace contracts to implement.
 - [UniversalBombetta](./contracts/src/UniversalBombetta.sol): Implementation of the bombetta marketplace standard.
+- [UniversalPorchetta](./contracts/src/UniversalPorchetta.sol): Implementation of the porchetta marketplace standard.
 
 **`protocol crates`**
 
-- [primitives](./crates/taralli-primitives/): defines shared types and functionality that is used throughout the protocol (system definitions, system IDs, common utility functions, etc).
-- [protocol server](./crates/taralli-server/): rust axum api server that facilitates the communication of requests/offers for/of compute between protocol clients.
-- [requester client](./crates/taralli-requester/): rust program for creating, submitting and tracking requests.
-- [provider client](./crates/taralli-provider/): rust program for monitoring incoming requests from the protocol server, selecting requests, processing requests, and resolving requests.
+- [primitives](./crates/taralli-primitives/): shared types and functionality that is used throughout the protocol (system definitions, system IDs, common utility functions, etc).
+- [server](./crates/taralli-server/): axum api server that facilitates the communication of compute intents between protocol clients.
+- [client](./crates/taralli-client/): library to compose protocol clients together from their sub-components.
+- [worker](./crates/taralli-worker/): library containing compute worker implementations for use in clients providing/offering compute.
+- [binaries](./bin/): existing server binary as well as client binaries.
 
 ### Roadmap
 
@@ -39,27 +42,30 @@ RPC_URL= required for server and clients
 REQUESTER_PRIVATE_KEY= required for clients
 PROVIDER_PRIVATE_KEY= required for clients
 RISC0_PROVER=prove
-BONSAI_API_URL=https://api.bonsai.xyz/
+BONSAI_API_URL= required for using risc0 bonsai api
 BONSAI_API_KEY= required for using risc0 bonsai api
+SUCCINCT_PRIVATE_KEY= required for using succint network
+SUCCINT_RPC_URL= required for using succint network
 ENV= equivalent to the API_KEY, otherwise, default to DEVELOPMENT
 ```
 contracts/ .env
 ```
 ETH_MAINNET_RPC_URL=
-ETH_HOLESKY_RPC_URL= works with existing deploy script
+ETH_SEPOLIA_RPC_URL=
 ETH_LOCAL_RPC_URL=
-TESTNET_PRIVATE_KEY=
 LOCAL_PRIVATE_KEY=
+REQUESTER_PRIVATE_KEY=
+PROVIDER_PRIVATE_KEY=
 ```
 
 NOTE: 
-If you want to get the whole protocol running locally excluding the contracts/chain, the quickest/easiest way is to use holesky RPCs + the existing holesky deployment addresses [here](./contracts/deployments.json) or redeploy your own version of the contracts to holesky using existing forge script.
+If you want to get the whole protocol running locally excluding the contracts/chain, the quickest/easiest way is to use sepolia RPCs + the existing sepolia deployment addresses [here](./contracts/deployments/sepolia_deployments.json) or redeploy your own version of the contracts to sepolia using existing forge script.
 
-You can also create a local anvil fork of the holesky network and that works too.
+You can also create a local anvil fork of the sepolia network and that works too.
 
 ### server config
 
-an example server config can be found [here](./example_server_config.json). The preexisting systems the server uses are defined by the `proving_system_ids` field.
+the existing server config can be found [here](./config.json). The preexisting systems the server uses are defined by the `supported_systems` field in the base validation config.
 
 ### Build
 

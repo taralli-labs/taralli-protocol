@@ -6,8 +6,8 @@ use axum::{
 };
 use taralli_primitives::compression_utils::intents::{PartialComputeOffer, PartialComputeRequest};
 
-/// A custom extracted type that contains both all Request data of `Request<I: ProvingSystemInformation>`.
-/// Although we use a vector of bytes to reprent the compressed proving system.
+/// A custom extracted type that contains both all ComputeRequest data of `ComputeRequest<S: System>`.
+/// Although we use a vector of bytes to represent the compressed system.
 pub struct ExtractedRequest {
     pub partial_request: PartialComputeRequest,
     pub system_bytes: Vec<u8>,
@@ -84,6 +84,8 @@ where
     }
 }
 
+/// A custom extracted type that contains both all ComputeOffer data of `ComputeOffer<S: System>`.
+/// Although we use a vector of bytes to represent the compressed system.
 pub struct ExtractedOffer {
     pub partial_offer: PartialComputeOffer,
     pub system_bytes: Vec<u8>,
