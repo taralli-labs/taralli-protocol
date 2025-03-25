@@ -8,7 +8,7 @@ use axum::{
 use color_eyre::{eyre::Context, Result};
 use dotenv::dotenv;
 use serde_json::json;
-use std::{str::FromStr, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
 use taralli_primitives::env::Environment;
 use taralli_server::{
     config::Config,
@@ -75,7 +75,7 @@ async fn main() -> Result<()> {
         Duration::from_secs(u64::from(config.validation_timeout_seconds)),
         validation_configs,
     );
-    let request_state = RequestState::new(base_state.clone(), subscription_manager);
+    let request_state = RequestState::new(base_state.clone(), Arc::new(subscription_manager));
     let offer_state = OfferState::new(base_state, intent_db);
 
     tracing::info!("Setting up routers");

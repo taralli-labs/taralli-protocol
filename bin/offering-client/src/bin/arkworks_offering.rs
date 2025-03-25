@@ -43,12 +43,14 @@ async fn main() -> Result<()> {
     let priv_key = &env::var("PROVIDER_PRIVATE_KEY")?; // private key
 
     // system workload data
-    let r1cs_data_path = Path::new("./contracts/test-proof-data/groth16/multiplier2.r1cs");
+    let r1cs_data_path =
+        Path::new("./contracts/test-proof-data/groth16/multiplier/multiplier2.r1cs");
     let proof_inputs_file =
-        File::open("./contracts/test-proof-data/groth16/multiplier2_js/input.json")?;
-    let proof_public_inputs_file = File::open("./contracts/test-proof-data/groth16/public.json")?;
+        File::open("./contracts/test-proof-data/groth16/multiplier/multiplier2_js/input.json")?;
+    let proof_public_inputs_file =
+        File::open("./contracts/test-proof-data/groth16/multiplier/public.json")?;
     let wasm_path =
-        Path::new("./contracts/test-proof-data/groth16/multiplier2_js/multiplier2.wasm");
+        Path::new("./contracts/test-proof-data/groth16/multiplier/multiplier2_js/multiplier2.wasm");
     let public_inputs_reader = BufReader::new(proof_public_inputs_file);
     let inputs_reader = BufReader::new(proof_inputs_file);
 

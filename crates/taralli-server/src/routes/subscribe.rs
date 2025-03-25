@@ -1,3 +1,5 @@
+use crate::error::ServerError;
+use alloy::{providers::Provider, transports::Transport};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -9,7 +11,7 @@ use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
 use std::sync::Arc;
 use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::systems::SystemIdMask;
+use taralli_primitives::systems::{SystemIdMask, ALL_PROVING_SYSTEMS};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::state::request::RequestState;
@@ -39,9 +41,23 @@ pub async fn websocket_subscribe_handler<
     State(app_state): State<RequestState<T, P>>,
     Query(args): Query<SubscribeArgs>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| {
-        websocket_subscribe(socket, Arc::new(app_state), args.subscribed_to)
-    })
+    // We check for proving system ids that are not valid/matching with our current, so we don't spend resources needlessly.
+    // Otherwise, we'd keep the connection open but, below, we'd never send any messages.
+    // Also we need to fail before the upgrade, otherwise the client would see a success on connecting to the websocket.
+    if args
+        .subscribed_to
+        .is_some_and(|subscribed_to| subscribed_to > *ALL_PROVING_SYSTEMS)
+    {
+        return Err(ServerError::SystemIdError(
+            args.subscribed_to.unwrap().to_string(),
+        ));
+    }
+
+    Ok(ws.on_upgrade(move |socket| async move {
+        if let Err(e) = websocket_subscribe(socket, Arc::new(app_state), args.subscribed_to).await {
+            tracing::error!("Failed to subscribe websocket: {:?}", e);
+        }
+    }))
 }
 
 /// Handles an active WebSocket session, streaming messages from the subscription system.
@@ -57,7 +73,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
     app_state: Arc<RequestState<T, P>>,
     subscribed_to: Option<SystemIdMask>,
-) {
+) -> Result<(), ServerError> {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
     let subscription = app_state.subscription_manager().add_subscription();
     tracing::info!(
@@ -78,10 +94,10 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                 match maybe_broadcast {
                     Some(Ok(message)) => {
                         let bytes = message.content;
-                        let message_system_id = message.subscribed_to;
-                        // Check if the message is for the subscribed system
-                        // If no system is specified, default to 1, client is subscribed to all systems.
-                        if message_system_id & subscribed_to.unwrap_or(1) == 0 {
+                        let message_system_id: SystemIdMask = message.subscribed_to;
+                        // Check if the message is for any of the subscribed systems
+                        // If no system is specified upon subscription, client is subscribed to all systems.
+                        if message_system_id & subscribed_to.unwrap_or(*ALL_PROVING_SYSTEMS) == 0 {
                             continue;
                         }
                         // Try sending a binary message to the client
@@ -92,7 +108,9 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                     }
                     Some(Err(e)) => {
                         tracing::error!("Broadcast stream error: {:?}", e);
-                        break;
+                        // We don't break here, since stream errors from `tokyo::sync::broadcast` include returning errors if you're lagging behind.
+                        // Which should not be fatal. If the configured queue for the broadcast is big enough, this will just be sent on the next iteration.
+                        // Otherwise, it won't be sent at all. But still not a reason to break the connection.
                     }
                     None => {
                         // The broadcast_stream ended (channel closed, etc.)
@@ -129,4 +147,5 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
             }
         }
     }
+    Ok(())
 }

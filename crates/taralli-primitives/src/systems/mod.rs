@@ -4,6 +4,7 @@ use crate::error::Result;
 use crate::systems::{arkworks::ArkworksProofParams, risc0::Risc0ProofParams, sp1::Sp1ProofParams};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::sync::LazyLock;
 
 pub mod arkworks;
 pub mod risc0;
@@ -190,3 +191,6 @@ systems! {
     (Risc0, "risc0", Risc0ProofParams, 0x02),
     (Sp1, "sp1", Sp1ProofParams, 0x04)
 }
+
+pub static ALL_PROVING_SYSTEMS: LazyLock<SystemIdMask> =
+    LazyLock::new(|| SystemId::all().iter().fold(0, |acc, id| acc | id.as_bit()));

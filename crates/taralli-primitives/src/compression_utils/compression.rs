@@ -19,7 +19,10 @@ use crate::{
 /// via the environment variables.
 /// Furthermore, we chose to instantiate a new compressor for each intent
 /// if the need to submit multiple intent concurrently arises.
-pub fn compress_brotli(payload: String) -> Result<Vec<u8>> {
+pub fn compress_brotli<T>(payload: &T) -> Result<Vec<u8>>
+where
+    T: AsRef<[u8]>,
+{
     // We opt for some default values that may be reasonable for the general use case.
     let mut brotli_encoder = brotli::CompressorWriter::new(
         Vec::new(),
@@ -37,7 +40,7 @@ pub fn compress_brotli(payload: String) -> Result<Vec<u8>> {
             .unwrap_or(24),
     );
     brotli_encoder
-        .write_all(payload.as_bytes())
+        .write_all(payload.as_ref())
         .map_err(|e| PrimitivesError::CompressionError(e.to_string()))?;
     Ok(brotli_encoder.into_inner())
 }

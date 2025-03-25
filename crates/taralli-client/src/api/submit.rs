@@ -56,9 +56,9 @@ impl SubmitApiClient {
         let partial_intent_part = Part::text(partial_intent_string);
         let partial_intent_field_name = format!("partial_{}", intent.type_string());
 
-        let compression_string = serde_json::to_string(&intent.system())
+        let system_as_bytes = serde_json::to_vec(&intent.system())
             .map_err(|e| ClientError::IntentSubmissionFailed(e.to_string()))?;
-        let compressed = compress_brotli(compression_string)?;
+        let compressed = compress_brotli(&system_as_bytes)?;
         let compressed_part = Part::bytes(compressed);
 
         let form = Form::new()
