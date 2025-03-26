@@ -2,16 +2,16 @@ pub mod local; // local sp1 prover
 pub mod remote; // succint network sp1 prover
 
 use crate::error::{Result, WorkerError};
-use alloy::{
-    dyn_abi::DynSolValue,
-    primitives::{Bytes, FixedBytes},
-};
 use async_trait::async_trait;
 use sp1_sdk::{HashableKey, SP1ProofWithPublicValues, SP1VerifyingKey};
 use std::str::FromStr;
 use taralli_client::{
     error::ClientError,
     worker::{ComputeWorker, WorkResult},
+};
+use taralli_primitives::alloy::{
+    dyn_abi::DynSolValue,
+    primitives::{Bytes, FixedBytes},
 };
 use taralli_primitives::{
     intents::ComputeIntent,

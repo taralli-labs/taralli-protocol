@@ -1,7 +1,7 @@
-use alloy::primitives::{Address, U256};
 use serde::Deserialize;
 use std::fs;
 use std::str::FromStr;
+use taralli_primitives::alloy::primitives::{Address, U256};
 use taralli_primitives::validation::offer::OfferValidationConfig;
 use taralli_primitives::validation::request::RequestValidationConfig;
 use taralli_primitives::validation::BaseValidationConfig;

@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use alloy::network::Network;
-use alloy::primitives::{Address, Bytes, FixedBytes, B256};
 use async_trait::async_trait;
 use taralli_primitives::abi::universal_bombetta::UniversalBombetta::UniversalBombettaInstance;
+use taralli_primitives::alloy::network::Network;
+use taralli_primitives::alloy::primitives::{Address, Bytes, FixedBytes, B256};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;
 use taralli_primitives::intents::request::ComputeRequest;

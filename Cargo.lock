@@ -8940,7 +8940,6 @@ dependencies = [
 name = "taralli-client"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "anyhow",
  "async-trait",
  "bincode",
@@ -9171,7 +9170,6 @@ dependencies = [
 name = "taralli-server"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "async-stream",
  "async-trait",
  "axum",
@@ -9248,7 +9246,6 @@ name = "taralli-worker"
 version = "0.1.0"
 dependencies = [
  "aligned-sdk",
- "alloy",
  "anyhow",
  "ark-bn254 0.5.0",
  "ark-circom",

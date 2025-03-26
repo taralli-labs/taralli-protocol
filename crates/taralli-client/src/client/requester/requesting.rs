@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use alloy::primitives::Address;
-use alloy::signers::Signer;
-use alloy::{network::Network, providers::Provider, transports::Transport};
+use taralli_primitives::alloy::primitives::Address;
+use taralli_primitives::alloy::signers::Signer;
+use taralli_primitives::alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::request::ComputeRequest;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};

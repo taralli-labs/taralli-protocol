@@ -14,7 +14,7 @@ pub mod alloy {
     pub mod network {
         pub use alloy::network::{
             primitives::{BlockResponse, BlockTransactionsKind, HeaderResponse},
-            Ethereum, EthereumWallet, Network,
+            Ethereum, EthereumWallet, Network, ReceiptResponse,
         };
     }
 
@@ -36,7 +36,7 @@ pub mod alloy {
     }
 
     pub mod eips {
-        pub use alloy::eips::{BlockId, BlockNumberOrTag::Latest};
+        pub use alloy::eips::{BlockId, BlockNumberOrTag};
     }
 
     pub mod utils {
@@ -44,11 +44,15 @@ pub mod alloy {
     }
 
     pub mod dyn_abi {
-        pub use alloy::dyn_abi;
+        pub use alloy::dyn_abi::DynSolValue;
+    }
+
+    pub mod sol_types {
+        pub use alloy::sol_types::SolValue;
     }
 
     pub mod signers {
-        pub use alloy::signers::Signer;
+        pub use alloy::signers::{local, Signer};
     }
 }
 

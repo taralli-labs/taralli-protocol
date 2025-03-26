@@ -1,11 +1,11 @@
 use std::{path::Path, str::FromStr};
 
-use alloy::{
-    primitives::{address, Address, FixedBytes, PrimitiveSignature, Uint, U256},
+use rstest::*;
+use taralli_primitives::alloy::{
+    primitives::{address, Address, FixedBytes, PrimitiveSignature, U256},
     signers::{local::PrivateKeySigner, Signer},
     sol_types::SolValue,
 };
-use rstest::*;
 
 use taralli_client::api::{submit::SubmitApiClient, subscribe::SubscribeApiClient};
 use taralli_primitives::{
@@ -69,8 +69,8 @@ pub async fn request_fixture() -> ComputeRequest<SystemParams> {
         proof_request: ProofRequest {
             signer: address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
             market: SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
-            nonce: Uint::from(0u64),
-            rewardToken: Address::random(),
+            nonce: U256::from(0u64),
+            rewardToken: Address::ZERO,
             maxRewardAmount: U256::from(0),
             minRewardAmount: U256::from(0),
             minimumStake: 0,

@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
 
-use alloy::{network::Network, primitives::Address, providers::Provider, transports::Transport};
 use async_trait::async_trait;
+use taralli_primitives::alloy::{
+    network::Network, primitives::Address, providers::Provider, transports::Transport,
+};
 use taralli_primitives::{
     intents::offer::ComputeOffer,
     systems::SystemParams,

@@ -16,7 +16,7 @@ use taralli_primitives::systems::arkworks::ArkworksProofParams;
 use taralli_primitives::systems::System;
 use taralli_primitives::{
     alloy::{
-        dyn_abi::dyn_abi::DynSolValue,
+        dyn_abi::DynSolValue,
         primitives::{Bytes, FixedBytes, U256},
     },
     systems::SystemParams,

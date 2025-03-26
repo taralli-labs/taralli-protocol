@@ -1,16 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
-use alloy::{
+use futures_util::StreamExt;
+use taralli_primitives::alloy::{
     consensus::BlockHeader,
     eips::{BlockId, BlockNumberOrTag::Latest},
-    network::{BlockResponse, Network},
+    network::{BlockResponse, BlockTransactionsKind, Network},
     primitives::{Address, FixedBytes},
     providers::Provider,
-    rpc::types::BlockTransactionsKind,
     signers::Signer,
     transports::Transport,
 };
-use futures_util::StreamExt;
 use taralli_primitives::{
     intents::{request::ComputeRequest, ComputeIntent},
     systems::{SystemId, SystemParams},

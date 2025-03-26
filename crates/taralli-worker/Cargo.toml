@@ -5,8 +5,7 @@ edition = "2021"
 
 [dependencies]
 taralli-primitives = { workspace = true }
-taralli-client = { path = "../taralli-client" }
-alloy = { workspace = true }
+taralli-client = { workspace = true }
 async-compression = "0.4.18"
 chrono = { workspace = true }
 serde = { workspace = true }

@@ -1,13 +1,13 @@
-use alloy::{
+use async_trait::async_trait;
+use futures_util::StreamExt;
+use std::marker::PhantomData;
+use std::time::Duration;
+use taralli_primitives::alloy::{
     network::Network,
     primitives::{Address, B256},
     providers::Provider,
     transports::Transport,
 };
-use async_trait::async_trait;
-use futures_util::StreamExt;
-use std::marker::PhantomData;
-use std::time::Duration;
 use taralli_primitives::{
     abi::universal_porchetta::UniversalPorchetta::{self, UniversalPorchettaInstance},
     intents::offer::ComputeOffer,

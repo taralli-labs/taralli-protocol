@@ -1,5 +1,5 @@
-use alloy::primitives::Address;
 use async_trait::async_trait;
+use taralli_primitives::alloy::primitives::Address;
 use taralli_primitives::{
     intents::{offer::ComputeOffer, ComputeIntent},
     systems::{SystemId, SystemParams},

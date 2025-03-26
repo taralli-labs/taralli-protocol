@@ -1,8 +1,8 @@
-use alloy::primitives::Address;
-use alloy::signers::Signer;
-use alloy::{network::Network, providers::Provider, transports::Transport};
 use std::sync::Arc;
 use std::time::Duration;
+use taralli_primitives::alloy::primitives::Address;
+use taralli_primitives::alloy::signers::Signer;
+use taralli_primitives::alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::offer::ComputeOffer;
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::{SystemId, SystemParams};
