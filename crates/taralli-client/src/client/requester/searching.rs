@@ -1,13 +1,12 @@
 use std::time::Duration;
 
-use alloy::consensus::BlockHeader;
-use alloy::eips::BlockId;
-use alloy::eips::BlockNumberOrTag::Latest;
-use alloy::network::BlockResponse;
-use alloy::primitives::Address;
-use alloy::rpc::types::BlockTransactionsKind;
-use alloy::signers::Signer;
-use alloy::{network::Network, providers::Provider, transports::Transport};
+use taralli_primitives::alloy::consensus::BlockHeader;
+use taralli_primitives::alloy::eips::BlockId;
+use taralli_primitives::alloy::eips::BlockNumberOrTag::Latest;
+use taralli_primitives::alloy::network::{BlockResponse, BlockTransactionsKind};
+use taralli_primitives::alloy::primitives::Address;
+use taralli_primitives::alloy::signers::Signer;
+use taralli_primitives::alloy::{network::Network, providers::Provider, transports::Transport};
 use taralli_primitives::intents::ComputeIntent;
 use taralli_primitives::systems::SystemId;
 use taralli_primitives::validation::offer::OfferValidationConfig;

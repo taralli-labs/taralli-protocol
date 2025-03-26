@@ -9,7 +9,7 @@ use taralli_primitives::systems::risc0::Risc0ProofParams;
 
 use crate::error::{Result, WorkerError};
 use taralli_client::worker::{ComputeWorker, WorkResult};
-use taralli_primitives::alloy::dyn_abi::dyn_abi::DynSolValue;
+use taralli_primitives::alloy::dyn_abi::DynSolValue;
 use taralli_primitives::alloy::primitives::{Bytes, FixedBytes};
 use taralli_primitives::systems::{System, SystemParams};
 

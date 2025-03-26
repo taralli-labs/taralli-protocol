@@ -1,11 +1,11 @@
 use crate::error::{ClientError, Result};
-use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 use taralli_primitives::abi::universal_porchetta::UniversalPorchetta::{
     ProofOffer, UniversalPorchettaInstance,
 };
 use taralli_primitives::alloy::network::Network;
+use taralli_primitives::alloy::primitives::FixedBytes;
 use taralli_primitives::alloy::primitives::{Address, Bytes, PrimitiveSignature};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;

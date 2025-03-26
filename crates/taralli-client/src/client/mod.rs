@@ -1,7 +1,7 @@
 //! This module contains the various client configurations
 
-use alloy::primitives::Address;
 use std::marker::PhantomData;
+use taralli_primitives::alloy::primitives::Address;
 
 pub mod provider;
 pub mod requester;

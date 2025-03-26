@@ -1,7 +1,7 @@
 use crate::error::Result;
-use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use taralli_primitives::alloy::network::Network;
+use taralli_primitives::alloy::primitives::FixedBytes;
 use taralli_primitives::alloy::primitives::PrimitiveSignature;
 
 pub mod offer;

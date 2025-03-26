@@ -1,6 +1,6 @@
-use alloy::primitives::FixedBytes;
 use async_trait::async_trait;
 use std::time::Duration;
+use taralli_primitives::alloy::primitives::FixedBytes;
 
 use crate::error::Result;
 

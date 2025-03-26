@@ -1,4 +1,3 @@
-use alloy::{providers::Provider, transports::Transport};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -9,6 +8,7 @@ use axum::{
 use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
 use std::sync::Arc;
+use taralli_primitives::alloy::{providers::Provider, transports::Transport};
 use taralli_primitives::systems::SystemIdMask;
 use tokio_stream::wrappers::BroadcastStream;
 

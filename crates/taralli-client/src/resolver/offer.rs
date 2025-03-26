@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use alloy::network::Network;
-use alloy::primitives::{Address, Bytes, FixedBytes};
 use async_trait::async_trait;
 use taralli_primitives::abi::universal_porchetta::UniversalPorchetta::UniversalPorchettaInstance;
+use taralli_primitives::alloy::network::Network;
+use taralli_primitives::alloy::primitives::{Address, Bytes, FixedBytes};
 use taralli_primitives::alloy::providers::Provider;
 use taralli_primitives::alloy::transports::Transport;
 use taralli_primitives::intents::offer::ComputeOffer;
