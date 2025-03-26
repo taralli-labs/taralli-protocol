@@ -1,11 +1,5 @@
 use std::{fs::File, path::Path, str::FromStr};
 
-use alloy::{
-    primitives::{address, Address, FixedBytes, PrimitiveSignature, Uint, U256},
-    providers::ProviderBuilder,
-    signers::{local::PrivateKeySigner, Signer},
-    sol_types::SolValue,
-};
 use axum::{
     routing::{get, post},
     Router,
@@ -18,8 +12,14 @@ use std::sync::Arc;
 use taralli_client::api::{submit::SubmitApiClient, subscribe::SubscribeApiClient};
 use taralli_primitives::{
     abi::universal_bombetta::UniversalBombetta::ProofRequest,
+    alloy::{
+        primitives::{address, Address, FixedBytes, PrimitiveSignature, U256},
+        providers::ProviderBuilder,
+        signers::{local::PrivateKeySigner, Signer},
+        sol_types::SolValue,
+    },
     intents::ComputeIntent,
-    systems::{arkworks::ArkworksProofParams, risc0::Risc0ProofParams, ALL_PROVING_SYSTEMS},
+    systems::{arkworks::ArkworksProofParams, risc0::Risc0ProofParams, ALL_SYSTEMS_MASK},
 };
 use taralli_primitives::{
     intents::request::ComputeRequest,
@@ -54,12 +54,12 @@ pub fn requester_fixture() -> SubmitApiClient {
 pub fn provider_fixture() -> SubscribeApiClient {
     SubscribeApiClient::new(
         Url::parse("http://localhost:8080").unwrap(),
-        *ALL_PROVING_SYSTEMS,
+        *ALL_SYSTEMS_MASK,
     )
 }
 
-/// Generate a Request to be sent to the server.
-/// The contents of the request are unimportant, as long as we pass the validation on submit().
+/// Generate a compute request to be sent to the server.
+/// The contents of the compute request are unimportant, as long as we pass the validation on submit().
 #[fixture]
 pub fn risc0_request_fixture() -> ComputeRequest<SystemParams> {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -119,7 +119,7 @@ pub fn risc0_request_fixture() -> ComputeRequest<SystemParams> {
 }
 
 #[fixture]
-/// Also generates a Request to be sent to the server.
+/// Also generates a compute request to be sent to the server.
 /// This one, however, is much bigger than the risc0 above.
 pub fn groth16_request_fixture() -> ComputeRequest<SystemParams> {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -151,8 +151,8 @@ pub fn groth16_request_fixture() -> ComputeRequest<SystemParams> {
         proof_request: ProofRequest {
             signer: address!("f39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
             market: SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
-            nonce: Uint::from(0u64),
-            rewardToken: Address::random(),
+            nonce: U256::from(0u64),
+            rewardToken: Address::ZERO,
             maxRewardAmount: U256::from(0),
             minRewardAmount: U256::from(0),
             minimumStake: 0,
@@ -207,7 +207,7 @@ pub fn setup_app() -> (Router, Arc<SubscriptionManager>) {
         rpc_provider.clone(),
         Markets {
             universal_bombetta: SEPOLIA_UNIVERSAL_BOMBETTA_ADDRESS,
-            universal_porchetta: Address::random(),
+            universal_porchetta: address!("0000000000000000000000000000000000000001"),
         },
         std::time::Duration::from_secs(10),
         ServerValidationConfigs {

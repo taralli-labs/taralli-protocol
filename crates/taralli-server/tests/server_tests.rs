@@ -355,7 +355,7 @@ async fn test_multiple_concurrent_requests_with_multiple_subscribers_which_can_l
 
 #[tokio::test]
 #[rstest]
-// Assert someone subscribed with wrong proving system id masks won't actually keep a connection open.
+// Assert someone subscribed with wrong system id masks won't actually keep a connection open.
 async fn test_invalid_proving_system_id(mut provider_fixture: SubscribeApiClient) {
     provider_fixture.subscribed_to = 0b10000000; // Invalid proving system id as of now.
     assert!(provider_fixture.subscribe_to_markets().await.is_err());
@@ -388,16 +388,14 @@ async fn test_corrupted_data_on_subscribe(
         proof_request: risc0_request_fixture.proof_request,
         signature: risc0_request_fixture.signature,
     };
-    let proving_system_information_bytes = compression::compress_brotli(
+    let system_information_bytes = compression::compress_brotli(
         &serde_json::to_vec(&risc0_request_fixture.system)
-            .expect("Couldn't serialize proving system information"),
+            .expect("Couldn't serialize system information"),
     )
-    .expect("Couldn't compress proving system information");
+    .expect("Couldn't compress system information");
     // This bit below is done under the submit.rs file.
-    let request_compressed = ComputeRequestCompressed::from((
-        partial_request.clone(),
-        proving_system_information_bytes.clone(),
-    ));
+    let request_compressed =
+        ComputeRequestCompressed::from((partial_request.clone(), system_information_bytes.clone()));
     let request_serialized = bincode::serialize(&request_compressed)
         .expect("Couldn't serialize request for BroadcastedMessage");
     let message_to_broadcast = BroadcastedMessage {
@@ -405,10 +403,10 @@ async fn test_corrupted_data_on_subscribe(
         subscribed_to: partial_request.system_id.as_bit(),
     };
 
-    // Let's add some bogus data to proving_system_information_bytes so we can check how the subscriber handles it.
+    // Let's add some bogus data to system_information_bytes so we can check how the subscriber handles it.
     let request_compressed = ComputeRequestCompressed::from((
         partial_request.clone(),
-        proving_system_information_bytes
+        system_information_bytes
             .into_iter()
             .map(|byte| byte ^ 0b10101010)
             .collect(),
@@ -419,13 +417,6 @@ async fn test_corrupted_data_on_subscribe(
         content: corrupted_serialized,
         subscribed_to: partial_request.system_id.as_bit(),
     };
-
-    // let mut subscription = ProviderApi::new(ApiConfig {
-    //     server_url: Url::parse(&format!("http://localhost:{}", port)).unwrap(),
-    //     request_timeout: 0,
-    //     max_retries: 0,
-    //     subscribed_to: ProvingSystemId::Risc0.as_bit(),
-    // })
 
     let mut subscription = SubscribeApiClient::new(
         Url::parse(&format!("http://localhost:{port}")).unwrap(),

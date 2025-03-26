@@ -192,5 +192,5 @@ systems! {
     (Sp1, "sp1", Sp1ProofParams, 0x04)
 }
 
-pub static ALL_PROVING_SYSTEMS: LazyLock<SystemIdMask> =
+pub static ALL_SYSTEMS_MASK: LazyLock<SystemIdMask> =
     LazyLock::new(|| SystemId::all().iter().fold(0, |acc, id| acc | id.as_bit()));

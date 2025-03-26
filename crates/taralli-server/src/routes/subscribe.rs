@@ -1,5 +1,5 @@
+use crate::error::Result;
 use crate::error::ServerError;
-use alloy::{providers::Provider, transports::Transport};
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -10,8 +10,9 @@ use axum::{
 use futures::{stream::StreamExt, SinkExt};
 use serde::Deserialize;
 use std::sync::Arc;
-use taralli_primitives::alloy::{providers::Provider, transports::Transport};
-use taralli_primitives::systems::{SystemIdMask, ALL_PROVING_SYSTEMS};
+use taralli_primitives::alloy::providers::Provider;
+use taralli_primitives::alloy::transports::Transport;
+use taralli_primitives::systems::{SystemIdMask, ALL_SYSTEMS_MASK};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::state::request::RequestState;
@@ -40,13 +41,13 @@ pub async fn websocket_subscribe_handler<
     ws: WebSocketUpgrade,
     State(app_state): State<RequestState<T, P>>,
     Query(args): Query<SubscribeArgs>,
-) -> impl IntoResponse {
-    // We check for proving system ids that are not valid/matching with our current, so we don't spend resources needlessly.
+) -> Result<impl IntoResponse> {
+    // We check for system ids that are not valid/matching with our current, so we don't spend resources needlessly.
     // Otherwise, we'd keep the connection open but, below, we'd never send any messages.
     // Also we need to fail before the upgrade, otherwise the client would see a success on connecting to the websocket.
     if args
         .subscribed_to
-        .is_some_and(|subscribed_to| subscribed_to > *ALL_PROVING_SYSTEMS)
+        .is_some_and(|subscribed_to| subscribed_to > *ALL_SYSTEMS_MASK)
     {
         return Err(ServerError::SystemIdError(
             args.subscribed_to.unwrap().to_string(),
@@ -73,7 +74,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
     socket: WebSocket,
     app_state: Arc<RequestState<T, P>>,
     subscribed_to: Option<SystemIdMask>,
-) -> Result<(), ServerError> {
+) -> Result<()> {
     // Register a new subscription. In other words, create a new receiver for the broadcasted proofs.
     let subscription = app_state.subscription_manager().add_subscription();
     tracing::info!(
@@ -97,7 +98,7 @@ async fn websocket_subscribe<T: Transport + Clone, P: Provider<T> + Clone>(
                         let message_system_id: SystemIdMask = message.subscribed_to;
                         // Check if the message is for any of the subscribed systems
                         // If no system is specified upon subscription, client is subscribed to all systems.
-                        if message_system_id & subscribed_to.unwrap_or(*ALL_PROVING_SYSTEMS) == 0 {
+                        if message_system_id & subscribed_to.unwrap_or(*ALL_SYSTEMS_MASK) == 0 {
                             continue;
                         }
                         // Try sending a binary message to the client

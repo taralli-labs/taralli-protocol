@@ -113,14 +113,14 @@ async fn should_handle_lagging_subscribers(groth16_request_fixture: ComputeReque
         proof_request: groth16_request_fixture.proof_request,
         signature: groth16_request_fixture.signature,
     };
-    let proving_system_information_bytes = compression::compress_brotli(
+    let system_information_bytes = compression::compress_brotli(
         &serde_json::to_vec(&groth16_request_fixture.system)
-            .expect("Couldn't serialize proving system information"),
+            .expect("Couldn't serialize system information"),
     )
-    .expect("Couldn't compress proving system information");
+    .expect("Couldn't compress system information");
     // This bit below is done under the submit.rs file.
     let request_compressed =
-        ComputeRequestCompressed::from((partial_request.clone(), proving_system_information_bytes));
+        ComputeRequestCompressed::from((partial_request.clone(), system_information_bytes));
     let request_serialized = bincode::serialize(&request_compressed)
         .expect("Couldn't serialize request for BroadcastedMessage");
     let message_to_broadcast = BroadcastedMessage {

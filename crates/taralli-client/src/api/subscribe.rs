@@ -95,20 +95,20 @@ impl SubscribeApiClient {
                                         }
                                     };
 
-                                    // Then, we need to decompress the proving system information.
+                                    // Then, we need to decompress the system information.
                                     let system = match compression::decompress_system(
                                         request_compressed.system
                                     ).await {
                                         Ok(decompressed) => decompressed,
                                         Err(e) => {
                                             let err = Err(ClientError::IntentParsingError(
-                                                format!("Failed to decompress proving system data: {e}")
+                                                format!("Failed to decompress system information: {e}")
                                             ));
                                             return Some((err, (listener, shutdown_receiver)));
                                         }
                                     };
 
-                                    // Create the final Request object
+                                    // Create the final Compute Request which will be received.
                                     let request = ComputeRequest::<SystemParams> {
                                         system_id: request_compressed.system_id,
                                         system,
