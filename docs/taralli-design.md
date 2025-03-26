@@ -106,7 +106,7 @@ pub trait ComputeIntent: Serialize + for<'de> Deserialize<'de> + Send + Sync {
 }
 ```
 
-The process of implementing a new compute intent for the protocol is to make a new ComputeIntent impl that uses existing associated type impls for the System and ProofCommitment traits or leverages new ones. For now, the 2 main implementations in use are the compute request and the compute offer with plans to add in new types/compositions of intents later. Reqeusts and offers are the 2 fundamental aspects of a market's supply chain so we will build out the protocol with these in mind to start. Furthermore, you can imagine more complicated intent structures such as recurring requests/offers, which can be referred to as "Intent Chains" or something along those lines. Intents that lay out challenges/competition parameters or revolve around speed of completion, and other various ideas depending on the needs/nature of a given compute market and its participants.
+The process of implementing a new compute intent for the protocol is to make a new ComputeIntent impl that uses existing associated type impls for the System and ProofCommitment traits or leverages new ones. For now, the 2 main implementations in use are the compute request and the compute offer with plans to add in new types/compositions of intents later. compute requests and offers are the 2 fundamental aspects of a market's supply chain so we will build out the protocol with these in mind to start. Furthermore, you can imagine more complicated intent structures such as recurring requests/offers, which can be referred to as "Intent Chains" or something along those lines. Intents that lay out challenges/competition parameters or revolve around speed of completion, and other various ideas depending on the needs/nature of a given compute market and its participants.
 
 ##### ComputeRequest
 
@@ -153,8 +153,8 @@ pub struct ProofRequest {
 
 ##### ComputeOffer
 
-The `ComputeOffer` type is the structure used when submitting an offer of computation to the server using the corresponding submit endpoint
-by offering clients and then stored within the server's postgres db for searching clients querying the server for quotes on various compute 
+The `ComputeOffer` type is the structure used when submitting an offer of computation to the server.
+Offers submitted by clients are then stored within the server's postgres database for searching for quotes on various compute 
 offerings.
 
 ```rust
@@ -626,7 +626,7 @@ The above design doc outlines the taralli protocol's 2 high level users, those l
 - The core smart contract protocol allows for programmatically defined economic agreements that apply to specific compute workloads between the 2 parties in a permission-less manor and/or a manor that accepts the underlying security assumptions of the blockchain/smart contracts it executes on (Ethereum in our case).
 - The protocol server is a centralized method by which to communicate the compute intents offchain from one party to another so they can decide what to do them. (In the future, we have plans to design a way to communicate intents in a more distributed and decentralized way)
 - the smart contract protocol can perhaps be made more generic such that the need for multiple market contract commitment addresses can be removed and a single address can be used making interacting with the on-chain componentes fo the protocol more straight forward...where's me solidity generics ;).
-- the querying feature provided by the protocol server has lots of room for improvment to make the searcher client and compute offering workflow less of a performance over head in the case of complicated compute workloads and higher scale scenarios where upwards of thousands of active users exist.
+- the querying feature provided by the protocol server has lots of room for improvement to make the searcher client and compute offering workflow less of a performance over head in the case of complicated compute workloads and higher scale scenarios where upwards of thousands of active users exist.
 - the implementation effort for adding new systems, validators and intent types can be decreased.
 - the systems implementations should be moved out of the primitives crate in the same aspect that the compute worker impl's remain outside the client crate to allow for easier contribution and addition of systems.
 - the existing modules of the client and primitives crates can be broken down into smaller crates.

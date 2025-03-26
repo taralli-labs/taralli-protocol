@@ -61,7 +61,7 @@ PROVIDER_PRIVATE_KEY=
 NOTE: 
 If you want to get the whole protocol running locally excluding the contracts/chain, the quickest/easiest way is to use sepolia RPCs + the existing sepolia deployment addresses [here](./contracts/deployments/sepolia_deployments.json) or redeploy your own version of the contracts to sepolia using existing forge script.
 
-You can also create a local anvil fork of the sepolia network and that works too.
+You can also create a local anvil fork of the sepolia network.
 
 ### server config
 
