@@ -1,4 +1,4 @@
-use taralli_primitives::systems::SystemIdMask;
+use taralli_primitives::{env::Environment, systems::SystemIdMask};
 use tokio::sync::broadcast::{self, Receiver};
 
 use crate::error::{Result, ServerError};
@@ -29,6 +29,11 @@ where
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
         Self { sender }
+    }
+
+    #[must_use]
+    pub fn buffer_len(&self) -> usize {
+        self.sender.len()
     }
 
     #[must_use]
@@ -73,11 +78,20 @@ where
     M: Clone,
 {
     fn default() -> Self {
-        Self::new(
-            std::env::var("SERVER_SUBSCRIPTION_LAG")
-                .unwrap_or_else(|_| "1".to_string())
-                .parse::<usize>()
-                .unwrap_or(1),
-        )
+        let lag = std::env::var("SERVER_SUBSCRIPTION_LAG");
+        match Environment::from_env_var() {
+            Environment::Production => Self::new(
+                lag.expect("Must specify SERVER_SUBSCRIPTION_LAG in production")
+                    .parse::<usize>()
+                    .expect("Failed to parse SERVER_SUBSCRIPTION_LAG"),
+            ),
+            // For development, any "bigger" value is acceptable.
+            // Some tests rely on having at least 1-2-10 of lag.
+            Environment::Development => Self::new(
+                lag.unwrap_or_else(|_| "100".to_string())
+                    .parse::<usize>()
+                    .unwrap_or(100),
+            ),
+        }
     }
 }

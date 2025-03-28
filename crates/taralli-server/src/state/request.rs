@@ -18,10 +18,10 @@ where
     T: Transport + Clone,
     P: Provider<T, Ethereum> + Clone,
 {
-    pub fn new(base: BaseState<T, P>, subscription_manager: SubscriptionManager) -> Self {
+    pub fn new(base: BaseState<T, P>, subscription_manager: Arc<SubscriptionManager>) -> Self {
         Self {
             base,
-            subscription_manager: Arc::new(subscription_manager),
+            subscription_manager,
         }
     }
 
