@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use futures_util::StreamExt;
-use taralli_primitives::alloy::{
+use taralli_primitives::{alloy::{
     consensus::BlockHeader,
     eips::{BlockId, BlockNumberOrTag::Latest},
     network::{BlockResponse, BlockTransactionsKind, Network},
@@ -9,7 +9,7 @@ use taralli_primitives::alloy::{
     providers::Provider,
     signers::Signer,
     transports::Transport,
-};
+}, systems::ALL_SYSTEMS_MASK};
 use taralli_primitives::{
     intents::{request::ComputeRequest, ComputeIntent},
     systems::{SystemId, SystemParams},
@@ -64,7 +64,7 @@ where
     ) -> Self {
         Self {
             base: BaseClient::new(rpc_provider.clone(), signer.clone(), market_address),
-            api: SubscribeApiClient::new(server_url.clone(), 0u8),
+            api: SubscribeApiClient::new(server_url.clone(), *ALL_SYSTEMS_MASK),
             analyzer: ComputeRequestAnalyzer::new(
                 rpc_provider.clone(),
                 market_address,
