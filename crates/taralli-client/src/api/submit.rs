@@ -13,7 +13,6 @@ use crate::error::{ClientError, Result};
 
 /// Submit compute intents to the protocol server
 pub struct SubmitApiClient {
-    _api_key: String,
     client: Client,
     server_url: Url,
 }
@@ -25,13 +24,15 @@ impl SubmitApiClient {
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
         headers.insert("Content-Encoding", HeaderValue::from_static("br"));
 
-        let mut api_key = String::new();
         if Environment::from_env_var() == Environment::Production {
-            api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
+            let api_key = std::env::var("API_KEY").expect("API_KEY env variable is not set");
+            headers.insert(
+                "x-api-key",
+                HeaderValue::from_str(&api_key).expect("Failed to set API_KEY header"),
+            );
         }
 
         Self {
-            _api_key: api_key,
             client: Client::builder()
                 .default_headers(headers)
                 .build()
